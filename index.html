@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Charles's Tools</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #f8fafc;
+    }
+    p.subtitle {
+      color: #94a3b8;
+      margin-bottom: 48px;
+      font-size: 1rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+    a.card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 28px 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    a.card:hover {
+      border-color: #60a5fa;
+      transform: translateY(-3px);
+    }
+    .card-icon { font-size: 2rem; }
+    .card-title { font-size: 1.1rem; font-weight: 600; color: #f1f5f9; }
+    .card-desc  { font-size: 0.875rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <h1>Charles's Tools</h1>
+  <p class="subtitle">A collection of web tools</p>
+  <div class="grid">
+    <a class="card" href="mortgage-calculator.html">
+      <span class="card-icon">🏠</span>
+      <span class="card-title">Mortgage Calculator</span>
+      <span class="card-desc">Calculate monthly payments and amortization</span>
+    </a>
+    <a class="card" href="date-calculator.html">
+      <span class="card-icon">📅</span>
+      <span class="card-title">Date Calculator</span>
+      <span class="card-desc">Calculate differences between dates</span>
+    </a>
+    <a class="card" href="random-selector.html">
+      <span class="card-icon">🎲</span>
+      <span class="card-title">Random Selector</span>
+      <span class="card-desc">Randomly pick from a list of items</span>
+    </a>
+    <a class="card" href="letter-analyzer.html">
+      <span class="card-icon">📝</span>
+      <span class="card-title">Letter Analyzer</span>
+      <span class="card-desc">Analyze text and letter frequency</span>
+    </a>
+    <a class="card" href="baby-learning.html">
+      <span class="card-icon">🌟</span>
+      <span class="card-title">Baby Learning</span>
+      <span class="card-desc">Interactive learning for little ones</span>
+    </a>
+    <a class="card" href="stock-dashboard/index.html">
+      <span class="card-icon">📈</span>
+      <span class="card-title">Stock Dashboard</span>
+      <span class="card-desc">Track and visualize stock data</span>
+    </a>
+  </div>
+</body>
+</html>

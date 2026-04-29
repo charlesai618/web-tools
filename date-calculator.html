@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Date Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      max-width: 860px;
+      margin: 0 auto 24px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #718096;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+    }
+
+    .tab-btn:hover {
+      background: #f0f4f8;
+      color: #2d3748;
+    }
+
+    .tab-btn.active {
+      background: #667eea;
+      color: #fff;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin: 0 auto 24px;
+      max-width: 860px;
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 16px;
+    }
+
+    /* Shared input row */
+    .date-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .date-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #718096;
+      min-width: 52px;
+    }
+
+    input[type="date"], input[type="number"] {
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+      color: #2d3748;
+    }
+
+    input[type="date"]:focus, input[type="number"]:focus {
+      border-color: #667eea;
+    }
+
+    .date-row input[type="date"] { flex: 1; }
+
+    .btn-remove {
+      background: none;
+      border: 1.5px solid #fed7d7;
+      color: #fc8181;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s, color 0.2s;
+      line-height: 1;
+    }
+
+    .btn-remove:hover {
+      background: #fff5f5;
+      color: #e53e3e;
+    }
+
+    .btn-add {
+      background: none;
+      border: 1.5px dashed #cbd5e0;
+      color: #718096;
+      border-radius: 8px;
+      padding: 9px 18px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: border-color 0.2s, color 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-add:hover {
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-top: 16px;
+      display: block;
+      width: 100%;
+    }
+
+    .btn-primary:hover { opacity: 0.88; }
+
+    /* Tables */
+    .results-table, .pair-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .results-table th, .pair-table th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #718096;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .results-table th.center, .pair-table th.center { text-align: center; }
+
+    .results-table td, .pair-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #f0f4f8;
+      color: #2d3748;
+      vertical-align: middle;
+    }
+
+    .results-table td.center, .pair-table td.center { text-align: center; }
+
+    .results-table tr:last-child td,
+    .pair-table tr:last-child td { border-bottom: none; }
+
+    .results-table tr:hover td,
+    .pair-table tr:hover td { background: #f7fafc; }
+
+    .date-badge {
+      display: inline-block;
+      background: #ebf4ff;
+      color: #2b6cb0;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+
+    .num-big {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .num-sub {
+      display: block;
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-top: 1px;
+    }
+
+    .days-pill {
+      display: inline-block;
+      background: #f0fff4;
+      color: #276749;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: 1px solid #c6f6d5;
+    }
+
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .section-divider h2 { margin-bottom: 0; white-space: nowrap; }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+
+    .col-group-label {
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 6px 12px 2px;
+      border-bottom: none !important;
+    }
+
+    .col-group-start { color: #3182ce; }
+    .col-group-end   { color: #805ad5; }
+
+    .th-start { border-bottom-color: #bee3f8 !important; color: #3182ce !important; }
+    .th-end   { border-bottom-color: #e9d8fd !important; color: #805ad5 !important; }
+
+    .num-big.start { color: #2b6cb0; }
+    .num-big.end   { color: #553c9a; }
+
+    /* --- Tab 2: Date offset --- */
+    .offset-form {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: end;
+    }
+
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+
+    .field-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #718096;
+    }
+
+    .field-group input[type="date"],
+    .field-group input[type="number"] {
+      width: 100%;
+    }
+
+    .plus-minus-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .plus-minus-wrap .field-label { text-align: center; }
+
+    .sign-toggle {
+      display: flex;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1.5px solid #e2e8f0;
+    }
+
+    .sign-btn {
+      flex: 1;
+      padding: 10px 0;
+      border: none;
+      background: none;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #718096;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .sign-btn.active-pos { background: #f0fff4; color: #276749; }
+    .sign-btn.active-neg { background: #fff5f5; color: #e53e3e; }
+
+    .offset-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: #cbd5e0;
+      padding-bottom: 2px;
+    }
+
+    /* Result display */
+    .offset-result {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .result-banner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 18px 20px;
+      border: 1px solid #e2e8f0;
+      flex-wrap: wrap;
+    }
+
+    .result-banner .arrow-label {
+      color: #a0aec0;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .result-banner .arrow-label span {
+      font-size: 1.2rem;
+    }
+
+    .result-date-big {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #2d3748;
+    }
+
+    .result-meta {
+      font-size: 0.82rem;
+      color: #718096;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 1.4rem; }
+      .card { padding: 16px; }
+      .results-table, .pair-table { font-size: 0.8rem; }
+      .results-table th, .results-table td,
+      .pair-table th, .pair-table td { padding: 8px 7px; }
+      .offset-form { grid-template-columns: 1fr; }
+      .offset-arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Date Calculator</h1>
+  <p class="subtitle">Tools for working with dates and days.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="tab-position">Year Position &amp; Distance</button>
+    <button class="tab-btn" data-tab="tab-offset">Date Offset</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ TAB 1 -->
+  <div id="tab-position" class="tab-panel active">
+
+    <div class="card">
+      <h2>Dates</h2>
+      <div id="date-inputs"></div>
+      <button class="btn-add" id="btn-add">+ Add date</button>
+      <button class="btn-primary" id="btn-calculate">Calculate</button>
+    </div>
+
+    <div class="card" id="card-position" style="display:none">
+      <div class="section-divider">
+        <h2>Position in Year</h2>
+        <div class="divider-line"></div>
+      </div>
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th rowspan="2">Date</th>
+            <th colspan="2" class="col-group-label col-group-start">From Start of Year (Jan 1)</th>
+            <th colspan="2" class="col-group-label col-group-end">From End of Year (Dec 31)</th>
+          </tr>
+          <tr>
+            <th class="center th-start">Day #</th>
+            <th class="center th-start">Distance</th>
+            <th class="center th-end">Day #</th>
+            <th class="center th-end">Distance</th>
+          </tr>
+        </thead>
+        <tbody id="position-body"></tbody>
+      </table>
+      <p style="margin-top:12px; font-size:0.78rem; color:#a0aec0;">
+        <strong>Day #</strong> = ordinal count (Jan 1 = day 1 from start; Dec 31 = day 1 from end).&nbsp;
+        <strong>Distance</strong> = days elapsed (Jan 1 → Jan 1 = 0 days; Jan 1 → Jan 15 = 14 days).
+      </p>
+    </div>
+
+    <div class="card" id="card-pairs" style="display:none">
+      <div class="section-divider">
+        <h2>Days Between Dates</h2>
+        <div class="divider-line"></div>
+      </div>
+      <table class="pair-table">
+        <thead>
+          <tr>
+            <th>From</th>
+            <th>To</th>
+            <th>Days Apart</th>
+          </tr>
+        </thead>
+        <tbody id="pairs-body"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /tab-position -->
+
+  <!-- ═══════════════════════════════════════════════ TAB 2 -->
+  <div id="tab-offset" class="tab-panel">
+
+    <div class="card">
+      <h2>Date Offset</h2>
+      <p style="font-size:0.88rem;color:#718096;margin-bottom:20px;">
+        Pick a starting date and add or subtract days to find the target date.
+      </p>
+
+      <div class="offset-form">
+        <div class="field-group">
+          <span class="field-label">Start date</span>
+          <input type="date" id="offset-start">
+        </div>
+
+        <div class="offset-arrow">→</div>
+
+        <div class="field-group">
+          <span class="field-label">Days to add / subtract</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="sign-toggle" id="sign-toggle">
+              <button class="sign-btn active-pos" data-sign="1">+</button>
+              <button class="sign-btn" data-sign="-1">−</button>
+            </div>
+            <input type="number" id="offset-days" min="0" placeholder="0" style="flex:1;min-width:0;">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-offset-calc">Calculate</button>
+
+      <div class="offset-result" id="offset-result">
+        <div class="result-banner" id="result-banner"></div>
+      </div>
+    </div>
+
+  </div><!-- /tab-offset -->
+
+  <script>
+    // ── Tab switching ──────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ── Shared helpers ─────────────────────────────────────────
+    function parseLocalDate(str) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function ordinalDay(date) {
+      const start = new Date(date.getFullYear(), 0, 1);
+      return Math.round((date - start) / 86400000) + 1;
+    }
+
+    function daysInYear(year) {
+      return ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) ? 366 : 365;
+    }
+
+    function formatDate(date) {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    }
+
+    function absDaysBetween(a, b) {
+      return Math.round(Math.abs(b - a) / 86400000);
+    }
+
+    function addDays(date, n) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + n);
+      return d;
+    }
+
+    // ── Tab 1: Year position ───────────────────────────────────
+    let dateCount = 0;
+    const container = document.getElementById('date-inputs');
+
+    function addDateRow(value) {
+      dateCount++;
+      const row = document.createElement('div');
+      row.className = 'date-row';
+      row.innerHTML = `
+        <span class="date-label">Date ${dateCount}</span>
+        <input type="date" value="${value || ''}">
+        <button class="btn-remove" title="Remove">✕</button>
+      `;
+      row.querySelector('.btn-remove').addEventListener('click', () => {
+        row.remove();
+        relabelRows();
+      });
+      container.appendChild(row);
+    }
+
+    function relabelRows() {
+      container.querySelectorAll('.date-row').forEach((r, i) => {
+        r.querySelector('.date-label').textContent = `Date ${i + 1}`;
+      });
+    }
+
+    document.getElementById('btn-add').addEventListener('click', () => addDateRow());
+    document.getElementById('btn-calculate').addEventListener('click', calculate);
+    addDateRow(); addDateRow();
+
+    function calculate() {
+      const inputs = container.querySelectorAll('input[type="date"]');
+      const dates = [];
+      inputs.forEach((inp, i) => {
+        if (inp.value) dates.push({ label: `Date ${i + 1}`, date: parseLocalDate(inp.value) });
+      });
+      if (dates.length === 0) return;
+
+      // Position table
+      const posBody = document.getElementById('position-body');
+      posBody.innerHTML = '';
+      dates.forEach(({ label, date }) => {
+        const year = date.getFullYear();
+        const total = daysInYear(year);
+        const dayFromStart = ordinalDay(date);
+        const distFromStart = dayFromStart - 1;
+        const dayFromEnd = total - dayFromStart + 1;
+        const distFromEnd = dayFromEnd - 1;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="date-badge">${formatDate(date)}</span><br>
+              <span style="font-size:0.75rem;color:#a0aec0;">${label}</span></td>
+          <td class="center">
+            <span class="num-big start">${dayFromStart}</span>
+            <span class="num-sub">day ${dayFromStart} of ${total}</span>
+          </td>
+          <td class="center">
+            <span class="num-big start">${distFromStart}</span>
+            <span class="num-sub">day${distFromStart !== 1 ? 's' : ''} since Jan 1</span>
+          </td>
+          <td class="center">
+            <span class="num-big end">${dayFromEnd}</span>
+            <span class="num-sub">day ${dayFromEnd} from end</span>
+          </td>
+          <td class="center">
+            <span class="num-big end">${distFromEnd}</span>
+            <span class="num-sub">day${distFromEnd !== 1 ? 's' : ''} until Dec 31</span>
+          </td>
+        `;
+        posBody.appendChild(tr);
+      });
+      document.getElementById('card-position').style.display = '';
+
+      // Pairwise table
+      const pairsBody = document.getElementById('pairs-body');
+      pairsBody.innerHTML = '';
+      if (dates.length >= 2) {
+        for (let i = 0; i < dates.length; i++) {
+          for (let j = i + 1; j < dates.length; j++) {
+            const a = dates[i], b = dates[j];
+            const diff = absDaysBetween(a.date, b.date);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><span class="date-badge">${formatDate(a.date)}</span>
+                  <span style="color:#a0aec0;font-size:0.8rem;"> ${a.label}</span></td>
+              <td><span class="date-badge">${formatDate(b.date)}</span>
+                  <span style="color:#a0aec0;font-size:0.8rem;"> ${b.label}</span></td>
+              <td><span class="days-pill">${diff} day${diff !== 1 ? 's' : ''}</span></td>
+            `;
+            pairsBody.appendChild(tr);
+          }
+        }
+        document.getElementById('card-pairs').style.display = '';
+      } else {
+        document.getElementById('card-pairs').style.display = 'none';
+      }
+    }
+
+    // ── Tab 2: Date offset ─────────────────────────────────────
+    let sign = 1;
+
+    document.querySelectorAll('.sign-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        sign = Number(btn.dataset.sign);
+        document.querySelectorAll('.sign-btn').forEach(b => {
+          b.classList.remove('active-pos', 'active-neg');
+        });
+        btn.classList.add(sign === 1 ? 'active-pos' : 'active-neg');
+      });
+    });
+
+    document.getElementById('btn-offset-calc').addEventListener('click', () => {
+      const startVal = document.getElementById('offset-start').value;
+      const daysVal  = document.getElementById('offset-days').value;
+      if (!startVal || daysVal === '') return;
+
+      const startDate = parseLocalDate(startVal);
+      const days = Math.abs(parseInt(daysVal, 10));
+      const targetDate = addDays(startDate, sign * days);
+
+      const direction = sign === 1 ? 'later' : 'earlier';
+      const signLabel = sign === 1 ? `+${days}` : `−${days}`;
+
+      const banner = document.getElementById('result-banner');
+      banner.innerHTML = `
+        <div>
+          <div class="date-badge" style="font-size:1rem;padding:5px 12px;">${formatDate(startDate)}</div>
+          <div class="result-meta">start date</div>
+        </div>
+        <div class="arrow-label">
+          <span>${sign === 1 ? '→' : '←'}</span>
+          <strong style="color:#667eea;">${signLabel} day${days !== 1 ? 's' : ''}</strong>
+        </div>
+        <div>
+          <div class="result-date-big">${formatDate(targetDate)}</div>
+          <div class="result-meta">${days} day${days !== 1 ? 's' : ''} ${direction} than the start</div>
+        </div>
+      `;
+
+      document.getElementById('offset-result').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

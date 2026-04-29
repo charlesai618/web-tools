@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mortgage Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #718096;
+      margin-bottom: 32px;
+      font-size: 0.95rem;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    @media (max-width: 640px) {
+      .full-width { grid-column: 1; }
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #4a5568;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+    }
+
+    /* ── Inputs ── */
+    .field { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #4a5568;
+      margin-bottom: 6px;
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-wrap .prefix,
+    .input-wrap .suffix {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #a0aec0;
+      font-size: 0.95rem;
+      pointer-events: none;
+    }
+
+    .input-wrap .prefix { left: 12px; }
+    .input-wrap .suffix { right: 12px; }
+
+    input[type="number"] {
+      width: 100%;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 36px 10px 28px;
+      font-size: 1rem;
+      color: #2d3748;
+      transition: border-color 0.2s;
+      outline: none;
+      appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    input[type="number"]:focus {
+      border-color: #4299e1;
+      box-shadow: 0 0 0 3px rgba(66,153,225,0.15);
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #e2e8f0;
+      outline: none;
+      flex: 1;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #4299e1;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    .range-value {
+      font-size: 0.875rem;
+      color: #4299e1;
+      font-weight: 600;
+      min-width: 52px;
+      text-align: right;
+    }
+
+    /* ── Breakdown card ── */
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
+      font-size: 0.82rem;
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    /* ── Rates table ── */
+    .rates-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .rates-header h2 { margin-bottom: 0; }
+
+    .rates-source {
+      font-size: 0.78rem;
+      color: #a0aec0;
+    }
+
+    .rates-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .rate-tile {
+      background: #f7fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .rate-tile:hover {
+      border-color: #4299e1;
+      box-shadow: 0 0 0 3px rgba(66,153,225,0.12);
+    }
+
+    .rate-tile.active {
+      border-color: #4299e1;
+      background: #ebf8ff;
+    }
+
+    .rate-tile-name {
+      font-size: 0.78rem;
+      color: #718096;
+      margin-bottom: 4px;
+    }
+
+    .rate-tile-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #2b6cb0;
+    }
+
+    .rate-tile-note {
+      font-size: 0.72rem;
+      color: #a0aec0;
+      margin-top: 2px;
+    }
+
+    .use-rate-btn {
+      font-size: 0.75rem;
+      color: #4299e1;
+      font-weight: 600;
+      margin-top: 6px;
+      display: inline-block;
+    }
+
+    .rates-trend {
+      overflow-x: auto;
+    }
+
+    .rates-trend table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      min-width: 380px;
+    }
+
+    .rates-trend thead th {
+      background: #f7fafc;
+      padding: 8px 12px;
+      text-align: right;
+      font-weight: 600;
+      color: #4a5568;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .rates-trend thead th:first-child { text-align: left; }
+
+    .rates-trend tbody td {
+      padding: 7px 12px;
+      text-align: right;
+      color: #2d3748;
+      border-bottom: 1px solid #edf2f7;
+    }
+
+    .rates-trend tbody td:first-child { text-align: left; color: #718096; }
+    .rates-trend tbody tr:last-child td { font-weight: 600; background: #ebf8ff; }
+
+    /* ── Amortization ── */
+    .amort-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .amort-header h2 { margin-bottom: 0; }
+
+    .view-tabs {
+      display: flex;
+      background: #edf2f7;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .view-tab {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: #718096;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .view-tab.active {
+      background: #fff;
+      color: #2b6cb0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    .early-payoff-banner {
+      background: #f0fff4;
+      border: 1.5px solid #68d391;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+      color: #276749;
+      display: none;
+    }
+
+    .early-payoff-banner.visible { display: block; }
+
+    .chart-wrap { margin-bottom: 20px; }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+      font-size: 0.78rem;
+    }
+
+    .bar-label {
+      width: 56px;
+      text-align: right;
+      color: #718096;
+      flex-shrink: 0;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 12px;
+      background: #edf2f7;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .bar-principal {
+      background: #4299e1;
+      height: 100%;
+      border-radius: 6px 0 0 6px;
+    }
+
+    .bar-interest {
+      background: #fc8181;
+      height: 100%;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .bar-prepay {
+      background: #68d391;
+      height: 100%;
+    }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }
+
+    thead th {
+      background: #f7fafc;
+      padding: 10px 10px;
+      text-align: right;
+      font-weight: 600;
+      color: #4a5568;
+      border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    thead th:first-child { text-align: left; }
+
+    tbody tr:nth-child(even) { background: #f7fafc; }
+
+    tbody td {
+      padding: 8px 10px;
+      text-align: right;
+      color: #2d3748;
+      border-bottom: 1px solid #edf2f7;
+      white-space: nowrap;
+    }
+
+    tbody td:first-child { text-align: left; color: #718096; }
+
+    /* Prepayment input cell */
+    .prepay-cell { min-width: 90px; }
+
+    .prepay-input {
+      width: 82px;
+      padding: 4px 6px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: #2d3748;
+      text-align: right;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .prepay-input:focus {
+      border-color: #68d391;
+      box-shadow: 0 0 0 2px rgba(104,211,145,0.2);
+    }
+
+    .prepay-input.has-value {
+      border-color: #68d391;
+      background: #f0fff4;
+      color: #276749;
+      font-weight: 600;
+    }
+
+    td.prepay-sum {
+      color: #276749;
+      font-weight: 600;
+    }
+
+    /* Paid-off row */
+    .paid-off-row td {
+      background: #f0fff4;
+      color: #276749;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* Toggle btn */
+    .toggle-btn {
+      display: block;
+      width: 100%;
+      margin-top: 14px;
+      padding: 10px;
+      border: 1.5px solid #4299e1;
+      border-radius: 10px;
+      background: transparent;
+      color: #4299e1;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .toggle-btn:hover { background: #4299e1; color: #fff; }
+
+    .prepay-note {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Charles AI Logo -->
+  <div style="display:flex; justify-content:center; margin-bottom:20px;">
+    <div style="
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f1117;
+      color: #fff;
+      padding: 8px 18px 8px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    ">
+      <!-- A+L icon -->
+      <div style="
+        width: 30px; height: 30px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border-radius: 7px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+      ">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+             stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Left leg of A → bends right at bottom to form the L foot -->
+          <polyline points="12,2 2,22 10,22"/>
+          <!-- Right leg of A -->
+          <line x1="12" y1="2" x2="22" y2="22"/>
+          <!-- Crossbar of A -->
+          <line x1="6.5" y1="13.5" x2="17.5" y2="13.5"/>
+        </svg>
+      </div>
+      <span style="color:#a0aec0; font-size:0.78rem;">Powered by</span>
+      <span style="font-weight:700; font-size:0.9rem; letter-spacing:0.02em;">Charles <span style="color:#818cf8; display:inline-flex; align-items:center; gap:1px;"><!-- A+L ligature glyph -->
+        <svg viewBox="0 0 14 17" height="1em" width="0.85em"
+             style="display:inline-block; vertical-align:-0.12em;"
+             fill="none" stroke="#818cf8" stroke-width="1.9"
+             stroke-linecap="round" stroke-linejoin="round">
+          <!-- Left leg of A → bends right at bottom = L foot -->
+          <polyline points="6,1 1,16 7.5,16"/>
+          <!-- Right diagonal leg of A -->
+          <line x1="6" y1="1" x2="13" y2="16"/>
+          <!-- Crossbar of A -->
+          <line x1="3" y1="10" x2="10.5" y2="10"/>
+        </svg>I</span></span>
+    </div>
+  </div>
+
+  <h1>Mortgage Calculator</h1>
+  <p class="subtitle">Estimate your monthly payment, explore prepayments, and compare today's rates</p>
+
+  <div class="container">
+
+    <!-- ── Current Rates ── -->
+    <div class="card full-width">
+      <div class="rates-header">
+        <h2>Today's Mortgage Rates</h2>
+        <span class="rates-source">Source: Bankrate &amp; Freddie Mac · March 27, 2026 · Click any rate to apply</span>
+      </div>
+
+      <div class="rates-grid">
+        <div class="rate-tile" onclick="applyRate(6.52, '30-Year Fixed')" title="Click to apply">
+          <div class="rate-tile-name">30-Year Fixed</div>
+          <div class="rate-tile-value">6.52%</div>
+          <div class="rate-tile-note">Bankrate avg</div>
+          <span class="use-rate-btn">Use this rate →</span>
+        </div>
+        <div class="rate-tile" onclick="applyRate(5.85, '15-Year Fixed')" title="Click to apply">
+          <div class="rate-tile-name">15-Year Fixed</div>
+          <div class="rate-tile-value">5.85%</div>
+          <div class="rate-tile-note">Bankrate avg</div>
+          <span class="use-rate-btn">Use this rate →</span>
+        </div>
+        <div class="rate-tile" onclick="applyRate(5.73, '5/1 ARM')" title="Click to apply">
+          <div class="rate-tile-name">5/1 ARM</div>
+          <div class="rate-tile-value">5.73%</div>
+          <div class="rate-tile-note">Bankrate avg</div>
+          <span class="use-rate-btn">Use this rate →</span>
+        </div>
+        <div class="rate-tile" onclick="applyRate(6.63, 'Jumbo 30-Year')" title="Click to apply">
+          <div class="rate-tile-name">Jumbo 30-Year</div>
+          <div class="rate-tile-value">6.63%</div>
+          <div class="rate-tile-note">Bankrate avg</div>
+          <span class="use-rate-btn">Use this rate →</span>
+        </div>
+        <div class="rate-tile" onclick="applyRate(6.38, '30-Year (Freddie Mac)')" title="Click to apply">
+          <div class="rate-tile-name">30-Year Fixed</div>
+          <div class="rate-tile-value">6.38%</div>
+          <div class="rate-tile-note">Freddie Mac weekly</div>
+          <span class="use-rate-btn">Use this rate →</span>
+        </div>
+        <div class="rate-tile" onclick="applyRate(5.75, '15-Year (Freddie Mac)')" title="Click to apply">
+          <div class="rate-tile-name">15-Year Fixed</div>
+          <div class="rate-tile-value">5.75%</div>
+          <div class="rate-tile-note">Freddie Mac weekly</div>
+          <span class="use-rate-btn">Use this rate →</span>
+        </div>
+      </div>
+
+      <details>
+        <summary style="cursor:pointer; font-size:0.85rem; color:#4299e1; font-weight:600; margin-bottom:10px; user-select:none;">
+          Weekly Rate Trend (Mar 19 – 27, 2026)
+        </summary>
+        <div class="rates-trend">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>30-Yr Fixed</th><th>15-Yr Fixed</th><th>5/1 ARM</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Mar 19</td><td>6.33%</td><td>5.64%</td><td>5.49%</td></tr>
+              <tr><td>Mar 20</td><td>6.32%</td><td>5.67%</td><td>5.64%</td></tr>
+              <tr><td>Mar 24</td><td>6.43%</td><td>5.78%</td><td>5.75%</td></tr>
+              <tr><td>Mar 25</td><td>6.45%</td><td>5.79%</td><td>5.74%</td></tr>
+              <tr><td>Mar 26</td><td>6.49%</td><td>5.82%</td><td>5.68%</td></tr>
+              <tr><td>Mar 27</td><td>6.52%</td><td>5.85%</td><td>5.73%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <!-- ── Loan Inputs ── -->
+    <div class="card">
+      <h2>Loan Details</h2>
+
+      <div class="field">
+        <label for="amount">Loan Amount</label>
+        <div class="input-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="amount" value="300000" min="10000" max="10000000" step="1000">
+        </div>
+        <div class="range-row">
+          <input type="range" id="amountRange" min="10000" max="2000000" step="5000" value="300000">
+          <span class="range-value" id="amountDisplay">$300,000</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="rate">Annual Interest Rate</label>
+        <div class="input-wrap">
+          <input type="number" id="rate" value="6.52" min="0.1" max="30" step="0.05" style="padding-right:36px; padding-left:12px;">
+          <span class="suffix">%</span>
+        </div>
+        <div class="range-row">
+          <input type="range" id="rateRange" min="0.5" max="20" step="0.05" value="6.52">
+          <span class="range-value" id="rateDisplay">6.52%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="term">Loan Term</label>
+        <div class="input-wrap">
+          <input type="number" id="term" value="30" min="1" max="50" step="1" style="padding-right:36px; padding-left:12px;">
+          <span class="suffix">yrs</span>
+        </div>
+        <div class="range-row">
+          <input type="range" id="termRange" min="1" max="50" step="1" value="30">
+          <span class="range-value" id="termDisplay">30 yrs</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Payment Breakdown ── -->
+    <div class="card">
+      <h2>Payment Breakdown</h2>
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #edf2f7;">
+          <span style="color:#4a5568; font-size:0.9rem;">Monthly Payment</span>
+          <span id="monthlyBig" style="font-size:1.6rem; font-weight:700; color:#2b6cb0;">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.88rem; padding:3px 0;">
+          <span style="color:#718096;">Loan Principal</span>
+          <span id="summPrincipal" style="font-weight:600;">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.88rem; padding:3px 0;">
+          <span style="color:#718096;">Total Interest</span>
+          <span id="summInterest" style="font-weight:600; color:#e53e3e;">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.88rem; padding:3px 0;">
+          <span style="color:#718096;">Total Prepayments</span>
+          <span id="summPrepay" style="font-weight:600; color:#276749;">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.88rem; padding:3px 0;">
+          <span style="color:#718096;">Total Cost</span>
+          <span id="summTotal" style="font-weight:600;">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.88rem; padding:3px 0;">
+          <span style="color:#718096;">Effective Term</span>
+          <span id="summTerm" style="font-weight:600;">—</span>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; margin-top:20px;">
+        <svg id="donut" width="140" height="140" viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="54" fill="none" stroke="#edf2f7" stroke-width="22"/>
+          <circle id="donutPrepay" cx="70" cy="70" r="54" fill="none" stroke="#68d391" stroke-width="22"
+            stroke-dasharray="0 340" stroke-dashoffset="0" transform="rotate(-90 70 70)" style="transition:all 0.4s"/>
+          <circle id="donutInterest" cx="70" cy="70" r="54" fill="none" stroke="#fc8181" stroke-width="22"
+            stroke-dasharray="0 340" stroke-dashoffset="0" transform="rotate(-90 70 70)" style="transition:all 0.4s"/>
+          <circle id="donutPrincipal" cx="70" cy="70" r="54" fill="none" stroke="#4299e1" stroke-width="22"
+            stroke-dasharray="0 340" stroke-dashoffset="0" transform="rotate(-90 70 70)" style="transition:all 0.4s"/>
+          <text x="70" y="66" text-anchor="middle" font-size="11" fill="#718096">Monthly</text>
+          <text id="donutLabel" x="70" y="82" text-anchor="middle" font-size="14" font-weight="700" fill="#2d3748">—</text>
+        </svg>
+      </div>
+      <div class="legend" style="justify-content:center; flex-wrap:wrap;">
+        <span><span class="legend-dot" style="background:#4299e1;"></span>Principal</span>
+        <span><span class="legend-dot" style="background:#fc8181;"></span>Interest</span>
+        <span><span class="legend-dot" style="background:#68d391;"></span>Prepayment</span>
+      </div>
+    </div>
+
+    <!-- ── Amortization ── -->
+    <div class="card full-width">
+      <div class="amort-header">
+        <h2>Amortization Schedule</h2>
+        <div class="view-tabs">
+          <button class="view-tab active" id="tabYearly" onclick="setView('yearly')">Yearly</button>
+          <button class="view-tab" id="tabMonthly" onclick="setView('monthly')">Monthly</button>
+        </div>
+      </div>
+
+      <div id="earlyPayoffBanner" class="early-payoff-banner"></div>
+
+      <div class="chart-wrap" id="chartWrap"></div>
+
+      <div class="table-wrap">
+        <table id="amortTable">
+          <thead id="amortHead"></thead>
+          <tbody id="amortBody"></tbody>
+        </table>
+      </div>
+
+      <p class="prepay-note" id="prepayNote" style="display:none;">
+        Enter prepayment amounts in the "Prepay" column to see how extra payments shorten your loan and reduce interest.
+      </p>
+
+      <button class="toggle-btn" id="toggleBtn">Show More</button>
+    </div>
+
+  </div><!-- /container -->
+
+  <script>
+    // ── Formatting helpers ──
+    const fmt  = n => '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const fmtK = n => {
+      if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+      return '$' + n.toFixed(0);
+    };
+    const fmtTerm = months => {
+      const y = Math.floor(months / 12), m = months % 12;
+      return y > 0 && m > 0 ? `${y} yr ${m} mo` : y > 0 ? `${y} yr` : `${m} mo`;
+    };
+
+    // ── State ──
+    let viewMode = 'yearly';
+    let showAll  = false;
+    const INITIAL_YEARLY  = 10;
+    const INITIAL_MONTHLY = 24;
+    const prepayments = {}; // { monthIndex: amount }
+
+    // ── Core math ──
+    function calcMonthly(P, annualRate, n) {
+      const r = annualRate / 100 / 12;
+      if (r === 0) return P / n;
+      return P * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+    }
+
+    function buildMonthly(P, annualRate, years) {
+      const r  = annualRate / 100 / 12;
+      const n  = years * 12;
+      const M  = calcMonthly(P, annualRate, n);
+      let bal  = P;
+      const rows = [];
+
+      for (let i = 0; i < n && bal > 0.005; i++) {
+        const interest  = bal * r;
+        const scheduled = Math.min(M - interest, bal);
+        const prepay    = Math.min(prepayments[i] || 0, bal - scheduled);
+        bal = Math.max(bal - scheduled - prepay, 0);
+        rows.push({
+          idx:       i,
+          month:     i + 1,
+          year:      Math.floor(i / 12) + 1,
+          payment:   scheduled + interest,
+          prepayment: prepay,
+          principal: scheduled,
+          interest,
+          balance:   bal
+        });
+      }
+      return rows;
+    }
+
+    function aggregateYearly(monthlyRows, totalYears) {
+      const map = {};
+      for (let y = 1; y <= totalYears; y++) {
+        map[y] = { year: y, payment: 0, prepayment: 0, principal: 0, interest: 0, balance: 0, exists: false };
+      }
+      monthlyRows.forEach(r => {
+        const y = r.year;
+        if (!map[y]) map[y] = { year: y, payment: 0, prepayment: 0, principal: 0, interest: 0, balance: 0, exists: false };
+        map[y].payment    += r.payment;
+        map[y].prepayment += r.prepayment;
+        map[y].principal  += r.principal;
+        map[y].interest   += r.interest;
+        map[y].balance     = r.balance;
+        map[y].exists      = true;
+      });
+      return Object.values(map).filter(r => r.exists);
+    }
+
+    // ── Apply rate from tile ──
+    function applyRate(rate, label) {
+      document.getElementById('rate').value = rate;
+      document.getElementById('rateRange').value = rate;
+      document.getElementById('rateDisplay').textContent = rate.toFixed(2) + '%';
+      // highlight tile
+      document.querySelectorAll('.rate-tile').forEach(t => t.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      resetPrepayments();
+      update();
+    }
+
+    function resetPrepayments() {
+      Object.keys(prepayments).forEach(k => delete prepayments[k]);
+    }
+
+    // ── View toggle ──
+    function setView(mode) {
+      viewMode = mode;
+      showAll  = false;
+      document.getElementById('tabYearly').classList.toggle('active', mode === 'yearly');
+      document.getElementById('tabMonthly').classList.toggle('active', mode === 'monthly');
+      renderTable();
+    }
+
+    // ── Main update ──
+    function update() {
+      const P    = parseFloat(document.getElementById('amount').value) || 0;
+      const rate = parseFloat(document.getElementById('rate').value) || 0;
+      const term = parseInt(document.getElementById('term').value) || 0;
+      if (P <= 0 || rate <= 0 || term <= 0) return;
+
+      const M             = calcMonthly(P, rate, term * 12);
+      const monthlyRows   = buildMonthly(P, rate, term);
+      const totalPrepay   = monthlyRows.reduce((s, r) => s + r.prepayment, 0);
+      const totalInterest = monthlyRows.reduce((s, r) => s + r.interest, 0);
+      const totalPaid     = monthlyRows.reduce((s, r) => s + r.payment + r.prepayment, 0);
+      const actualMonths  = monthlyRows.length;
+      const circumference = 2 * Math.PI * 54;
+
+      // ── Summary ──
+      document.getElementById('monthlyBig').textContent    = fmt(M);
+      document.getElementById('summPrincipal').textContent = fmt(P);
+      document.getElementById('summInterest').textContent  = fmt(totalInterest);
+      document.getElementById('summPrepay').textContent    = totalPrepay > 0 ? fmt(totalPrepay) : '$0.00';
+      document.getElementById('summTotal').textContent     = fmt(totalPaid);
+      document.getElementById('summTerm').textContent      = fmtTerm(actualMonths);
+
+      // ── Donut ──
+      const totalForDonut  = totalPaid;
+      const pFrac = P          / totalForDonut;
+      const iFrac = totalInterest / totalForDonut;
+      const ppFrac= totalPrepay   / totalForDonut;
+      const pArc  = pFrac  * circumference;
+      const iArc  = iFrac  * circumference;
+      const ppArc = ppFrac * circumference;
+
+      const donutP  = document.getElementById('donutPrincipal');
+      const donutI  = document.getElementById('donutInterest');
+      const donutPP = document.getElementById('donutPrepay');
+
+      donutP.setAttribute('stroke-dasharray',  `${pArc} ${circumference}`);
+      donutP.setAttribute('stroke-dashoffset', 0);
+
+      donutI.setAttribute('stroke-dasharray',  `${iArc} ${circumference}`);
+      donutI.setAttribute('stroke-dashoffset', -pArc);
+
+      donutPP.setAttribute('stroke-dasharray',  `${ppArc} ${circumference}`);
+      donutPP.setAttribute('stroke-dashoffset', -(pArc + iArc));
+
+      document.getElementById('donutLabel').textContent = fmtK(M);
+
+      // ── Early payoff banner ──
+      const originalMonths = term * 12;
+      const banner = document.getElementById('earlyPayoffBanner');
+      if (actualMonths < originalMonths) {
+        const saved = originalMonths - actualMonths;
+        const savedInterest = calcMonthly(P, rate, originalMonths) * originalMonths - P - totalInterest;
+        banner.innerHTML = `<strong>Loan paid off early!</strong> Your prepayments cut <strong>${fmtTerm(saved)}</strong> off your loan and save you <strong>${fmt(Math.abs(savedInterest))}</strong> in interest.`;
+        banner.classList.add('visible');
+      } else {
+        banner.classList.remove('visible');
+      }
+
+      // ── Chart ──
+      renderChart(monthlyRows, term);
+
+      // ── Table ──
+      renderTable(monthlyRows, term);
+    }
+
+    // ── Chart ──
+    function renderChart(monthlyRows, term) {
+      const yearlyRows = aggregateYearly(monthlyRows, term);
+      const chartWrap  = document.getElementById('chartWrap');
+      const maxTotal   = Math.max(...yearlyRows.map(r => r.payment + r.prepayment));
+      chartWrap.innerHTML = '';
+      yearlyRows.forEach(row => {
+        const total   = row.payment + row.prepayment;
+        const pW      = (row.principal  / maxTotal) * 100;
+        const iW      = (row.interest   / maxTotal) * 100;
+        const ppW     = (row.prepayment / maxTotal) * 100;
+        chartWrap.innerHTML += `
+          <div class="bar-row">
+            <span class="bar-label">Yr ${row.year}</span>
+            <div class="bar-track">
+              <div class="bar-principal" style="width:${pW}%"></div>
+              <div class="bar-interest"  style="width:${iW}%"></div>
+              <div class="bar-prepay"    style="width:${ppW}%"></div>
+            </div>
+          </div>`;
+      });
+      const hasPrepay = monthlyRows.some(r => r.prepayment > 0);
+      chartWrap.innerHTML += `<div class="legend">
+        <span><span class="legend-dot" style="background:#4299e1;"></span>Principal</span>
+        <span><span class="legend-dot" style="background:#fc8181;"></span>Interest</span>
+        ${hasPrepay ? '<span><span class="legend-dot" style="background:#68d391;"></span>Prepayment</span>' : ''}
+      </div>`;
+    }
+
+    // ── Table ──
+    let _lastMonthlyRows = [];
+    let _lastTerm = 30;
+
+    function renderTable(monthlyRows, term) {
+      // Allow calling with cached data
+      if (monthlyRows !== undefined) { _lastMonthlyRows = monthlyRows; _lastTerm = term; }
+      else { monthlyRows = _lastMonthlyRows; term = _lastTerm; }
+
+      const head  = document.getElementById('amortHead');
+      const tbody = document.getElementById('amortBody');
+      const note  = document.getElementById('prepayNote');
+      const btn   = document.getElementById('toggleBtn');
+
+      if (viewMode === 'yearly') {
+        note.style.display = 'none';
+        const yearlyRows = aggregateYearly(monthlyRows, term);
+        const display    = showAll ? yearlyRows : yearlyRows.slice(0, INITIAL_YEARLY);
+
+        head.innerHTML = `<tr>
+          <th>Year</th><th>Scheduled Pmt</th><th>Prepayment</th>
+          <th>Principal</th><th>Interest</th><th>Balance</th>
+        </tr>`;
+
+        tbody.innerHTML = '';
+        display.forEach(row => {
+          const pp = row.prepayment > 0 ? `<td class="prepay-sum">${fmt(row.prepayment)}</td>` : `<td>—</td>`;
+          tbody.innerHTML += `<tr>
+            <td>${row.year}</td>
+            <td>${fmt(row.payment)}</td>
+            ${pp}
+            <td>${fmt(row.principal)}</td>
+            <td>${fmt(row.interest)}</td>
+            <td>${fmt(row.balance)}</td>
+          </tr>`;
+        });
+
+        if (yearlyRows.length <= INITIAL_YEARLY) {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = 'block';
+          btn.textContent = showAll ? 'Show Less' : `Show All ${yearlyRows.length} Years`;
+        }
+
+      } else {
+        // Monthly view
+        note.style.display = 'block';
+        const display = showAll ? monthlyRows : monthlyRows.slice(0, INITIAL_MONTHLY);
+
+        head.innerHTML = `<tr>
+          <th>Month</th><th>Year</th><th>Scheduled Pmt</th>
+          <th class="prepay-cell">Prepay ($)</th>
+          <th>Principal</th><th>Interest</th><th>Balance</th>
+        </tr>`;
+
+        tbody.innerHTML = '';
+        display.forEach(row => {
+          const prepayVal = prepayments[row.idx] || '';
+          const hasVal    = prepayVal !== '' && prepayVal > 0;
+          tbody.innerHTML += `<tr>
+            <td>${row.month}</td>
+            <td>${row.year}</td>
+            <td>${fmt(row.payment)}</td>
+            <td class="prepay-cell">
+              <input
+                type="number"
+                class="prepay-input${hasVal ? ' has-value' : ''}"
+                min="0" step="100"
+                value="${hasVal ? prepayVal : ''}"
+                placeholder="0"
+                data-idx="${row.idx}"
+                onchange="onPrepayChange(this)"
+              >
+            </td>
+            <td>${fmt(row.principal)}</td>
+            <td>${fmt(row.interest)}</td>
+            <td>${fmt(row.balance)}</td>
+          </tr>`;
+        });
+
+        // If loan paid off early and not showing all, show a "paid off" row if the last shown row has 0 balance
+        const last = display[display.length - 1];
+        if (last && last.balance < 0.01 && monthlyRows.length < _lastTerm * 12) {
+          tbody.innerHTML += `<tr class="paid-off-row"><td colspan="7">Loan paid off!</td></tr>`;
+        }
+
+        const total = monthlyRows.length;
+        if (total <= INITIAL_MONTHLY) {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = 'block';
+          btn.textContent = showAll ? 'Show Less' : `Show ${total - display.length} More Months`;
+        }
+      }
+    }
+
+    // ── Prepayment change handler ──
+    function onPrepayChange(input) {
+      const idx = parseInt(input.dataset.idx);
+      const val = parseFloat(input.value) || 0;
+      if (val > 0) {
+        prepayments[idx] = val;
+        input.classList.add('has-value');
+      } else {
+        delete prepayments[idx];
+        input.classList.remove('has-value');
+      }
+      update();
+    }
+
+    // ── Sync range <-> number ──
+    function syncInputs(numberId, rangeId, displayId, format) {
+      const num  = document.getElementById(numberId);
+      const rng  = document.getElementById(rangeId);
+      const disp = document.getElementById(displayId);
+      num.addEventListener('input', () => {
+        rng.value = num.value;
+        disp.textContent = format(num.value);
+        resetPrepayments();
+        update();
+      });
+      rng.addEventListener('input', () => {
+        num.value = rng.value;
+        disp.textContent = format(rng.value);
+        resetPrepayments();
+        update();
+      });
+    }
+
+    syncInputs('amount', 'amountRange', 'amountDisplay', v => '$' + Number(v).toLocaleString());
+    syncInputs('rate',   'rateRange',   'rateDisplay',   v => parseFloat(v).toFixed(2) + '%');
+    syncInputs('term',   'termRange',   'termDisplay',   v => v + ' yrs');
+
+    document.getElementById('toggleBtn').addEventListener('click', () => {
+      showAll = !showAll;
+      renderTable();
+    });
+
+    update();
+  </script>
+</body>
+</html>

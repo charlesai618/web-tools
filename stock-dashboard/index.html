@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080c14;
+      --surface:  #0f1623;
+      --surface2: #151d2e;
+      --border:   #1e2d45;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --yellow:   #eab308;
+      --orange:   #f97316;
+      --blue:     #3b82f6;
+      --cyan:     #06b6d4;
+      --radius:   10px;
+    }
+
+    html { font-size: 14px; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo-wrap { display: flex; align-items: center; gap: 18px; }
+    .logo { font-size: 1.3rem; font-weight: 700; color: var(--blue); letter-spacing: -.5px; white-space: nowrap; }
+    .logo span { color: var(--text); }
+    .logo-tagline { font-size: 1.3rem; font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 0; }
+    .logo-tagline .tl-by { font-size: 0.75rem; font-weight: 400; color: var(--muted); margin-right: 6px; }
+    .logo-tagline .tl-charles { color: var(--text); }
+    .logo-tagline .tl-ai { color: var(--blue); display: inline-flex; align-items: center; }
+
+    .search-bar { display: flex; gap: 8px; flex: 1; max-width: 340px; }
+    .search-bar input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius); padding: 8px 14px;
+      font-size: 1rem; font-weight: 600; text-transform: uppercase; outline: none; transition: border-color .2s;
+    }
+    .search-bar input:focus { border-color: var(--blue); }
+    .search-bar input::placeholder { text-transform: none; font-weight: 400; color: var(--muted); }
+
+    .btn {
+      background: var(--blue); color: #fff; border: none; border-radius: var(--radius);
+      padding: 8px 18px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: opacity .2s; white-space: nowrap;
+    }
+    .btn:hover { opacity: .85; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .quick-tickers { display: flex; gap: 6px; flex-wrap: wrap; }
+    .qt {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      border-radius: 6px; padding: 5px 10px; font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .2s;
+    }
+    .qt:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    main { max-width: 1400px; margin: 0 auto; padding: 20px 24px 60px; }
+
+    #status-banner {
+      display: none; align-items: center; justify-content: center;
+      gap: 12px; padding: 60px 20px; font-size: 1rem; color: var(--muted);
+    }
+    .spinner {
+      width: 24px; height: 24px; border: 3px solid var(--border);
+      border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #error-msg {
+      display: none; background: #1a0a0a; border: 1px solid #7f1d1d;
+      color: var(--red); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px;
+    }
+    #dashboard { display: none; }
+
+    /* ── Security header ─────────────────────────────────────────────────── */
+    #sec-header {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    }
+    .sec-name { font-size: 1.05rem; font-weight: 600; }
+    .sec-ticker-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; font-size: .85rem; font-weight: 700; color: var(--blue); }
+    .sec-price { font-size: 1.8rem; font-weight: 700; }
+    .sec-change { font-size: 1rem; font-weight: 600; padding: 3px 10px; border-radius: 6px; }
+    .sec-change.up   { background: rgba(34,197,94,.12);  color: var(--green); }
+    .sec-change.down { background: rgba(239,68,68,.12);  color: var(--red); }
+    .sec-meta { margin-left: auto; display: flex; gap: 20px; flex-wrap: wrap; }
+    .meta-item { text-align: right; }
+    .meta-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    .meta-value { font-size: .92rem; font-weight: 600; }
+
+    /* ── Overall signal ──────────────────────────────────────────────────── */
+    #overall-signal {
+      border-radius: var(--radius); padding: 12px 20px; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 14px; font-weight: 700; font-size: 1rem;
+    }
+    .signal-label { font-size: .78rem; font-weight: 400; opacity: .8; }
+    .signal-counts { font-size: .85rem; font-weight: 600; opacity: .85; margin-left: auto; }
+
+    /* ── Cards ────────────────────────────────────────────────────────────── */
+    .cards-row { display: grid; gap: 12px; margin-bottom: 12px; }
+    .cards-row.four  { grid-template-columns: repeat(4, 1fr); }
+    .cards-row.three { grid-template-columns: repeat(3, 1fr); }
+    .cards-row.two   { grid-template-columns: 1fr 1fr; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+    .card-title { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 4px; }
+    .card-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 2px; }
+    .card-sub { font-size: .8rem; color: var(--muted); }
+    .pill { display: inline-block; border-radius: 20px; padding: 3px 12px; font-size: .75rem; font-weight: 700; }
+
+    /* ── What-is-this box ────────────────────────────────────────────────── */
+    .what-is {
+      font-size: .74rem; color: var(--muted); line-height: 1.5;
+      border-top: 1px solid var(--border); margin-top: 10px; padding-top: 8px;
+    }
+    .what-is strong { color: #94a3b8; }
+
+    /* ── Commentary / insight boxes ──────────────────────────────────────── */
+    .insight {
+      margin-top: 10px; padding: 9px 12px; border-radius: 7px;
+      font-size: .78rem; line-height: 1.55; border-left: 3px solid;
+    }
+    .insight.bear  { background: rgba(239,68,68,.08);   border-color: var(--red);    color: #fca5a5; }
+    .insight.bull  { background: rgba(34,197,94,.08);   border-color: var(--green);  color: #86efac; }
+    .insight.warn  { background: rgba(234,179,8,.08);   border-color: var(--yellow); color: #fde68a; }
+    .insight.info  { background: rgba(59,130,246,.08);  border-color: var(--blue);   color: #93c5fd; }
+    .insight.neut  { background: rgba(100,116,139,.08); border-color: var(--muted);  color: #94a3b8; }
+
+    /* ── Chart commentary ────────────────────────────────────────────────── */
+    .chart-insight {
+      margin: 8px 0 0; padding: 10px 14px; border-radius: 7px;
+      font-size: .78rem; line-height: 1.6; border-left: 3px solid;
+    }
+    .chart-insight.bear  { background: rgba(239,68,68,.07);   border-color: var(--red);    color: #fca5a5; }
+    .chart-insight.bull  { background: rgba(34,197,94,.07);   border-color: var(--green);  color: #86efac; }
+    .chart-insight.warn  { background: rgba(234,179,8,.07);   border-color: var(--yellow); color: #fde68a; }
+    .chart-insight.info  { background: rgba(59,130,246,.07);  border-color: var(--blue);   color: #93c5fd; }
+    .chart-insight.neut  { background: rgba(100,116,139,.07); border-color: var(--muted);  color: #94a3b8; }
+
+    /* ── MA table ────────────────────────────────────────────────────────── */
+    .ma-table { width: 100%; border-collapse: collapse; }
+    .ma-table th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .ma-table td { padding: 6px 0; font-size: .85rem; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .ma-table td:last-child { text-align: right; }
+
+    /* ── Options ─────────────────────────────────────────────────────────── */
+    .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .opt-item .opt-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .opt-item .opt-val   { font-size: 1rem; font-weight: 700; }
+    .opt-item .opt-sig   { font-size: .75rem; margin-top: 2px; }
+
+    /* ── Fear & Greed ────────────────────────────────────────────────────── */
+    #fg-gauge-container { position: relative; width: 140px; margin: 0 auto; }
+    #fg-needle {
+      position: absolute; bottom: 0; left: 50%; width: 2px; height: 62px;
+      background: white; transform-origin: bottom center;
+      transform: translateX(-50%) rotate(-90deg); transition: transform .6s ease; border-radius: 2px;
+    }
+    #fg-score-display  { text-align: center; font-size: 1.6rem; font-weight: 700; margin-top: 6px; }
+    #fg-rating-display { text-align: center; font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Chart cards ─────────────────────────────────────────────────────── */
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }
+    .chart-card-title { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+    .chart-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-left: auto; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--muted); }
+    .legend-dot  { width: 10px; height: 3px; border-radius: 2px; }
+
+    .chart-wrap { position: relative; }
+    .chart-wrap.price-h { height: 320px; }
+    .chart-wrap.small-h { height: 180px; }
+
+    /* ── Colours ─────────────────────────────────────────────────────────── */
+    .green  { color: var(--green); }  .red    { color: var(--red); }
+    .yellow { color: var(--yellow); } .blue   { color: var(--blue); }
+    .muted  { color: var(--muted); }
+
+    .bg-green  { background: rgba(34,197,94,.12);  color: var(--green); }
+    .bg-red    { background: rgba(239,68,68,.12);  color: var(--red); }
+    .bg-yellow { background: rgba(234,179,8,.12);  color: var(--yellow); }
+    .bg-blue   { background: rgba(59,130,246,.12); color: var(--blue); }
+
+    /* ── Fibonacci ───────────────────────────────────────────────────────── */
+    .fib-visual { position: relative; height: 46px; margin: 12px 0 18px; }
+    .fib-track  { position: absolute; left: 0; right: 0; top: 18px; height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--red), var(--orange), var(--yellow), #86efac, var(--green)); }
+    .fib-tick   { position: absolute; top: 10px; width: 2px; height: 24px; background: rgba(255,255,255,.25); transform: translateX(-50%); }
+    .fib-tick-label { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: .58rem; color: var(--muted); white-space: nowrap; }
+    .fib-current { position: absolute; top: 6px; width: 3px; height: 32px; background: #fff; border-radius: 2px; transform: translateX(-50%); box-shadow: 0 0 6px rgba(255,255,255,.5); }
+    .fib-current-label { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: .62rem; font-weight: 700; color: #fff; white-space: nowrap; }
+
+    /* ── ATM option summary bar ───────────────────────────────────────────── */
+    .atm-summary { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 14px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
+    .atm-item .atm-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+    .atm-item .atm-val   { font-size: 1rem; font-weight: 700; }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .cards-row.four  { grid-template-columns: repeat(2, 1fr); }
+      .cards-row.three { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 580px) {
+      .cards-row.four, .cards-row.three, .cards-row.two { grid-template-columns: 1fr; }
+      .sec-meta { margin-left: 0; }
+      main { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo">&#9650; Stock<span>Dash</span></div>
+    <div class="logo-tagline">
+      <span class="tl-by">Powered by</span>
+      <span class="tl-charles">Charles&nbsp;</span><span class="tl-ai"><svg viewBox="0 0 20 22" style="height:1em;width:auto;vertical-align:middle;margin-bottom:.1em;" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><polyline points="1,22 11,1 11,22 20,22"/><line x1="5.5" y1="13.5" x2="11" y2="13.5"/></svg><svg viewBox="0 0 10 22" style="height:1em;width:auto;vertical-align:middle;margin-bottom:.1em;" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><line x1="2" y1="1" x2="8" y2="1"/><line x1="5" y1="1" x2="5" y2="21"/><line x1="2" y1="21" x2="8" y2="21"/></svg></span>
+    </div>
+  </div>
+  <form class="search-bar" id="search-form" onsubmit="return false;">
+    <input id="ticker-input" type="text" placeholder="Enter ticker (e.g. AAPL)" maxlength="10" />
+    <button class="btn" id="search-btn" onclick="loadTicker()">Search</button>
+  </form>
+  <div class="quick-tickers">
+    <span class="qt" onclick="quickLoad('SPY')">SPY</span>
+    <span class="qt" onclick="quickLoad('QQQ')">QQQ</span>
+    <span class="qt" onclick="quickLoad('AAPL')">AAPL</span>
+    <span class="qt" onclick="quickLoad('TSLA')">TSLA</span>
+    <span class="qt" onclick="quickLoad('NVDA')">NVDA</span>
+    <span class="qt" onclick="quickLoad('MSFT')">MSFT</span>
+    <span class="qt" onclick="quickLoad('BTC-USD')">BTC</span>
+    <span class="qt" onclick="quickLoad('GLD')">GLD</span>
+  </div>
+</header>
+
+<main>
+  <div id="status-banner"><div class="spinner"></div><span id="status-text">Loading...</span></div>
+  <div id="error-msg"></div>
+
+  <div id="dashboard">
+
+    <!-- Security header -->
+    <div id="sec-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span class="sec-name" id="sec-name">—</span>
+          <span class="sec-ticker-badge" id="sec-ticker">—</span>
+          <span class="sec-ticker-badge" style="color:var(--muted)" id="sec-sector">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sec-price" id="sec-price">—</span>
+          <span class="sec-change" id="sec-change">—</span>
+        </div>
+      </div>
+      <div class="sec-meta">
+        <div class="meta-item"><div class="meta-label">Day Range</div><div class="meta-value" id="meta-day-range">—</div></div>
+        <div class="meta-item"><div class="meta-label">52-Week Range</div><div class="meta-value" id="meta-52w">—</div></div>
+        <div class="meta-item"><div class="meta-label">Volume</div><div class="meta-value" id="meta-vol">—</div></div>
+        <div class="meta-item"><div class="meta-label">Market Cap</div><div class="meta-value" id="meta-mktcap">—</div></div>
+        <div class="meta-item"><div class="meta-label">P/E</div><div class="meta-value" id="meta-pe">—</div></div>
+        <div class="meta-item"><div class="meta-label">Div Yield</div><div class="meta-value" id="meta-div">—</div></div>
+      </div>
+    </div>
+
+    <!-- Overall signal -->
+    <div id="overall-signal">
+      <div>
+        <div class="signal-label">Overall Technical Signal</div>
+        <div id="overall-text" style="font-size:1.3rem;">—</div>
+      </div>
+      <div class="signal-counts" id="signal-counts">—</div>
+    </div>
+
+    <!-- Row 1: RSI / MACD / ADX / Price Levels -->
+    <div class="cards-row four">
+
+      <!-- RSI -->
+      <div class="card">
+        <div class="card-title">RSI (14)</div>
+        <div class="card-value" id="rsi-val">—</div>
+        <div class="card-sub" id="rsi-sig">—</div>
+        <div style="margin-top:10px;background:var(--surface2);border-radius:6px;height:6px;overflow:hidden;">
+          <div id="rsi-bar" style="height:100%;border-radius:6px;transition:width .5s;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px;">
+          <span style="font-size:.65rem;color:var(--muted);">0</span>
+          <span style="font-size:.65rem;color:var(--green);">30</span>
+          <span style="font-size:.65rem;color:var(--red);">70</span>
+          <span style="font-size:.65rem;color:var(--muted);">100</span>
+        </div>
+        <div class="what-is">
+          <strong>What is RSI?</strong> The Relative Strength Index measures momentum on a 0–100 scale.
+          <strong style="color:var(--green);">Below 30</strong> = oversold (sellers may be exhausted),
+          <strong style="color:var(--red);">above 70</strong> = overbought (buyers may be exhausted).
+          The middle zone (30–70) is neutral territory.
+        </div>
+        <div class="insight" id="rsi-insight"></div>
+      </div>
+
+      <!-- MACD -->
+      <div class="card">
+        <div class="card-title">MACD (12, 26, 9)</div>
+        <div class="card-value" id="macd-val">—</div>
+        <div class="card-sub">Signal line: <span id="macd-sig-line">—</span></div>
+        <div class="card-sub">Histogram: <span id="macd-hist">—</span></div>
+        <div style="margin-top:8px;"><span class="pill" id="macd-pill">—</span></div>
+        <div class="what-is">
+          <strong>What is MACD?</strong> Compares a fast (12-day) and slow (26-day) moving average to detect momentum shifts.
+          When the MACD line crosses <strong style="color:var(--green);">above</strong> the signal line = bullish momentum building.
+          When it crosses <strong style="color:var(--red);">below</strong> = bearish momentum. The histogram shows the gap between them.
+        </div>
+        <div class="insight" id="macd-insight"></div>
+      </div>
+
+      <!-- ADX -->
+      <div class="card">
+        <div class="card-title">ADX (14)</div>
+        <div class="card-value" id="adx-val">—</div>
+        <div class="card-sub" id="adx-trend">—</div>
+        <div class="card-sub">+DI: <span id="adx-pdi">—</span> &nbsp; −DI: <span id="adx-mdi">—</span></div>
+        <div style="margin-top:8px;"><span class="pill" id="adx-pill">—</span></div>
+        <div class="what-is">
+          <strong>What is ADX?</strong> The Average Directional Index measures trend <em>strength</em> — not direction.
+          <strong style="color:var(--muted);">Below 20</strong> = no real trend (choppy),
+          <strong style="color:var(--blue);">25–50</strong> = strong trend,
+          <strong style="color:var(--yellow);">50+</strong> = very strong trend.
+          The +DI vs −DI lines reveal whether that trend is up or down.
+        </div>
+        <div class="insight" id="adx-insight"></div>
+      </div>
+
+      <!-- Price Levels -->
+      <div class="card">
+        <div class="card-title">Price Levels</div>
+        <div style="font-size:.82rem;display:grid;gap:5px;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;"><span class="muted">Open</span><span id="price-open">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span class="muted">Prev Close</span><span id="price-prev">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span class="muted">Day High</span><span class="green" id="price-high">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span class="muted">Day Low</span><span class="red" id="price-low">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span class="muted">52W High</span><span class="green" id="price-52h">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span class="muted">52W Low</span><span class="red" id="price-52l">—</span></div>
+        </div>
+        <div class="insight" id="price-insight"></div>
+      </div>
+
+    </div>
+
+    <!-- Row 2: Moving Averages / Options / Fear & Greed -->
+    <div class="cards-row three">
+
+      <!-- Moving Averages -->
+      <div class="card">
+        <div class="card-title">Moving Averages</div>
+        <table class="ma-table">
+          <thead><tr><th>Period</th><th>Value</th><th>vs Price</th><th>Signal</th></tr></thead>
+          <tbody id="ma-tbody"></tbody>
+        </table>
+        <div class="what-is" style="margin-top:10px;">
+          <strong>What are MAs?</strong> A moving average smooths out price noise. When price is
+          <strong style="color:var(--green);">above</strong> an MA, that timeframe is bullish.
+          <strong style="color:var(--red);">Below</strong> it = bearish.
+          Short MAs (5, 10) reflect recent momentum; long MAs (100, 200) reflect the bigger trend.
+          A <strong style="color:var(--green);">Golden Cross</strong> (MA50 crosses above MA200) is a strong bullish signal;
+          a <strong style="color:var(--red);">Death Cross</strong> (MA50 below MA200) is bearish.
+        </div>
+        <div class="insight" id="ma-insight"></div>
+      </div>
+
+      <!-- Options Data -->
+      <div class="card">
+        <div class="card-title">Options Data</div>
+        <div id="options-content">
+          <div class="opt-grid">
+            <div class="opt-item">
+              <div class="opt-label">Put/Call Ratio</div>
+              <div class="opt-val" id="opt-pcr">—</div>
+              <div class="opt-sig" id="opt-pcr-sig">—</div>
+            </div>
+            <div class="opt-item">
+              <div class="opt-label">Implied Volatility</div>
+              <div class="opt-val" id="opt-iv">—</div>
+              <div class="opt-sig" id="opt-iv-sig">—</div>
+            </div>
+            <div class="opt-item">
+              <div class="opt-label">Call Open Interest</div>
+              <div class="opt-val" id="opt-call-oi">—</div>
+            </div>
+            <div class="opt-item">
+              <div class="opt-label">Put Open Interest</div>
+              <div class="opt-val" id="opt-put-oi">—</div>
+            </div>
+            <div class="opt-item">
+              <div class="opt-label">Max Pain</div>
+              <div class="opt-val" id="opt-maxpain">—</div>
+            </div>
+            <div class="opt-item">
+              <div class="opt-label">Nearest Expiry</div>
+              <div class="opt-val" style="font-size:.85rem;" id="opt-expiry">—</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+            <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px;">PUT / CALL OI SPLIT</div>
+            <div style="background:var(--surface2);border-radius:6px;height:10px;overflow:hidden;display:flex;">
+              <div id="oi-put-bar"  style="background:var(--red);height:100%;transition:width .5s;"></div>
+              <div id="oi-call-bar" style="background:var(--green);height:100%;transition:width .5s;flex:1;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:.7rem;">
+              <span class="red">Puts <span id="oi-put-pct">—</span>%</span>
+              <span class="green">Calls <span id="oi-call-pct">—</span>%</span>
+            </div>
+          </div>
+          <div class="what-is">
+            <strong>Put/Call Ratio:</strong> &gt;1.0 = more puts than calls = traders are hedging or betting on a drop.
+            &lt;0.7 = more calls = bullish sentiment. Extreme readings can be <em>contrarian</em> signals.
+            <br><strong>Implied Volatility:</strong> How much the market expects the price to move. High IV = expensive options, fearful market. Low IV = calm market.
+            <br><strong>Max Pain:</strong> The price at which the most options expire worthless — market makers are incentivised to pin price here near expiry.
+          </div>
+          <div class="insight" id="options-insight"></div>
+        </div>
+        <div id="options-error" style="display:none;color:var(--muted);font-size:.82rem;"></div>
+      </div>
+
+      <!-- Fear & Greed -->
+      <div class="card" style="text-align:center;">
+        <div class="card-title" style="text-align:left;">Fear &amp; Greed Index</div>
+        <div id="fg-gauge-container">
+          <canvas id="fg-gauge" width="140" height="80"></canvas>
+          <div id="fg-needle"></div>
+        </div>
+        <div id="fg-score-display">—</div>
+        <div id="fg-rating-display">—</div>
+        <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:left;">
+          <div style="font-size:.72rem;"><div style="color:var(--red);font-weight:600;">0–25</div><div style="color:var(--muted);">Extreme Fear</div></div>
+          <div style="font-size:.72rem;"><div style="color:var(--orange);font-weight:600;">26–45</div><div style="color:var(--muted);">Fear</div></div>
+          <div style="font-size:.72rem;"><div style="color:var(--yellow);font-weight:600;">46–55</div><div style="color:var(--muted);">Neutral</div></div>
+          <div style="font-size:.72rem;"><div style="color:var(--green);font-weight:600;">56–100</div><div style="color:var(--muted);">Greed / Extreme Greed</div></div>
+        </div>
+        <div class="what-is" style="text-align:left;">
+          <strong>What is this?</strong> A composite of 7 market indicators (momentum, breadth, volatility, etc.).
+          Markets driven by <strong style="color:var(--red);">Extreme Fear</strong> have historically been good buying opportunities.
+          <strong style="color:var(--green);">Extreme Greed</strong> often signals the market is due for a pullback.
+          It is most useful as a <em>contrarian</em> tool.
+        </div>
+        <div class="insight" id="fg-insight" style="text-align:left;"></div>
+      </div>
+
+    </div>
+
+    <!-- Fibonacci Retracement -->
+    <div class="chart-card" style="margin-bottom:12px;">
+      <div class="chart-card-title">
+        Fibonacci Retracement
+        <span id="fib-trend-badge" style="margin-left:8px;font-size:.72rem;padding:2px 10px;border-radius:20px;font-weight:700;"></span>
+        <span style="margin-left:auto;font-size:.72rem;color:var(--muted);" id="fib-range-label">—</span>
+      </div>
+      <div class="fib-visual" id="fib-visual">
+        <div class="fib-track"></div>
+      </div>
+      <table class="ma-table">
+        <thead><tr><th>Level</th><th>Price</th><th>vs Current</th><th>Role</th></tr></thead>
+        <tbody id="fib-tbody"></tbody>
+      </table>
+      <div class="what-is" style="margin-top:10px;">
+        <strong>What is Fibonacci Retracement?</strong> Key price levels derived from the Fibonacci sequence. Traders watch these as natural support and resistance zones.
+        <strong style="color:var(--yellow);">38.2%, 50%, and 61.8%</strong> are the most significant levels.
+        A bounce off the <strong style="color:var(--green);">61.8% golden ratio</strong> level is one of the most reliable patterns in technical analysis.
+        Extensions (127.2%, 161.8%) project potential targets beyond the swing range.
+      </div>
+      <div class="insight" id="fib-insight"></div>
+    </div>
+
+    <!-- Price Chart -->
+    <div class="chart-card">
+      <div class="chart-card-title">
+        Price (90 days) + Moving Averages + Bollinger Bands
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#60a5fa;"></div>Price</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#facc15;"></div>MA20</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div>MA50</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#a855f7;"></div>MA200</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#94a3b8;"></div>BB Bands</div>
+        </div>
+      </div>
+      <div class="chart-wrap price-h"><canvas id="price-chart"></canvas></div>
+      <div class="chart-insight" id="price-chart-insight"></div>
+    </div>
+
+    <!-- Volume Chart -->
+    <div class="chart-card">
+      <div class="chart-card-title">Volume (90 days)</div>
+      <div class="chart-wrap small-h"><canvas id="vol-chart"></canvas></div>
+      <div class="chart-insight" id="vol-chart-insight"></div>
+    </div>
+
+    <!-- RSI + MACD -->
+    <div class="cards-row two">
+      <div class="chart-card" style="margin-bottom:0;">
+        <div class="chart-card-title">
+          RSI (14)
+          <span style="margin-left:auto;font-size:.72rem;color:var(--muted);">Oversold &lt;30 · Overbought &gt;70</span>
+        </div>
+        <div class="chart-wrap small-h"><canvas id="rsi-chart"></canvas></div>
+        <div class="chart-insight" id="rsi-chart-insight"></div>
+      </div>
+      <div class="chart-card" style="margin-bottom:0;">
+        <div class="chart-card-title">
+          MACD (12, 26, 9)
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#60a5fa;"></div>MACD</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div>Signal</div>
+          </div>
+        </div>
+        <div class="chart-wrap small-h"><canvas id="macd-chart"></canvas></div>
+        <div class="chart-insight" id="macd-chart-insight"></div>
+      </div>
+    </div>
+
+    <!-- ATM 1-Day Option History -->
+    <div class="chart-card">
+      <div class="chart-card-title" style="flex-wrap:wrap;gap:8px;">
+        1-Day ATM Straddle — Theoretical vs Realized Move
+        <div class="chart-legend" style="margin-left:0;">
+          <div class="legend-item"><div class="legend-dot" style="background:#a855f7;"></div>Theoretical Straddle</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.7);"></div>Realized Move</div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:.72rem;color:var(--muted);">HV Window:</span>
+          <div style="display:flex;gap:4px;">
+            <button class="atm-preset" data-hv="5"  style="padding:2px 8px;font-size:.72rem;font-weight:600;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;">5d</button>
+            <button class="atm-preset" data-hv="10" style="padding:2px 8px;font-size:.72rem;font-weight:600;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;">10d</button>
+            <button class="atm-preset" data-hv="20" style="padding:2px 8px;font-size:.72rem;font-weight:600;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;">20d</button>
+            <button class="atm-preset" data-hv="30" style="padding:2px 8px;font-size:.72rem;font-weight:600;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;border-color:var(--blue);color:var(--blue);">30d</button>
+          </div>
+          <input type="number" id="atm-lookback" min="2" max="60" value="30"
+            style="width:52px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 7px;font-size:.8rem;text-align:center;outline:none;">
+          <span style="font-size:.72rem;color:var(--muted);">days</span>
+        </div>
+      </div>
+      <div class="atm-summary" id="atm-summary">
+        <div class="atm-item"><div class="atm-label">Nearest Expiry</div><div class="atm-val" id="atm-expiry">—</div></div>
+        <div class="atm-item"><div class="atm-label">ATM Strike</div><div class="atm-val" id="atm-strike">—</div></div>
+        <div class="atm-item"><div class="atm-label">Call Mid</div><div class="atm-val green" id="atm-call-mid">—</div></div>
+        <div class="atm-item"><div class="atm-label">Put Mid</div><div class="atm-val red" id="atm-put-mid">—</div></div>
+        <div class="atm-item"><div class="atm-label">Straddle</div><div class="atm-val yellow" id="atm-straddle-val">—</div></div>
+        <div class="atm-item"><div class="atm-label">ATM IV</div><div class="atm-val" id="atm-iv-val">—</div></div>
+      </div>
+      <div class="chart-wrap small-h"><canvas id="atm-chart"></canvas></div>
+      <div class="what-is" style="margin-top:10px;">
+        <strong>What is a 1-Day ATM Straddle?</strong> Buying both an ATM call and put captures the next day's move. The <strong style="color:#a855f7;">theoretical price</strong> is computed via Black-Scholes using 30-day historical volatility with T=1 trading day.
+        <strong style="color:rgba(59,130,246,0.9);">Realized move</strong> is the actual next-day absolute price change.
+        When <strong style="color:#a855f7;">theoretical &gt; realized</strong>: options were overpriced — sellers won.
+        When <strong style="color:rgba(59,130,246,0.9);">realized &gt; theoretical</strong>: the actual move beat what options priced in — buyers won.
+      </div>
+      <div class="chart-insight" id="atm-chart-insight"></div>
+    </div>
+
+  </div><!-- /#dashboard -->
+</main>
+
+<script>
+  let priceChart, volChart, rsiChart, macdChart, atmChart;
+  let _atmData = null;   // stored for lookback re-renders
+
+  document.getElementById('ticker-input').addEventListener('keydown', e => { if (e.key === 'Enter') loadTicker(); });
+  function quickLoad(sym) { document.getElementById('ticker-input').value = sym; loadTicker(); }
+
+  async function loadTicker() {
+    const raw = document.getElementById('ticker-input').value.trim().toUpperCase();
+    if (!raw) return;
+    setLoading(true); hideError();
+    document.getElementById('dashboard').style.display = 'none';
+    try {
+      const res  = await fetch(`/api/stock/${encodeURIComponent(raw)}`);
+      const data = await res.json();
+      if (!res.ok || data.error) { showError(data.error || 'Failed to fetch data.'); return; }
+      render(data);
+      document.getElementById('dashboard').style.display = 'block';
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally { setLoading(false); }
+  }
+
+  function render(d) {
+    renderHeader(d);
+    renderSignal(d);
+    renderRSI(d);
+    renderMACD(d);
+    renderADX(d);
+    renderPriceLevels(d);
+    renderMovingAverages(d);
+    renderOptions(d);
+    renderFearGreed(d.fear_greed);
+    renderFibonacci(d.fibonacci);
+    renderCharts(d);
+    renderChartInsights(d);
+    renderATMSection(d);
+  }
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  function renderHeader(d) {
+    setText('sec-name', d.name); setText('sec-ticker', d.ticker); setText('sec-sector', d.sector || 'N/A');
+    setText('sec-price', fmt(d.price));
+    const chgEl = document.getElementById('sec-change');
+    const up = d.change >= 0;
+    chgEl.textContent = `${up?'+':''}${fmt(d.change)} (${up?'+':''}${fmt(d.change_pct)}%)`;
+    chgEl.className   = `sec-change ${up?'up':'down'}`;
+    setText('meta-day-range', `${fmt(d.day_low)} – ${fmt(d.day_high)}`);
+    setText('meta-52w',       `${fmt(d.week_52_low)} – ${fmt(d.week_52_high)}`);
+    setText('meta-vol',       fmtVol(d.volume));
+    setText('meta-mktcap',    fmtCap(d.market_cap));
+    setText('meta-pe',        d.pe_ratio != null ? d.pe_ratio : 'N/A');
+    setText('meta-div',       d.dividend_yield != null ? d.dividend_yield + '%' : 'N/A');
+  }
+
+  // ── Overall signal ────────────────────────────────────────────────────────
+  function renderSignal(d) {
+    const el = document.getElementById('overall-signal');
+    const sig = d.overall_signal;
+    const map = {
+      'STRONG SELL': ['#1a0808','#7f1d1d','var(--red)'],
+      'SELL':        ['#150b08','#7c2d12','var(--orange)'],
+      'NEUTRAL':     ['#0f1210','#1f3821','var(--yellow)'],
+      'BUY':         ['#081508','#14532d','var(--green)'],
+      'STRONG BUY':  ['#061608','#166534','var(--green)'],
+    };
+    const [bg, border, color] = map[sig] || map['NEUTRAL'];
+    el.style.background = bg; el.style.border = `1px solid ${border}`; el.style.color = color;
+    document.getElementById('overall-text').textContent = sig;
+    setText('signal-counts', `${d.buy_count} Buy · ${d.sell_count} Sell signals`);
+  }
+
+  // ── RSI ───────────────────────────────────────────────────────────────────
+  function renderRSI(d) {
+    const rsi = d.rsi;
+    const v   = rsi.value;
+    const col = v < 30 ? 'var(--green)' : v > 70 ? 'var(--red)' : 'var(--yellow)';
+
+    const valEl = document.getElementById('rsi-val');
+    valEl.textContent = v != null ? v.toFixed(1) : '—';
+    valEl.style.color = col;
+
+    const sigEl = document.getElementById('rsi-sig');
+    sigEl.textContent = rsi.signal;
+    sigEl.className   = 'card-sub ' + signalClass(rsi.signal);
+
+    document.getElementById('rsi-bar').style.width      = (v || 0) + '%';
+    document.getElementById('rsi-bar').style.background = col;
+
+    // Insight
+    let tone, msg;
+    if      (v < 20) { tone='bull'; msg=`RSI is at ${v.toFixed(1)} — deep in extreme oversold territory (below 20). Selling pressure has been severe. While this can precede a sharp bounce, in a strong downtrend it may persist. Watch for RSI to reclaim 30 as the first sign of recovery.`; }
+    else if (v < 30) { tone='bull'; msg=`RSI at ${v.toFixed(1)} is approaching oversold (the 30 threshold). This means selling pressure has been heavy and the asset may be undervalued in the short term. A bounce is possible, but wait for confirmation — oversold alone is not a buy signal in a downtrend.`; }
+    else if (v < 40) { tone='bear'; msg=`RSI at ${v.toFixed(1)} sits in bearish territory (30–40). Momentum favours the sellers. The asset is weakening but has not reached oversold levels yet. This zone often appears mid-way through a decline.`; }
+    else if (v < 60) { tone='neut'; msg=`RSI at ${v.toFixed(1)} is in neutral territory (40–60). There is no strong momentum advantage for either buyers or sellers. Price direction is likely being driven by broader news or macro factors rather than momentum alone.`; }
+    else if (v < 70) { tone='bull'; msg=`RSI at ${v.toFixed(1)} is in bullish territory (60–70). Buyers have the upper hand and momentum is positive. This zone is healthy for an uptrend and does not yet signal overextension.`; }
+    else if (v < 80) { tone='warn'; msg=`RSI at ${v.toFixed(1)} has entered overbought territory (above 70). The asset has run hard and buyers may be getting exhausted. A pullback or consolidation is increasingly likely, though overbought conditions can persist in strong uptrends.`; }
+    else             { tone='bear'; msg=`RSI at ${v.toFixed(1)} is in extreme overbought territory (above 80). The asset is heavily extended to the upside. This level of momentum is rarely sustained — a meaningful pullback is likely in the near term.`; }
+
+    setInsight('rsi-insight', tone, msg);
+  }
+
+  // ── MACD ──────────────────────────────────────────────────────────────────
+  function renderMACD(d) {
+    const mac = d.macd;
+    const valEl = document.getElementById('macd-val');
+    valEl.textContent = mac.value != null ? mac.value.toFixed(2) : '—';
+    valEl.style.color = mac.value >= 0 ? 'var(--green)' : 'var(--red)';
+    setText('macd-sig-line', mac.signal_line != null ? mac.signal_line.toFixed(2) : '—');
+    const histEl = document.getElementById('macd-hist');
+    histEl.textContent = mac.histogram != null ? mac.histogram.toFixed(2) : '—';
+    histEl.style.color = mac.histogram >= 0 ? 'var(--green)' : 'var(--red)';
+    setPill('macd-pill', mac.signal);
+
+    const v = mac.value, h = mac.histogram, sig = mac.signal_line;
+    let tone, msg;
+    const aboveZero = v > 0;
+    const bullCross  = mac.signal === 'BUY';
+    const histGrow   = h > 0; // histogram expanding bullishly
+
+    if (bullCross && aboveZero) {
+      tone='bull'; msg=`MACD (${v.toFixed(2)}) is above both zero and the signal line — a double bullish confirmation. Upward momentum is building. The positive histogram (${h.toFixed(2)}) means the gap is widening, strengthening the buy signal.`;
+    } else if (bullCross && !aboveZero) {
+      tone='warn'; msg=`MACD line (${v.toFixed(2)}) has crossed above the signal line (bullish crossover), but both remain below zero — meaning this is a potential early recovery, not yet a confirmed uptrend. Watch to see if MACD crosses above zero for stronger confirmation.`;
+    } else if (!bullCross && !aboveZero) {
+      tone='bear'; msg=`MACD (${v.toFixed(2)}) is below the signal line and below zero — a bearish double confirmation. Downward momentum is dominant. The negative histogram (${h.toFixed(2)}) shows the gap is ${Math.abs(h) > 2 ? 'widening — sellers accelerating' : 'narrowing — bearish momentum may be slowing'}.`;
+    } else {
+      tone='warn'; msg=`MACD (${v.toFixed(2)}) is above zero but has crossed below the signal line (bearish crossover). The broader trend is still technically positive (above zero), but short-term momentum is fading. A potential pullback may be forming.`;
+    }
+    setInsight('macd-insight', tone, msg);
+  }
+
+  // ── ADX ───────────────────────────────────────────────────────────────────
+  function renderADX(d) {
+    const adx = d.adx;
+    const valEl = document.getElementById('adx-val');
+    valEl.textContent = adx.value != null ? adx.value.toFixed(1) : '—';
+    valEl.style.color = adx.value > 25 ? 'var(--blue)' : 'var(--muted)';
+    setText('adx-trend', adx.trend);
+    setText('adx-pdi', adx.plus_di  != null ? adx.plus_di.toFixed(1) : '—');
+    setText('adx-mdi', adx.minus_di != null ? adx.minus_di.toFixed(1) : '—');
+
+    const dirLabel = adx.plus_di > adx.minus_di ? 'BUY' : 'SELL';
+    setPill('adx-pill', dirLabel);
+
+    const v = adx.value, pdi = adx.plus_di, mdi = adx.minus_di;
+    let tone, msg;
+    const bullDir = pdi > mdi;
+    const dirStr  = bullDir ? 'bullish (+DI above −DI)' : 'bearish (−DI above +DI)';
+
+    if      (v < 15)  { tone='neut'; msg=`ADX at ${v.toFixed(1)} — extremely weak or no trend. Price is in a choppy, range-bound state. Most trend-following signals are unreliable in this environment. Wait for ADX to rise above 20 before trusting any directional signal.`; }
+    else if (v < 20)  { tone='neut'; msg=`ADX at ${v.toFixed(1)} indicates a weak trend. The market lacks clear directional conviction. The current direction is ${dirStr}, but low ADX means this could reverse easily.`; }
+    else if (v < 25)  { tone='info'; msg=`ADX at ${v.toFixed(1)} is just below the key 25 threshold. A trend may be forming. Direction is ${dirStr}. If ADX breaks above 25, it would confirm a proper trend is underway.`; }
+    else if (v < 40)  { tone=bullDir?'bull':'bear'; msg=`ADX at ${v.toFixed(1)} confirms a strong, established ${bullDir?'bullish':'bearish'} trend (+DI ${pdi.toFixed(1)} vs −DI ${mdi.toFixed(1)}). Trend-following strategies work well here. The current direction has conviction behind it.`; }
+    else if (v < 60)  { tone=bullDir?'bull':'bear'; msg=`ADX at ${v.toFixed(1)} signals a very strong trend in the ${bullDir?'bullish':'bearish'} direction. The momentum is powerful but may be entering late-stage territory — very strong trends often precede reversals or exhaustion.`; }
+    else              { tone='warn'; msg=`ADX at ${v.toFixed(1)} is extremely high — this level of trend strength is unusual and rarely sustainable. Prepare for potential trend exhaustion or a sharp reversal, regardless of direction.`; }
+
+    setInsight('adx-insight', tone, msg);
+  }
+
+  // ── Price Levels ──────────────────────────────────────────────────────────
+  function renderPriceLevels(d) {
+    setText('price-open', fmt(d.open)); setText('price-prev', fmt(d.prev_close));
+    setText('price-high', fmt(d.day_high)); setText('price-low', fmt(d.day_low));
+    setText('price-52h',  fmt(d.week_52_high)); setText('price-52l', fmt(d.week_52_low));
+
+    const price = d.price, hi52 = d.week_52_high, lo52 = d.week_52_low;
+    if (!hi52 || !lo52) return;
+    const pctFromHigh = ((hi52 - price) / hi52 * 100).toFixed(1);
+    const pctFromLow  = ((price - lo52) / lo52 * 100).toFixed(1);
+    const pos52 = ((price - lo52) / (hi52 - lo52) * 100).toFixed(0);
+    let tone, msg;
+    if (pctFromHigh < 5)       { tone='warn'; msg=`Price is within ${pctFromHigh}% of its 52-week high ($${fmt(hi52)}). It is trading near the top of its annual range — potential resistance ahead. Breakouts above the 52W high are powerful bullish signals, but failures here often trigger pullbacks.`; }
+    else if (pctFromHigh < 15) { tone='bull'; msg=`Price is ${pctFromHigh}% below its 52-week high ($${fmt(hi52)}) and ${pctFromLow}% above its 52-week low ($${fmt(lo52)}). It sits in the upper portion of the annual range (${pos52}th percentile), suggesting relative strength.`; }
+    else if (pctFromHigh < 30) { tone='neut'; msg=`Price is ${pctFromHigh}% off its 52-week high ($${fmt(hi52)}), sitting roughly mid-range. It has recovered ${pctFromLow}% off its 52-week low ($${fmt(lo52)}), suggesting mixed conditions — neither strong nor deeply distressed.`; }
+    else if (pctFromHigh < 50) { tone='bear'; msg=`Price is ${pctFromHigh}% below its 52-week high ($${fmt(hi52)}), in the lower half of its annual range. The security has given up significant ground. It sits ${pctFromLow}% above its 52-week low ($${fmt(lo52)}).`; }
+    else                        { tone='bear'; msg=`Price has fallen ${pctFromHigh}% from its 52-week high ($${fmt(hi52)}) — deeply in the lower range. It is only ${pctFromLow}% above the 52-week low ($${fmt(lo52)}). The security is under severe pressure and approaching multi-month lows.`; }
+
+    setInsight('price-insight', tone, msg);
+  }
+
+  // ── Moving Averages ───────────────────────────────────────────────────────
+  function renderMovingAverages(d) {
+    const tbody = document.getElementById('ma-tbody');
+    tbody.innerHTML = '';
+    const price = d.price;
+    Object.entries(d.moving_averages).forEach(([label, info]) => {
+      const diff    = price - info.value;
+      const diffPct = ((diff / info.value) * 100).toFixed(2);
+      const up      = diff >= 0;
+      const row     = document.createElement('tr');
+      row.innerHTML = `
+        <td style="color:var(--muted);">${label}</td>
+        <td>${fmt(info.value)}</td>
+        <td style="color:${up?'var(--green)':'var(--red)'};">${up?'+':''}${diffPct}%</td>
+        <td><span class="pill ${info.signal==='BUY'?'bg-green':'bg-red'}">${info.signal}</span></td>`;
+      tbody.appendChild(row);
+    });
+
+    // Insight
+    const mas = d.moving_averages;
+    const ma50  = mas['MA50']  ? mas['MA50'].value  : null;
+    const ma200 = mas['MA200'] ? mas['MA200'].value : null;
+    const ma20  = mas['MA20']  ? mas['MA20'].value  : null;
+    const buys  = d.buy_count, sells = d.sell_count;
+    const total = buys + sells;
+
+    let tone, msg;
+    if (ma50 && ma200) {
+      const golden = ma50 > ma200;
+      const crossStr = golden
+        ? `The MA50 ($${fmt(ma50)}) is above the MA200 ($${fmt(ma200)}) — a Golden Cross configuration, which is a long-term bullish structural signal.`
+        : `The MA50 ($${fmt(ma50)}) is below the MA200 ($${fmt(ma200)}) — a Death Cross configuration, which is a long-term bearish structural signal.`;
+
+      const priceBelowAll = sells === total;
+      if (priceBelowAll) {
+        tone='bear'; msg=`Price is below all ${total} moving averages — ${sells} Sell signals, 0 Buy. The security is in a clear downtrend across every timeframe. ${crossStr}`;
+      } else if (buys === total) {
+        tone='bull'; msg=`Price is above all ${total} moving averages — ${buys} Buy signals. The security is in a healthy uptrend across every timeframe. ${crossStr}`;
+      } else {
+        tone = sells > buys ? 'bear' : 'warn';
+        msg = `Price is above ${buys} and below ${sells} moving averages. Mixed signals suggest the security is in transition — likely between short-term weakness and a longer-term trend. ${crossStr}`;
+      }
+    } else {
+      tone = sells > buys ? 'bear' : buys > sells ? 'bull' : 'neut';
+      msg  = `${sells} out of ${total} moving averages are showing Sell signals. ${buys} are showing Buy signals.`;
+    }
+    setInsight('ma-insight', tone, msg);
+  }
+
+  // ── Options ───────────────────────────────────────────────────────────────
+  function renderOptions(d) {
+    const o = d.options;
+    if (o.error) {
+      document.getElementById('options-content').style.display = 'none';
+      const e = document.getElementById('options-error');
+      e.style.display = 'block'; e.textContent = 'Options data not available for this security.';
+      return;
+    }
+    document.getElementById('options-content').style.display = 'block';
+    document.getElementById('options-error').style.display   = 'none';
+
+    const pcr = o.put_call_ratio;
+    const pcrEl = document.getElementById('opt-pcr');
+    pcrEl.textContent = pcr != null ? pcr.toFixed(2) : '—';
+    pcrEl.style.color = pcr > 1.0 ? 'var(--red)' : pcr < 0.7 ? 'var(--green)' : 'var(--yellow)';
+    const pcrSig = document.getElementById('opt-pcr-sig');
+    pcrSig.textContent = o.pcr_signal || '—';
+    pcrSig.style.color = (o.pcr_signal||'').includes('BEAR') ? 'var(--red)' : (o.pcr_signal||'').includes('BULL') ? 'var(--green)' : 'var(--yellow)';
+
+    const ivEl = document.getElementById('opt-iv');
+    ivEl.textContent = o.implied_volatility != null ? o.implied_volatility.toFixed(1) + '%' : '—';
+    ivEl.style.color = o.implied_volatility > 20 ? 'var(--red)' : o.implied_volatility < 10 ? 'var(--green)' : 'var(--yellow)';
+    setText('opt-iv-sig',   o.iv_signal || '—');
+    setText('opt-call-oi',  fmtVol(o.call_oi));
+    setText('opt-put-oi',   fmtVol(o.put_oi));
+    setText('opt-maxpain',  o.max_pain != null ? '$' + fmt(o.max_pain) : '—');
+    setText('opt-expiry',   o.nearest_expiry || '—');
+
+    const total   = (o.call_oi||0) + (o.put_oi||0);
+    const putPct  = total > 0 ? ((o.put_oi/total)*100).toFixed(1) : 50;
+    const callPct = total > 0 ? ((o.call_oi/total)*100).toFixed(1) : 50;
+    document.getElementById('oi-put-bar').style.width = putPct + '%';
+    setText('oi-put-pct', putPct); setText('oi-call-pct', callPct);
+
+    // Insight
+    let tone, msg = '';
+    if (pcr != null) {
+      if (pcr > 1.5)       { tone='bear'; msg=`Put/Call ratio of ${pcr.toFixed(2)} is very elevated — traders are buying far more puts than calls. This signals strong bearish sentiment and/or aggressive hedging. As a contrarian note, extreme put buying can sometimes mark a sentiment bottom.`; }
+      else if (pcr > 1.2)  { tone='bear'; msg=`Put/Call ratio of ${pcr.toFixed(2)} leans significantly bearish. There is noticeably more downside protection being purchased. Market participants are hedging against further declines.`; }
+      else if (pcr > 1.0)  { tone='warn'; msg=`Put/Call ratio of ${pcr.toFixed(2)} is mildly bearish — slightly more puts than calls. Cautious sentiment, but not extreme. Traders are buying insurance without outright panic.`; }
+      else if (pcr < 0.5)  { tone='bull'; msg=`Put/Call ratio of ${pcr.toFixed(2)} is very low — traders are overwhelmingly buying calls over puts. Strong bullish sentiment. Note that extreme call buying can occasionally be a contrarian warning of complacency.`; }
+      else if (pcr < 0.7)  { tone='bull'; msg=`Put/Call ratio of ${pcr.toFixed(2)} is bullish — more calls than puts being purchased. Participants are positioning for upside. Healthy bullish sentiment.`; }
+      else                  { tone='neut'; msg=`Put/Call ratio of ${pcr.toFixed(2)} is roughly balanced — a neutral read on sentiment. Neither bears nor bulls have a strong dominance in options positioning.`; }
+
+      if (o.implied_volatility != null) {
+        if (o.implied_volatility > 25)      msg += ` IV at ${o.implied_volatility.toFixed(1)}% is elevated — options are expensive and the market is pricing in large future moves. This environment favours option sellers over buyers.`;
+        else if (o.implied_volatility < 12) msg += ` IV at ${o.implied_volatility.toFixed(1)}% is low — options are cheap. Good conditions for buying options as premium is affordable, but watch for a volatility spike.`;
+      }
+      if (o.max_pain != null) {
+        msg += ` Max pain is $${fmt(o.max_pain)} — this is the strike where option sellers face the least loss at expiry. Near expiration dates, price may gravitate toward this level.`;
+      }
+    } else {
+      tone='neut'; msg='Options data loaded. Interpret the metrics above using the explanations provided.';
+    }
+    setInsight('options-insight', tone, msg);
+  }
+
+  // ── Fear & Greed ──────────────────────────────────────────────────────────
+  function renderFearGreed(fg) {
+    const score  = fg && fg.score != null ? fg.score : null;
+    const rating = fg && fg.rating ? fg.rating : null;
+
+    const canvas = document.getElementById('fg-gauge');
+    const ctx    = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 140, 80);
+    const segments = [
+      { start: Math.PI,      end: Math.PI*1.20, color:'#ef4444' },
+      { start: Math.PI*1.20, end: Math.PI*1.45, color:'#f97316' },
+      { start: Math.PI*1.45, end: Math.PI*1.55, color:'#eab308' },
+      { start: Math.PI*1.55, end: Math.PI*1.80, color:'#86efac' },
+      { start: Math.PI*1.80, end: Math.PI*2,    color:'#22c55e' },
+    ];
+    segments.forEach(s => {
+      ctx.beginPath(); ctx.arc(70, 80, 60, s.start, s.end);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 12; ctx.stroke();
+    });
+
+    if (score != null) {
+      const deg = -180 + (score / 100) * 180;
+      document.getElementById('fg-needle').style.transform = `translateX(-50%) rotate(${deg}deg)`;
+    }
+
+    const scoreEl  = document.getElementById('fg-score-display');
+    const ratingEl = document.getElementById('fg-rating-display');
+    const source   = fg && fg.source ? fg.source : null;
+    if (score != null) {
+      scoreEl.textContent = score;
+      scoreEl.style.color = score<25?'var(--red)':score<45?'var(--orange)':score<55?'var(--yellow)':'var(--green)';
+      const ratingText = rating ? rating.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) : '';
+      ratingEl.textContent = ratingText + (source==='crypto' ? ' (Crypto F&G)' : '');
+      ratingEl.title = source==='crypto' ? 'CNN market index unavailable — showing Alternative.me Crypto Fear & Greed as proxy' : '';
+    } else {
+      scoreEl.textContent='N/A'; ratingEl.textContent='Data unavailable';
+    }
+
+    // Insight
+    let tone, msg;
+    if (score == null) {
+      tone='neut'; msg='Fear & Greed data is currently unavailable from both CNN and the fallback provider.';
+    } else if (score <= 15) {
+      tone='bull'; msg=`Score of ${score} — Extreme Fear. Investors are in panic mode, often capitulating (selling at the worst time). Historically, this is one of the better times to consider buying. Warren Buffett's maxim: "Be greedy when others are fearful." Contrarian buy signal.`;
+    } else if (score <= 25) {
+      tone='bull'; msg=`Score of ${score} — Extreme Fear territory. Market participants are overwhelmingly fearful. This level of pessimism has historically preceded market recoveries. However, fear can persist — wait for improving price action before acting.`;
+    } else if (score <= 45) {
+      tone='warn'; msg=`Score of ${score} — Fear. Sentiment is negative and cautious. The market is under stress but not in panic. Risk appetite is low. This can accompany continued weakness or mark a bottoming process.`;
+    } else if (score <= 55) {
+      tone='neut'; msg=`Score of ${score} — Neutral. Market sentiment is balanced between fear and greed. No strong contrarian signal either way. Price action and technical indicators matter more than sentiment right now.`;
+    } else if (score <= 75) {
+      tone='warn'; msg=`Score of ${score} — Greed. Investors are optimistic and risk appetite is elevated. Markets may continue to rise, but valuations are becoming stretched. Be cautious about chasing momentum at elevated levels.`;
+    } else {
+      tone='bear'; msg=`Score of ${score} — Extreme Greed. Euphoria is widespread — a classic contrarian warning. Historically, extreme greed readings have preceded pullbacks or corrections. This is not a time to be adding aggressive long exposure.`;
+    }
+    if (source === 'crypto') msg += ' Note: CNN market index was unavailable — this score is from the Alternative.me Crypto Fear & Greed index, which correlates with but is not identical to equity market sentiment.';
+    setInsight('fg-insight', tone, msg);
+  }
+
+  // ── Fibonacci ─────────────────────────────────────────────────────────────
+  function renderFibonacci(fib) {
+    if (!fib) return;
+
+    // Trend badge
+    const badge = document.getElementById('fib-trend-badge');
+    const up = fib.trend === 'uptrend';
+    badge.textContent = up ? '↑ Uptrend' : '↓ Downtrend';
+    badge.style.background = up ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
+    badge.style.color = up ? 'var(--green)' : 'var(--red)';
+
+    setText('fib-range-label', `1Y Swing: $${fmt(fib.swing_low)} – $${fmt(fib.swing_high)}`);
+
+    // Visual bar — only show levels within [swing_low, swing_high]
+    const visual = document.getElementById('fib-visual');
+    // Remove old markers (keep the track div)
+    [...visual.querySelectorAll('.fib-tick, .fib-current')].forEach(el => el.remove());
+
+    const rangeMin = fib.swing_low;
+    const rangeMax = fib.swing_high;
+    const rangeSpan = rangeMax - rangeMin;
+
+    fib.levels.filter(lv => lv.price >= rangeMin && lv.price <= rangeMax).forEach(lv => {
+      const pct = ((lv.price - rangeMin) / rangeSpan * 100).toFixed(2);
+      const tick = document.createElement('div');
+      tick.className = 'fib-tick';
+      tick.style.left = pct + '%';
+      const label = document.createElement('div');
+      label.className = 'fib-tick-label';
+      label.textContent = lv.label;
+      tick.appendChild(label);
+      visual.appendChild(tick);
+    });
+
+    // Current price marker
+    const curPct = Math.min(100, Math.max(0, ((fib.current_price - rangeMin) / rangeSpan * 100))).toFixed(2);
+    const curEl = document.createElement('div');
+    curEl.className = 'fib-current';
+    curEl.style.left = curPct + '%';
+    const curLabel = document.createElement('div');
+    curLabel.className = 'fib-current-label';
+    curLabel.textContent = '$' + fmt(fib.current_price);
+    curEl.appendChild(curLabel);
+    visual.appendChild(curEl);
+
+    // Table
+    const tbody = document.getElementById('fib-tbody');
+    tbody.innerHTML = '';
+    const cur = fib.current_price;
+
+    fib.levels.forEach(lv => {
+      const diff    = cur - lv.price;
+      const diffPct = ((diff / lv.price) * 100).toFixed(2);
+      const above   = lv.price > cur;
+      const isNearR = fib.nearest_resistance && lv.ratio === fib.nearest_resistance.ratio;
+      const isNearS = fib.nearest_support    && lv.ratio === fib.nearest_support.ratio;
+      const isExt   = lv.ratio > 1.0;
+
+      let roleHtml = '';
+      if      (isNearR)  roleHtml = '<span class="pill bg-red"   style="font-size:.65rem;">Key Resistance</span>';
+      else if (isNearS)  roleHtml = '<span class="pill bg-green" style="font-size:.65rem;">Key Support</span>';
+      else if (above)    roleHtml = '<span style="color:var(--muted);font-size:.78rem;">Resistance</span>';
+      else if (isExt)    roleHtml = '<span style="color:var(--muted);font-size:.78rem;">Extension</span>';
+      else               roleHtml = '<span style="color:var(--muted);font-size:.78rem;">Support</span>';
+
+      const row = document.createElement('tr');
+      row.style.background = (isNearR || isNearS) ? 'rgba(255,255,255,.03)' : '';
+      row.innerHTML = `
+        <td style="color:var(--muted);">${lv.label}</td>
+        <td style="font-weight:${(isNearR||isNearS)?'700':'400'};">$${fmt(lv.price)}</td>
+        <td style="color:${above?'var(--red)':'var(--green)'};">${above?'+':''}${diffPct}%</td>
+        <td>${roleHtml}</td>`;
+      tbody.appendChild(row);
+    });
+
+    // Insight
+    const nr = fib.nearest_resistance;
+    const ns = fib.nearest_support;
+    let tone, msg;
+    const distR = nr ? ((nr.price - cur) / cur * 100).toFixed(1) : null;
+    const distS = ns ? ((cur - ns.price) / cur * 100).toFixed(1) : null;
+
+    if (nr && distR < 1.5) {
+      tone = 'warn';
+      msg = `Price ($${fmt(cur)}) is within ${distR}% of the ${nr.label} Fibonacci level ($${fmt(nr.price)}) — a key resistance zone. A rejection here would confirm the level is holding. A clean break and close above it would be a bullish signal.`;
+    } else if (ns && distS < 1.5) {
+      tone = 'warn';
+      msg = `Price ($${fmt(cur)}) is within ${distS}% of the ${ns.label} Fibonacci support level ($${fmt(ns.price)}). This is a critical zone to hold. A breakdown below it would open the door to the next support at ${fib.levels.find(l => l.price < ns.price) ? fib.levels.find(l => l.price < ns.price).label : 'lower levels'}.`;
+    } else if (nr && ns) {
+      const key = [0.382, 0.5, 0.618].includes(ns.ratio) ? 'key' : '';
+      tone = up ? 'bull' : 'bear';
+      msg = `Price ($${fmt(cur)}) is trading between the ${ns.label} ${key} support ($${fmt(ns.price)}, ${distS}% below) and the ${nr.label} resistance ($${fmt(nr.price)}, ${distR}% above). ${up ? 'Uptrend context: the ' + ns.label + ' level should act as a floor during pullbacks.' : 'Downtrend context: the ' + nr.label + ' level is overhead resistance limiting rallies.'}`;
+    } else {
+      tone = 'neut'; msg = `Fibonacci levels calculated from the 1-year swing range ($${fmt(fib.swing_low)} – $${fmt(fib.swing_high)}).`;
+    }
+    setInsight('fib-insight', tone, msg);
+  }
+
+  // ── ATM Math Helpers (client-side Black-Scholes) ──────────────────────────
+  function erfApprox(x) {
+    const t = 1 / (1 + 0.3275911 * Math.abs(x));
+    const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+    const r = 1 - p * Math.exp(-x * x);
+    return x >= 0 ? r : -r;
+  }
+  function normCdfJS(x) { return 0.5 * (1 + erfApprox(x / Math.sqrt(2))); }
+  function bsAtmStraddleJS(S, sigma, T, r) {
+    r = r || 0.04;
+    if (T <= 0 || sigma <= 0 || S <= 0) return null;
+    const sqrtT = Math.sqrt(T);
+    const d1 = (r + 0.5 * sigma * sigma) * T / (sigma * sqrtT);
+    const d2 = d1 - sigma * sqrtT;
+    const call = S * normCdfJS(d1) - S * Math.exp(-r * T) * normCdfJS(d2);
+    return call + (call - S + S * Math.exp(-r * T));
+  }
+  function computeTodayStraddleJS(extCloses, W, maxHV, todayPrice) {
+    // HV from last W returns ending at the final entry in extCloses (yesterday's close)
+    const endIdx = extCloses.length - 1;
+    const returns = [];
+    for (let k = endIdx - W + 1; k <= endIdx; k++) {
+      if (k >= 1 && extCloses[k] != null && extCloses[k-1] != null && extCloses[k-1] > 0)
+        returns.push(Math.log(extCloses[k] / extCloses[k-1]));
+    }
+    if (returns.length < Math.max(Math.floor(W * 0.8), 2)) return null;
+    const mean = returns.reduce((a,b) => a+b, 0) / returns.length;
+    const vari = returns.reduce((a,b) => a+(b-mean)**2, 0) / (returns.length - 1);
+    const sigma = Math.sqrt(vari * 252);
+    const st = bsAtmStraddleJS(todayPrice, sigma, 1/252, 0.04);
+    return st != null ? Math.round(st * 100) / 100 : null;
+  }
+
+  function computeStraddlesJS(extCloses, W, maxHV) {
+    // extCloses layout: [maxHV warmup prices][91 display prices]
+    // S for display day j is always at index maxHV+j
+    // HV uses W log-returns ending at that same index
+    maxHV = maxHV || 60;
+    const straddles = [];
+    for (let j = 0; j < 90; j++) {
+      const idx = maxHV + j;
+      const S = extCloses[idx];
+      if (S == null || S <= 0) { straddles.push(null); continue; }
+      const returns = [];
+      // W returns ending at idx: log(extCloses[k] / extCloses[k-1]) for k = idx-W+1..idx
+      for (let k = idx - W + 1; k <= idx; k++) {
+        if (k >= 1 && extCloses[k] != null && extCloses[k-1] != null && extCloses[k-1] > 0)
+          returns.push(Math.log(extCloses[k] / extCloses[k-1]));
+      }
+      const minObs = Math.max(Math.floor(W * 0.8), 2);
+      if (returns.length < minObs) { straddles.push(null); continue; }
+      const mean = returns.reduce((a,b) => a+b, 0) / returns.length;
+      const vari = returns.reduce((a,b) => a+(b-mean)**2, 0) / (returns.length - 1);
+      const sigma = Math.sqrt(vari * 252);
+      const st = bsAtmStraddleJS(S, sigma, 1/252, 0.04);
+      straddles.push(st != null ? Math.round(st * 100) / 100 : null);
+    }
+    return straddles;
+  }
+
+  // ── ATM Option Section ────────────────────────────────────────────────────
+  function renderATMSection(d) {
+    const o   = d.options || {};
+    const atm = d.atm_history;
+
+    // Current ATM summary bar
+    if (!o.error && o.nearest_expiry) {
+      setText('atm-expiry',      o.nearest_expiry || '—');
+      setText('atm-strike',      o.atm_strike != null ? '$' + fmt(o.atm_strike) : '—');
+      setText('atm-call-mid',    o.atm_call_mid  != null ? '$' + fmt(o.atm_call_mid)  : '—');
+      setText('atm-put-mid',     o.atm_put_mid   != null ? '$' + fmt(o.atm_put_mid)   : '—');
+      setText('atm-straddle-val',o.atm_straddle  != null ? '$' + fmt(o.atm_straddle)  : '—');
+      setText('atm-iv-val',      o.atm_iv        != null ? o.atm_iv + '%' : '—');
+    } else {
+      document.getElementById('atm-summary').style.display = 'none';
+    }
+
+    if (!atm) return;
+    _atmData = { atm, options: o };
+    renderATMChart(parseInt(document.getElementById('atm-lookback').value) || 30);
+  }
+
+  function renderATMChart(hvWindow) {
+    if (!_atmData) return;
+    const { atm, options: o } = _atmData;
+
+    hvWindow = Math.min(Math.max(hvWindow, 2), atm.max_hv || 60);
+
+    // Recompute straddles client-side using the chosen HV window
+    const extCloses    = atm.extended_closes;
+    const maxHV        = atm.max_hv || 60;
+    const computedStraddles = computeStraddlesJS(extCloses, hvWindow, maxHV);
+    const todayStraddle = atm.today_date
+      ? computeTodayStraddleJS(extCloses, hvWindow, maxHV, atm.today_price)
+      : null;
+
+    // Append today's point (straddle only — realized unknown)
+    const displayDates    = atm.today_date ? [...atm.dates, atm.today_date] : atm.dates;
+    const displayStraddles = atm.today_date ? [...computedStraddles, todayStraddle] : computedStraddles;
+    const displayRealized = atm.today_date ? [...atm.realized, null] : atm.realized;
+
+    // Update preset button styles
+    document.querySelectorAll('.atm-preset').forEach(btn => {
+      const active = parseInt(btn.dataset.hv) === hvWindow;
+      btn.style.borderColor = active ? 'var(--blue)' : 'var(--border)';
+      btn.style.color       = active ? 'var(--blue)' : 'var(--muted)';
+    });
+
+    // Draw chart
+    if (atmChart) atmChart.destroy();
+    const gridColor = 'rgba(255,255,255,0.04)';
+    const tickColor = '#475569';
+    const baseFont  = { family: 'Segoe UI, system-ui, sans-serif', size: 11 };
+    const tooltip   = () => ({ backgroundColor:'#1e293b', borderColor:'#334155', borderWidth:1, titleColor:'#94a3b8', bodyColor:'#e2e8f0' });
+
+    atmChart = new Chart(document.getElementById('atm-chart'), {
+      type: 'bar',
+      data: { labels: displayDates, datasets: [
+        { type: 'line', label: 'Theoretical Straddle ($)', data: displayStraddles,
+          borderColor: '#a855f7', borderWidth: 2, pointRadius: 0, fill: false, tension: .3, yAxisID: 'y' },
+        { label: 'Realized Move ($)', data: displayRealized,
+          backgroundColor: 'rgba(59,130,246,0.35)', borderColor: 'rgba(59,130,246,0.7)', borderWidth: 1, yAxisID: 'y' },
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { display: false }, tooltip: tooltip() },
+        scales: {
+          x: { ticks: { color: tickColor, font: baseFont, maxTicksLimit: 8 }, grid: { color: gridColor } },
+          y: { ticks: { color: tickColor, font: baseFont, callback: v => '$' + v.toFixed(2) }, grid: { color: gridColor } },
+        }
+      }
+    });
+
+    // Insight — use historical days only (exclude today which has no realized)
+    const straddles = computedStraddles.filter(v => v != null);
+    const realized  = atm.realized.filter(v => v != null);
+    if (!straddles.length) return;
+
+    const avgStr  = straddles.reduce((a,b)=>a+b,0) / straddles.length;
+    const avgReal = realized.reduce((a,b)=>a+b,0) / realized.length;
+    const ratio   = avgReal / avgStr;
+    const recent5Str  = computedStraddles.slice(-5).filter(v=>v!=null);
+    const recent5Real = atm.realized.slice(-5).filter(v=>v!=null);
+    const avgStr5  = recent5Str.reduce((a,b)=>a+b,0)  / (recent5Str.length||1);
+    const avgReal5 = recent5Real.reduce((a,b)=>a+b,0) / (recent5Real.length||1);
+
+    let tone, msg;
+    if (ratio > 1.2) {
+      tone = 'bull';
+      msg  = `Using ${hvWindow}-day HV: avg realized move ($${avgReal.toFixed(2)}) exceeded the theoretical straddle ($${avgStr.toFixed(2)}) by ${((ratio-1)*100).toFixed(0)}%. Options appear underpriced by this measure — straddle buyers would have profited on average.`;
+    } else if (ratio < 0.8) {
+      tone = 'bear';
+      msg  = `Using ${hvWindow}-day HV: avg realized move ($${avgReal.toFixed(2)}) was only ${(ratio*100).toFixed(0)}% of the theoretical straddle cost ($${avgStr.toFixed(2)}). Options appear expensive relative to actual volatility — sellers had the edge.`;
+    } else {
+      tone = 'neut';
+      msg  = `Using ${hvWindow}-day HV: realized moves ($${avgReal.toFixed(2)} avg) and theoretical straddle prices ($${avgStr.toFixed(2)} avg) are reasonably matched. Options look fairly priced relative to realized volatility.`;
+    }
+    msg += ` Recent 5-day avg: straddle $${avgStr5.toFixed(2)} vs realized $${avgReal5.toFixed(2)}.`;
+    if (o.atm_straddle != null) msg += ` Current ATM straddle (nearest expiry): $${fmt(o.atm_straddle)}.`;
+    setChartInsight('atm-chart-insight', tone, msg);
+  }
+
+  // HV window input listeners (set up once)
+  document.getElementById('atm-lookback').addEventListener('change', e => {
+    const v = parseInt(e.target.value);
+    if (v >= 2) renderATMChart(v);
+  });
+  document.querySelectorAll('.atm-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const hv = parseInt(btn.dataset.hv);
+      document.getElementById('atm-lookback').value = hv;
+      renderATMChart(hv);
+    });
+  });
+
+  // ── Charts ────────────────────────────────────────────────────────────────
+  function renderCharts(d) {
+    const cd = d.chart_data;
+    [priceChart, volChart, rsiChart, macdChart].forEach(c => c && c.destroy());
+
+    const gridColor = 'rgba(255,255,255,0.04)';
+    const tickColor = '#475569';
+    const baseFont  = { family: 'Segoe UI, system-ui, sans-serif', size: 11 };
+    const baseScales = () => ({
+      x: { ticks: { color: tickColor, font: baseFont, maxTicksLimit: 8 }, grid: { color: gridColor } },
+      y: { ticks: { color: tickColor, font: baseFont }, grid: { color: gridColor } },
+    });
+    const tooltip = () => ({
+      backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1,
+      titleColor: '#94a3b8', bodyColor: '#e2e8f0',
+    });
+
+    priceChart = new Chart(document.getElementById('price-chart'), {
+      type: 'line',
+      data: { labels: cd.dates, datasets: [
+        { label:'BB Upper',  data:cd.bb_upper, borderColor:'rgba(148,163,184,0.35)', borderWidth:1, borderDash:[3,3], pointRadius:0, fill:false, tension:.3 },
+        { label:'BB Lower',  data:cd.bb_lower, borderColor:'rgba(148,163,184,0.35)', borderWidth:1, borderDash:[3,3], pointRadius:0, fill:'-1', backgroundColor:'rgba(148,163,184,0.04)', tension:.3 },
+        { label:'MA200', data:cd.ma200, borderColor:'#a855f7', borderWidth:1.5, pointRadius:0, fill:false, tension:.3 },
+        { label:'MA50',  data:cd.ma50,  borderColor:'#f97316', borderWidth:1.5, pointRadius:0, fill:false, tension:.3 },
+        { label:'MA20',  data:cd.ma20,  borderColor:'#facc15', borderWidth:1.5, pointRadius:0, fill:false, tension:.3 },
+        { label:'Price', data:cd.close, borderColor:'#60a5fa', borderWidth:2, backgroundColor:'rgba(96,165,250,0.08)', pointRadius:0, fill:true, tension:.3 },
+      ]},
+      options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{legend:{display:false},tooltip:tooltip()}, scales:baseScales() }
+    });
+
+    volChart = new Chart(document.getElementById('vol-chart'), {
+      type: 'bar',
+      data: { labels: cd.dates, datasets: [{ label:'Volume', data:cd.volume, backgroundColor:'rgba(59,130,246,0.3)', borderColor:'rgba(59,130,246,0.6)', borderWidth:1 }] },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: { legend:{display:false} },
+        scales: {
+          x: { ticks:{color:tickColor,font:baseFont,maxTicksLimit:8}, grid:{color:gridColor} },
+          y: { ticks:{color:tickColor,font:baseFont,callback:v=>fmtVol(v)}, grid:{color:gridColor} }
+        }
+      }
+    });
+
+    rsiChart = new Chart(document.getElementById('rsi-chart'), {
+      type: 'line',
+      data: { labels: cd.dates, datasets: [{ label:'RSI', data:cd.rsi, borderColor:'#22d3ee', borderWidth:2, pointRadius:0, fill:false, tension:.3 }] },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: { legend:{display:false}, tooltip:tooltip() },
+        scales: { x:baseScales().x, y:{ min:0, max:100, ticks:{color:tickColor,font:baseFont}, grid:{color:gridColor} } }
+      }
+    });
+
+    const histColors = cd.macd_hist.map(v => v==null?'transparent':v>=0?'rgba(34,197,94,0.5)':'rgba(239,68,68,0.5)');
+    macdChart = new Chart(document.getElementById('macd-chart'), {
+      type: 'bar',
+      data: { labels: cd.dates, datasets: [
+        { type:'line', label:'MACD',   data:cd.macd,        borderColor:'#60a5fa', borderWidth:2, pointRadius:0, fill:false, tension:.3 },
+        { type:'line', label:'Signal', data:cd.macd_signal, borderColor:'#f97316', borderWidth:1.5, pointRadius:0, fill:false, tension:.3 },
+        { label:'Histogram', data:cd.macd_hist, backgroundColor:histColors, borderWidth:0 },
+      ]},
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:tooltip()}, scales:baseScales() }
+    });
+  }
+
+  // ── Chart-level commentary ────────────────────────────────────────────────
+  function renderChartInsights(d) {
+    const cd  = d.chart_data;
+    const mas = d.moving_averages;
+
+    // Price chart
+    const price  = d.price;
+    const ma20v  = mas['MA20']  ? mas['MA20'].value  : null;
+    const ma50v  = mas['MA50']  ? mas['MA50'].value  : null;
+    const ma200v = mas['MA200'] ? mas['MA200'].value : null;
+    const bb     = cd.bb_upper && cd.bb_lower ? { upper: cd.bb_upper.at(-1), lower: cd.bb_lower.at(-1), mid: cd.bb_mid.at(-1) } : null;
+
+    let priceTone, priceMsg = `Current price $${fmt(price)}.`;
+    const belowAll = [ma20v,ma50v,ma200v].every(m => m && price < m);
+    const aboveAll = [ma20v,ma50v,ma200v].every(m => m && price > m);
+
+    if (belowAll) {
+      priceTone='bear'; priceMsg=`Price ($${fmt(price)}) is below all three major moving averages — MA20 ($${fmt(ma20v)}), MA50 ($${fmt(ma50v)}), MA200 ($${fmt(ma200v)}). This is a textbook bearish alignment. Each moving average now acts as overhead resistance. The security is in a confirmed downtrend across all timeframes shown.`;
+    } else if (aboveAll) {
+      priceTone='bull'; priceMsg=`Price ($${fmt(price)}) is above all three major moving averages — MA20 ($${fmt(ma20v)}), MA50 ($${fmt(ma50v)}), MA200 ($${fmt(ma200v)}). This is a bullish alignment: the moving averages act as a support staircase beneath price. The uptrend is intact across all timeframes.`;
+    } else if (ma50v && ma200v) {
+      const aboveLong = price > ma200v;
+      priceTone='warn'; priceMsg=`Price ($${fmt(price)}) shows mixed MA positioning. It is ${price>ma20v?'above':'below'} MA20 ($${fmt(ma20v)}), ${price>ma50v?'above':'below'} MA50 ($${fmt(ma50v)}), and ${aboveLong?'above':'below'} MA200 ($${fmt(ma200v)}). ${aboveLong?'The long-term trend remains intact despite short-term weakness.':'Short-term and long-term trends are both pointing down — a challenging environment.'}`;
+    } else {
+      priceTone='neut'; priceMsg=`Price is at $${fmt(price)}.`;
+    }
+
+    if (bb) {
+      const nearUpper = price > bb.upper * 0.98;
+      const nearLower = price < bb.lower * 1.02;
+      if (nearUpper)      priceMsg += ` Price is near or touching the upper Bollinger Band ($${fmt(bb.upper)}) — indicating the asset may be overextended short-term. A pullback toward the middle band ($${fmt(bb.mid)}) is common.`;
+      else if (nearLower) priceMsg += ` Price is near the lower Bollinger Band ($${fmt(bb.lower)}) — indicating a potentially oversold short-term condition. A mean-reversion bounce toward the middle band ($${fmt(bb.mid)}) is common from this level.`;
+      else                priceMsg += ` Price is trading within the Bollinger Bands (upper: $${fmt(bb.upper)}, lower: $${fmt(bb.lower)}), not showing extreme extension in either direction.`;
+    }
+    setChartInsight('price-chart-insight', priceTone, priceMsg);
+
+    // Volume chart
+    const recentVols = cd.volume.slice(-10);
+    const avgVol10   = recentVols.reduce((a,b)=>a+b,0) / recentVols.length;
+    const avgVolAll  = cd.volume.reduce((a,b)=>a+b,0) / cd.volume.length;
+    const volRatio   = avgVol10 / avgVolAll;
+    let volTone, volMsg;
+    if (volRatio > 1.3)      { volTone='warn'; volMsg=`Recent volume (10-day avg: ${fmtVol(avgVol10)}) is ${((volRatio-1)*100).toFixed(0)}% above the 90-day average (${fmtVol(avgVolAll)}). Elevated volume increases the significance of recent price moves — large-volume moves tend to be more reliable and sustainable.`; }
+    else if (volRatio < 0.7) { volTone='neut'; volMsg=`Recent volume (10-day avg: ${fmtVol(avgVol10)}) is ${((1-volRatio)*100).toFixed(0)}% below the 90-day average (${fmtVol(avgVolAll)}). Low-volume moves are less reliable — they may lack conviction and are more prone to reversal.`; }
+    else                     { volTone='info'; volMsg=`Volume is running close to average. 10-day avg: ${fmtVol(avgVol10)} vs 90-day avg: ${fmtVol(avgVolAll)}. Normal participation — no unusual accumulation or distribution signal at this time.`; }
+    setChartInsight('vol-chart-insight', volTone, volMsg);
+
+    // RSI chart
+    const rsiVals  = cd.rsi.filter(v => v != null);
+    const rsiRecent = rsiVals.slice(-5);
+    const rsiTrend  = rsiRecent.length > 1 ? rsiRecent.at(-1) - rsiRecent[0] : 0;
+    const rsiNow    = d.rsi.value;
+    let rsiChartTone, rsiChartMsg;
+    const trendStr = rsiTrend > 2 ? 'trending upward (momentum building)' : rsiTrend < -2 ? 'trending downward (momentum fading)' : 'flattening (momentum neutral)';
+    if      (rsiNow < 30) { rsiChartTone='bull'; rsiChartMsg=`RSI has entered oversold territory (${rsiNow.toFixed(1)}) and is ${trendStr}. Oversold readings can persist in downtrends — the key signal to watch is RSI turning upward and crossing back above 30, which would suggest selling pressure is exhausting.`; }
+    else if (rsiNow > 70) { rsiChartTone='bear'; rsiChartMsg=`RSI is in overbought territory (${rsiNow.toFixed(1)}) and ${trendStr}. A cross back below 70 would be an early warning of momentum reversal. Overbought can last in strong uptrends, so look for a confirmed bearish divergence before fading the move.`; }
+    else                  { rsiChartTone='neut'; rsiChartMsg=`RSI is at ${rsiNow.toFixed(1)}, within the neutral 30–70 band, and is ${trendStr}. Watch for approaches to 70 (overbought) or 30 (oversold) for actionable signals. Divergences between RSI and price are also powerful early warning signals.`; }
+    setChartInsight('rsi-chart-insight', rsiChartTone, rsiChartMsg);
+
+    // MACD chart
+    const mac      = d.macd;
+    const histVals = cd.macd_hist.filter(v => v != null);
+    const histRecent5 = histVals.slice(-5);
+    const histChanging = histRecent5.length > 1 ? histRecent5.at(-1) - histRecent5[0] : 0;
+    const histDir = histChanging > 0 ? 'growing (momentum accelerating)' : histChanging < 0 ? 'shrinking (momentum decelerating)' : 'flat';
+    let macdChartTone, macdChartMsg;
+    if (mac.signal === 'BUY' && mac.value > 0)  { macdChartTone='bull'; macdChartMsg=`MACD is above both the signal line and the zero line — dual bullish confirmation. The histogram is ${histDir}. This configuration is the strongest bullish MACD setup: momentum is positive and accelerating.`; }
+    else if (mac.signal === 'BUY')               { macdChartTone='warn'; macdChartMsg=`MACD has crossed above the signal line (bullish crossover) but both remain below zero. This is an early recovery signal, not a confirmed uptrend. The histogram turning positive and MACD crossing zero would strengthen this signal considerably.`; }
+    else if (mac.signal === 'SELL' && mac.value < 0) { macdChartTone='bear'; macdChartMsg=`MACD is below both the signal line and zero — confirmed bearish momentum. The histogram is ${histDir}. ${histChanging < 0 ? 'The growing negative histogram means bearish momentum is accelerating.' : 'The shrinking histogram suggests bearish momentum may be slowing — watch for a potential crossover.'}`; }
+    else                                         { macdChartTone='warn'; macdChartMsg=`MACD is above zero but has crossed below its signal line — a bearish crossover warning. The broader trend (above zero) is still technically positive, but short-term momentum is fading. This pattern often precedes a pullback.`; }
+    setChartInsight('macd-chart-insight', macdChartTone, macdChartMsg);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setInsight(id, tone, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className   = `insight ${tone}`;
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function setChartInsight(id, tone, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className   = `chart-insight ${tone}`;
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val ?? '—'; }
+  function fmt(n)    { if (n==null) return '—'; return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtVol(n) { if (n==null) return '—'; n=Number(n); if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return n.toString(); }
+  function fmtCap(n) { if (n==null) return 'N/A'; n=Number(n); if(n>=1e12) return '$'+(n/1e12).toFixed(2)+'T'; if(n>=1e9) return '$'+(n/1e9).toFixed(2)+'B'; if(n>=1e6) return '$'+(n/1e6).toFixed(2)+'M'; return '$'+n; }
+  function signalClass(s) { if(!s) return ''; if(['OVERSOLD','BUY','STRONG BUY'].includes(s)) return 'green'; if(['OVERBOUGHT','SELL','STRONG SELL'].includes(s)) return 'red'; return 'yellow'; }
+  function setPill(id, signal) { const el=document.getElementById(id); if(!el) return; el.textContent=signal||'—'; el.className='pill '+(signal==='BUY'?'bg-green':signal==='SELL'?'bg-red':'bg-yellow'); }
+  function setLoading(on) { document.getElementById('status-banner').style.display=on?'flex':'none'; document.getElementById('search-btn').disabled=on; }
+  function showError(msg) { const e=document.getElementById('error-msg'); e.textContent=msg; e.style.display='block'; }
+  function hideError() { document.getElementById('error-msg').style.display='none'; }
+
+  // Auto-load SPY on startup
+  document.getElementById('ticker-input').value = 'SPY';
+  loadTicker();
+</script>
+</body>
+</html>

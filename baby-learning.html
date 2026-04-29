@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>宝宝学习乐园 Baby Learning</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root { --card: 158px; }
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #fce4ec 0%, #ede7f6 45%, #e0f7fa 100%);
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI', sans-serif;
+  overflow-x: hidden;
+  padding-bottom: 50px;
+}
+
+/* ── Floating background emojis ─────────────────────────── */
+.bubble {
+  position: fixed; pointer-events: none; z-index: 0;
+  animation: rise linear infinite;
+  font-size: 1.6rem; opacity: 0;
+}
+@keyframes rise {
+  0%   { transform: translateY(110vh) rotate(0deg);   opacity: 0; }
+  8%   { opacity: 0.45; }
+  92%  { opacity: 0.45; }
+  100% { transform: translateY(-120px) rotate(360deg); opacity: 0; }
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+header { text-align: center; padding: 28px 20px 8px; position: relative; z-index: 1; }
+
+h1 {
+  font-size: clamp(1.4rem, 5vw, 2.8rem);
+  background: linear-gradient(90deg, #ff6b9d, #b84cd4, #5b7ef5, #00bcd4, #ff9800, #ff6b9d);
+  background-size: 300%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 5s linear infinite;
+  margin-bottom: 6px;
+}
+@keyframes shimmer { to { background-position: 300% 50%; } }
+
+.subtitle { color: #999; font-size: 0.9rem; margin-bottom: 20px; }
+
+/* ── Music toggle ────────────────────────────────────────── */
+#music-btn {
+  position: fixed; top: 14px; right: 16px; z-index: 100;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: none; cursor: pointer; font-size: 1.3rem;
+  background: white; box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+  transition: transform 0.2s;
+}
+#music-btn:hover { transform: scale(1.12); }
+
+/* ── Tabs ────────────────────────────────────────────────── */
+.tabs { display: flex; justify-content: center; gap: 14px; padding: 0 16px 26px; position: relative; z-index: 1; }
+.tab-btn {
+  padding: 11px 26px; font-size: 1rem; font-weight: 700;
+  border: none; border-radius: 50px; cursor: pointer;
+  background: white; color: #bbb;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, #ff6b9d, #b84cd4);
+  color: white; transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(255,107,157,0.45);
+}
+
+/* ── Grid ────────────────────────────────────────────────── */
+.grid {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  justify-content: center; padding: 0 14px;
+  max-width: 1300px; margin: 0 auto;
+  position: relative; z-index: 1;
+}
+.hidden { display: none !important; }
+
+/* ── Card wrapper ────────────────────────────────────────── */
+.wrap {
+  width: var(--card); height: var(--card);
+  perspective: 1100px; flex-shrink: 0;
+  animation: pop-in 0.45s cubic-bezier(0.34,1.5,0.64,1) backwards;
+}
+@keyframes pop-in {
+  from { transform: scale(0.25) rotate(-15deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);      opacity: 1; }
+}
+
+/* ── 3-D flip card ───────────────────────────────────────── */
+.card {
+  width: 100%; height: 100%;
+  position: relative; transform-style: preserve-3d;
+  transition: transform 0.62s cubic-bezier(0.34, 1.3, 0.64, 1);
+  cursor: pointer; border-radius: 22px;
+  user-select: none; -webkit-user-select: none;
+}
+.card.flipped { transform: rotateY(180deg); }
+
+.face {
+  position: absolute; inset: 0; border-radius: 22px;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.16);
+  overflow: hidden;
+}
+.back-face { transform: rotateY(180deg); }
+
+/* Sound-pulse ring on card face */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0px rgba(255,107,157,.7), 0 8px 28px rgba(0,0,0,.16); }
+  70%  { box-shadow: 0 0 0 18px rgba(255,107,157,0), 0 8px 28px rgba(0,0,0,.16); }
+  100% { box-shadow: 0 0 0 0px rgba(255,107,157,0), 0 8px 28px rgba(0,0,0,.16); }
+}
+.card.pulsing .face { animation: pulse-ring 0.75s ease; }
+
+/* ── Number front ────────────────────────────────────────── */
+.num-front { color: white; }
+.num-arabic  { font-size: 3.8rem; font-weight: 900; line-height: 1; text-shadow: 2px 3px 6px rgba(0,0,0,.22); }
+.num-chinese { font-size: 1.05rem; font-weight: 600; opacity: .85; margin-top: 4px; }
+
+/* ── Number back ─────────────────────────────────────────── */
+.num-back { padding: 8px; }
+.emoji-grid {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; align-items: center;
+  flex: 1; max-width: 140px;
+}
+.item-label {
+  font-size: 0.62rem; font-weight: 700; color: white;
+  background: rgba(255,255,255,.28); border-radius: 20px;
+  padding: 2px 8px; white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+
+/* ── Letter front ────────────────────────────────────────── */
+.let-front { color: white; }
+.let-upper { font-size: 3.8rem; font-weight: 900; line-height: 1; text-shadow: 2px 3px 6px rgba(0,0,0,.22); }
+.let-lower { font-size: 2.4rem; font-weight: 700; opacity: .75; text-shadow: 1px 2px 4px rgba(0,0,0,.15); }
+
+/* ── Letter back ─────────────────────────────────────────── */
+.let-back { gap: 6px; }
+.let-emoji { font-size: 4rem; line-height: 1; }
+.let-word  { font-size: 0.92rem; font-weight: 700; color: white; text-shadow: 0 1px 3px rgba(0,0,0,.25); }
+
+/* ── Color cards ─────────────────────────────────────────── */
+.col-front { flex-direction: column; gap: 4px; }
+.col-name  { font-size: 2rem; font-weight: 900; color: white; text-shadow: 0 2px 8px rgba(0,0,0,.45); line-height: 1; }
+.col-zh    { font-size: 1rem; font-weight: 600; color: rgba(255,255,255,.85); text-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.col-back  { gap: 5px; }
+.col-emoji { font-size: 3.8rem; line-height: 1; }
+.col-item  { font-size: 0.88rem; font-weight: 700; color: white; text-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.col-item-zh { font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,.85); }
+
+/* ── Elsa bonus overlay ──────────────────────────────────── */
+#elsa-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #a8d8f8 0%, #1a6fc4 60%, #0a3a7a 100%);
+  cursor: pointer; animation: elsa-in 0.45s cubic-bezier(0.34,1.3,0.64,1);
+}
+#elsa-overlay.hidden { display: none; }
+@keyframes elsa-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+#elsa-img {
+  width: min(72vw, 360px); height: min(72vw, 360px);
+  object-fit: cover; border-radius: 50%;
+  border: 6px solid white;
+  box-shadow: 0 0 0 6px rgba(168,216,248,.5), 0 0 60px rgba(168,216,248,.7);
+  animation: elsa-glow 2s ease-in-out infinite;
+}
+#elsa-fallback {
+  width: min(72vw, 360px); height: min(72vw, 360px);
+  border-radius: 50%; border: 6px solid white;
+  background: linear-gradient(135deg, #a8d8f8, #4a90d9);
+  display: none; align-items: center; justify-content: center;
+  font-size: 7rem;
+  box-shadow: 0 0 0 6px rgba(168,216,248,.5), 0 0 60px rgba(168,216,248,.7);
+}
+@keyframes elsa-glow {
+  0%,100% { box-shadow: 0 0 0 6px rgba(168,216,248,.5), 0 0 60px rgba(168,216,248,.7); }
+  50%     { box-shadow: 0 0 0 10px rgba(168,216,248,.7), 0 0 100px rgba(168,216,248,.9); }
+}
+#elsa-name {
+  font-size: clamp(2.5rem, 9vw, 4.5rem); font-weight: 900;
+  color: white; letter-spacing: 6px; margin-top: 22px;
+  text-shadow: 0 0 30px rgba(168,216,248,.9), 2px 3px 8px rgba(0,30,80,.5);
+  animation: elsa-name-pulse 1.5s ease-in-out infinite;
+}
+@keyframes elsa-name-pulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.07); }
+}
+#elsa-hint { font-size: 0.9rem; color: rgba(255,255,255,.7); margin-top: 12px; }
+.sf {
+  position: absolute; pointer-events: none;
+  animation: sf-fall linear forwards;
+  font-size: 1.5rem; opacity: 0;
+}
+@keyframes sf-fall {
+  0%   { transform: translateY(-60px) rotate(0deg);   opacity: 0; }
+  10%  { opacity: .9; }
+  90%  { opacity: .9; }
+  100% { transform: translateY(105vh) rotate(540deg); opacity: 0; }
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  :root { --card: 128px; }
+  .num-arabic, .let-upper { font-size: 3rem; }
+  .let-lower { font-size: 2rem; }
+  .let-emoji { font-size: 3.3rem; }
+  .tab-btn { padding: 9px 18px; font-size: 0.9rem; }
+}
+@media (max-width: 340px) { :root { --card: 108px; } }
+</style>
+</head>
+<body>
+
+<button id="music-btn" title="Toggle music">🎵</button>
+
+<header>
+  <h1>🌟 宝宝学习乐园 · Baby Learning 🌟</h1>
+  <p class="subtitle">点击卡片学习数字和字母 · Tap cards to learn!</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tab-n"  onclick="showTab('numbers')">🔢 数字</button>
+  <button class="tab-btn"        id="tab-en" onclick="showTab('numbers-en')">🔢 Numbers</button>
+  <button class="tab-btn"        id="tab-c"  onclick="showTab('colors')">🎨 Colors 颜色</button>
+  <button class="tab-btn"        id="tab-l"  onclick="showTab('letters')">🔤 Letters 字母</button>
+</div>
+
+<div id="numbers"    class="grid"></div>
+<div id="numbers-en" class="grid hidden"></div>
+<div id="colors"     class="grid hidden"></div>
+<div id="letters"    class="grid hidden"></div>
+
+<!-- Elsa bonus overlay -->
+<div id="elsa-overlay" class="hidden" onclick="dismissElsa()">
+  <img id="elsa-img" src="" alt="Elsa"
+       onerror="this.style.display='none';document.getElementById('elsa-fallback').style.display='flex'">
+  <div id="elsa-fallback">❄️</div>
+  <div id="elsa-name">✨ Elsa! ✨</div>
+  <div id="elsa-hint">tap anywhere to continue</div>
+</div>
+
+<script>
+/* ═══════════════════════  DATA  ═══════════════════════════ */
+
+const NUMS = [
+  { n:1,  zh:'一',   e:'☀️', p:'一个太阳'   },
+  { n:2,  zh:'二',   e:'🐰', p:'两只兔子'   },
+  { n:3,  zh:'三',   e:'🍎', p:'三个苹果'   },
+  { n:4,  zh:'四',   e:'🦋', p:'四只蝴蝶'   },
+  { n:5,  zh:'五',   e:'⭐', p:'五颗星星'   },
+  { n:6,  zh:'六',   e:'🐟', p:'六条小鱼'   },
+  { n:7,  zh:'七',   e:'🌸', p:'七朵花朵'   },
+  { n:8,  zh:'八',   e:'🐝', p:'八只蜜蜂'   },
+  { n:9,  zh:'九',   e:'🍇', p:'九粒葡萄'   },
+  { n:10, zh:'十',   e:'🎈', p:'十个气球'   },
+  { n:11, zh:'十一', e:'🌙', p:'十一个月亮' },
+  { n:12, zh:'十二', e:'🍓', p:'十二颗草莓' },
+  { n:13, zh:'十三', e:'🐠', p:'十三条热带鱼'},
+  { n:14, zh:'十四', e:'🌺', p:'十四朵鲜花' },
+  { n:15, zh:'十五', e:'🍭', p:'十五个棒棒糖'},
+  { n:16, zh:'十六', e:'🐸', p:'十六只青蛙' },
+  { n:17, zh:'十七', e:'🍄', p:'十七朵蘑菇' },
+  { n:18, zh:'十八', e:'🌻', p:'十八朵向日葵'},
+  { n:19, zh:'十九', e:'🦊', p:'十九只小狐狸'},
+  { n:20, zh:'二十', e:'🍬', p:'二十颗糖果' },
+];
+
+const ENUMS = [
+  { n:1,  en:'One',       e:'☀️', p:'One Sun'              },
+  { n:2,  en:'Two',       e:'🐰', p:'Two Rabbits'          },
+  { n:3,  en:'Three',     e:'🍎', p:'Three Apples'         },
+  { n:4,  en:'Four',      e:'🦋', p:'Four Butterflies'     },
+  { n:5,  en:'Five',      e:'⭐', p:'Five Stars'           },
+  { n:6,  en:'Six',       e:'🐟', p:'Six Fish'             },
+  { n:7,  en:'Seven',     e:'🌸', p:'Seven Flowers'        },
+  { n:8,  en:'Eight',     e:'🐝', p:'Eight Bees'           },
+  { n:9,  en:'Nine',      e:'🍇', p:'Nine Grapes'          },
+  { n:10, en:'Ten',       e:'🎈', p:'Ten Balloons'         },
+  { n:11, en:'Eleven',    e:'🌙', p:'Eleven Moons'         },
+  { n:12, en:'Twelve',    e:'🍓', p:'Twelve Strawberries'  },
+  { n:13, en:'Thirteen',  e:'🐠', p:'Thirteen Fish'        },
+  { n:14, en:'Fourteen',  e:'🌺', p:'Fourteen Flowers'     },
+  { n:15, en:'Fifteen',   e:'🍭', p:'Fifteen Lollipops'    },
+  { n:16, en:'Sixteen',   e:'🐸', p:'Sixteen Frogs'        },
+  { n:17, en:'Seventeen', e:'🍄', p:'Seventeen Mushrooms'  },
+  { n:18, en:'Eighteen',  e:'🌻', p:'Eighteen Sunflowers'  },
+  { n:19, en:'Nineteen',  e:'🦊', p:'Nineteen Foxes'       },
+  { n:20, en:'Twenty',    e:'🍬', p:'Twenty Candies'       },
+];
+
+const LETS = [
+  { l:'A', w:'Apple',     zh:'苹果',   e:'🍎' }, { l:'B', w:'Bear',      zh:'熊',     e:'🐻' },
+  { l:'C', w:'Cat',       zh:'猫',     e:'🐱' }, { l:'D', w:'Dog',       zh:'狗',     e:'🐶' },
+  { l:'E', w:'Elephant',  zh:'大象',   e:'🐘' }, { l:'F', w:'Frog',      zh:'青蛙',   e:'🐸' },
+  { l:'G', w:'Giraffe',   zh:'长颈鹿', e:'🦒' }, { l:'H', w:'Horse',     zh:'马',     e:'🐴' },
+  { l:'I', w:'Ice Cream', zh:'冰淇淋', e:'🍦' }, { l:'J', w:'Jellyfish', zh:'水母',   e:'🪼' },
+  { l:'K', w:'Kangaroo',  zh:'袋鼠',   e:'🦘' }, { l:'L', w:'Lion',      zh:'狮子',   e:'🦁' },
+  { l:'M', w:'Monkey',    zh:'猴子',   e:'🐒' }, { l:'N', w:'Nest',      zh:'鸟巢',   e:'🪺' },
+  { l:'O', w:'Octopus',   zh:'章鱼',   e:'🐙' }, { l:'P', w:'Penguin',   zh:'企鹅',   e:'🐧' },
+  { l:'Q', w:'Queen',     zh:'女王',   e:'👸' }, { l:'R', w:'Rainbow',   zh:'彩虹',   e:'🌈' },
+  { l:'S', w:'Star',      zh:'星星',   e:'⭐' }, { l:'T', w:'Tiger',     zh:'老虎',   e:'🐯' },
+  { l:'U', w:'Umbrella',  zh:'雨伞',   e:'☂️' }, { l:'V', w:'Violin',    zh:'小提琴', e:'🎻' },
+  { l:'W', w:'Whale',     zh:'鲸鱼',   e:'🐋' }, { l:'X', w:'X-ray',     zh:'X光',    e:'🩻' },
+  { l:'Y', w:'Yak',       zh:'牦牛',   e:'🐃' }, { l:'Z', w:'Zebra',     zh:'斑马',   e:'🦓' },
+];
+
+const COLORS = [
+  { name:'Red',    zh:'红色', hex:'#D32F2F', hex2:'#FF5252', emoji:'🍎', item:'Apple',     itemZh:'红苹果'  },
+  { name:'Orange', zh:'橙色', hex:'#E65100', hex2:'#FF6D00', emoji:'🍊', item:'Orange',    itemZh:'橙子'    },
+  { name:'Yellow', zh:'黄色', hex:'#F9A825', hex2:'#FFD600', emoji:'🌟', item:'Star',      itemZh:'星星'    },
+  { name:'Green',  zh:'绿色', hex:'#2E7D32', hex2:'#43A047', emoji:'🐸', item:'Frog',      itemZh:'青蛙'    },
+  { name:'Blue',   zh:'蓝色', hex:'#1565C0', hex2:'#1E88E5', emoji:'🐳', item:'Whale',     itemZh:'鲸鱼'    },
+  { name:'Purple', zh:'紫色', hex:'#6A1B9A', hex2:'#8E24AA', emoji:'🍇', item:'Grapes',    itemZh:'葡萄'    },
+  { name:'Pink',   zh:'粉色', hex:'#C2185B', hex2:'#E91E63', emoji:'🐷', item:'Pig',       itemZh:'小猪'    },
+  { name:'White',  zh:'白色', hex:'#546E7A', hex2:'#78909C', emoji:'☁️', item:'Cloud',     itemZh:'云朵'    },
+  { name:'Black',  zh:'黑色', hex:'#212121', hex2:'#424242', emoji:'🎩', item:'Hat',       itemZh:'帽子'    },
+  { name:'Brown',  zh:'棕色', hex:'#4E342E', hex2:'#6D4C41', emoji:'🍫', item:'Chocolate', itemZh:'巧克力'  },
+];
+
+/* ═══════════════════  GRADIENT PALETTES  ══════════════════ */
+
+const FRONTS = [
+  ['#FF6B9D','#C45DD4'], ['#6C63FF','#4FACFE'], ['#FF9800','#FF5722'],
+  ['#00BCD4','#009688'], ['#43E97B','#38F9D7'], ['#F093FB','#F5576C'],
+  ['#FA709A','#FEE140'], ['#A18CD1','#FBC2EB'], ['#4FACFE','#00F2FE'],
+  ['#FD7043','#FFCA28'],
+];
+const BACKS = [
+  ['#F6D365','#FDA085'], ['#84FAB0','#8FD3F4'], ['#A1C4FD','#C2E9FB'],
+  ['#FCCB90','#D57EEB'], ['#E0C3FC','#8EC5FC'], ['#43E97B','#38F9D7'],
+  ['#F9CE34','#EE2A7B'], ['#667EEA','#764BA2'], ['#4FACFE','#00F2FE'],
+  ['#F093FB','#F5576C'],
+];
+const g = ([a,b]) => `linear-gradient(135deg,${a},${b})`;
+
+/* ═══════════════════════  SPEECH  ════════════════════════= */
+// Each call gets its own hidden iframe → its own speechSynthesis instance,
+// so multiple sounds play simultaneously instead of queuing.
+
+function speak(text, lang, rate = 0.82) {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed;left:-2px;top:-2px;width:1px;height:1px;opacity:0;pointer-events:none;';
+  document.body.appendChild(frame);
+
+  const w = frame.contentWindow;
+  if (!w || !w.SpeechSynthesisUtterance) { frame.remove(); return; }
+
+  const u = new w.SpeechSynthesisUtterance(text);
+  u.lang = lang; u.rate = rate; u.pitch = 1.25; u.volume = 1;
+
+  const cleanup = () => { try { frame.remove(); } catch(e){} };
+  u.onend  = cleanup;
+  u.onerror = cleanup;
+  setTimeout(cleanup, 10000); // safety: never leak an iframe
+
+  w.speechSynthesis.resume();
+  w.speechSynthesis.speak(u);
+}
+
+// Speaks two phrases sequentially in the same iframe (different languages)
+function speakThen(t1, l1, t2, l2, rate = 0.82) {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed;left:-2px;top:-2px;width:1px;height:1px;opacity:0;pointer-events:none;';
+  document.body.appendChild(frame);
+
+  const w = frame.contentWindow;
+  if (!w || !w.SpeechSynthesisUtterance) { frame.remove(); return; }
+
+  const cleanup = () => { try { frame.remove(); } catch(e){} };
+  setTimeout(cleanup, 15000);
+
+  const u2 = new w.SpeechSynthesisUtterance(t2);
+  u2.lang = l2; u2.rate = rate; u2.pitch = 1.25; u2.volume = 1;
+  u2.onend = cleanup; u2.onerror = cleanup;
+
+  const u1 = new w.SpeechSynthesisUtterance(t1);
+  u1.lang = l1; u1.rate = rate; u1.pitch = 1.25; u1.volume = 1;
+  u1.onerror = cleanup;
+  u1.onend = () => w.speechSynthesis.speak(u2);
+
+  w.speechSynthesis.resume();
+  w.speechSynthesis.speak(u1);
+}
+
+/* ═════════════════════  EMOJI GRID  ══════════════════════ */
+
+function makeEmojiGrid(emoji, n) {
+  const fs  = n <= 4 ? '1.95rem' : n <= 9 ? '1.45rem' : n <= 14 ? '1.1rem' : '0.88rem';
+  const gap = n <= 4 ? '3px'     : n <= 9 ? '2px'     : '1px';
+  const spans = Array.from({length: n}, () =>
+    `<span style="font-size:${fs};line-height:1.1">${emoji}</span>`
+  ).join('');
+  return `<div class="emoji-grid" style="gap:${gap}">${spans}</div>`;
+}
+
+/* ════════════════════  CARD BUILDERS  ════════════════════ */
+
+/* ═══════════════════  ELSA BONUS  ════════════════════════ */
+
+const ELSA_IMGS = ['elsa1.jpg','elsa2.jpg','elsa3.jpg','elsa4.jpg','elsa5.jpg'];
+let _clicks = 0;
+let _nextElsa = randElsaTarget(); // taps needed before next bonus
+let _elsaDismissTimer = null;
+
+function randElsaTarget() {
+  // Random between 7 and 13, centred around 10
+  return Math.floor(Math.random() * 7) + 7;
+}
+
+function showElsa() {
+  const ov  = document.getElementById('elsa-overlay');
+  const img = document.getElementById('elsa-img');
+  const fb  = document.getElementById('elsa-fallback');
+
+  // Pick a random Elsa picture
+  const src = ELSA_IMGS[Math.floor(Math.random() * ELSA_IMGS.length)];
+  fb.style.display = 'none';
+  img.style.display = '';
+  img.src = src;
+
+  // Remove old snowflakes and spawn fresh ones
+  ov.querySelectorAll('.sf').forEach(s => s.remove());
+  const pool = ['❄️','✨','⭐','💎','🌟','💙'];
+  for (let i = 0; i < 22; i++) {
+    const sf = document.createElement('div');
+    sf.className = 'sf';
+    sf.textContent = pool[i % pool.length];
+    sf.style.left              = Math.random() * 100 + '%';
+    sf.style.fontSize          = (1 + Math.random() * 1.8) + 'rem';
+    sf.style.animationDuration = (2.5 + Math.random() * 3) + 's';
+    sf.style.animationDelay    = (Math.random() * 1.5) + 's';
+    ov.appendChild(sf);
+  }
+
+  ov.classList.remove('hidden');
+  speak('Elsa', 'en-US', 0.78);
+  clearTimeout(_elsaDismissTimer);
+  _elsaDismissTimer = setTimeout(dismissElsa, 5000);
+}
+
+function dismissElsa() {
+  clearTimeout(_elsaDismissTimer);
+  document.getElementById('elsa-overlay').classList.add('hidden');
+}
+
+function makePulse(card) {
+  card.classList.remove('pulsing');
+  void card.offsetWidth;
+  card.classList.add('pulsing');
+  card.addEventListener('animationend', () => card.classList.remove('pulsing'), {once:true});
+  // Elsa bonus after a random number of clicks (~10)
+  if (++_clicks >= _nextElsa) {
+    _clicks = 0;
+    _nextElsa = randElsaTarget();
+    showElsa();
+  }
+}
+
+function makeNumberCard(d, i) {
+  const wrap = document.createElement('div');
+  wrap.className = 'wrap';
+  wrap.style.animationDelay = `${i * 0.05}s`;
+
+  const fi = i % FRONTS.length, bi = (i+4) % BACKS.length;
+
+  wrap.innerHTML = `
+    <div class="card" role="button" aria-label="${d.n} ${d.zh}">
+      <div class="face num-front" style="background:${g(FRONTS[fi])}">
+        <div class="num-arabic">${d.n}</div>
+        <div class="num-chinese">${d.zh}</div>
+      </div>
+      <div class="face back-face num-back" style="background:${g(BACKS[bi])}">
+        ${makeEmojiGrid(d.e, d.n)}
+        <div class="item-label">${d.p}</div>
+      </div>
+    </div>`;
+
+  wrap.querySelector('.card').addEventListener('click', function() {
+    const flipped = this.classList.toggle('flipped');
+    makePulse(this);
+    // flip TO back → speak the number; flip TO front → speak the phrase
+    speak(flipped ? d.zh : d.p, 'zh-CN');
+  });
+
+  return wrap;
+}
+
+function makeLetterCard(d, i) {
+  const wrap = document.createElement('div');
+  wrap.className = 'wrap';
+  wrap.style.animationDelay = `${i * 0.045}s`;
+
+  const fi = (i+2) % FRONTS.length, bi = (i+7) % BACKS.length;
+
+  wrap.innerHTML = `
+    <div class="card" role="button" aria-label="${d.l} ${d.w}">
+      <div class="face let-front" style="background:${g(FRONTS[fi])}">
+        <div class="let-upper">${d.l}</div>
+        <div class="let-lower">${d.l.toLowerCase()}</div>
+      </div>
+      <div class="face back-face let-back" style="background:${g(BACKS[bi])}">
+        <div class="let-emoji">${d.e}</div>
+        <div class="let-word">${d.w}</div>
+      </div>
+    </div>`;
+
+  wrap.querySelector('.card').addEventListener('click', function() {
+    const flipped = this.classList.toggle('flipped');
+    makePulse(this);
+    if (flipped) {
+      speak(d.l.toLowerCase(), 'en-US', 0.78);          // letter name in English
+    } else {
+      speakThen(d.zh, 'zh-CN', d.w, 'en-US', 0.78);    // word in Chinese then English
+    }
+  });
+
+  return wrap;
+}
+
+/* ════════════════  ENGLISH NUMBER CARD  ═════════════════ */
+
+function makeEngNumCard(d, i) {
+  const wrap = document.createElement('div');
+  wrap.className = 'wrap';
+  wrap.style.animationDelay = `${i * 0.05}s`;
+
+  const fi = (i + 5) % FRONTS.length, bi = (i + 2) % BACKS.length;
+
+  wrap.innerHTML = `
+    <div class="card" role="button" aria-label="${d.n} ${d.en}">
+      <div class="face num-front" style="background:${g(FRONTS[fi])}">
+        <div class="num-arabic">${d.n}</div>
+        <div class="num-chinese">${d.en}</div>
+      </div>
+      <div class="face back-face num-back" style="background:${g(BACKS[bi])}">
+        ${makeEmojiGrid(d.e, d.n)}
+        <div class="item-label">${d.p}</div>
+      </div>
+    </div>`;
+
+  wrap.querySelector('.card').addEventListener('click', function() {
+    const flipped = this.classList.toggle('flipped');
+    makePulse(this);
+    speak(flipped ? d.en : d.p, 'en-US');
+  });
+
+  return wrap;
+}
+
+/* ══════════════════════  COLOR CARD  ════════════════════= */
+
+function makeColorCard(d, i) {
+  const wrap = document.createElement('div');
+  wrap.className = 'wrap';
+  wrap.style.animationDelay = `${i * 0.06}s`;
+
+  const front = `linear-gradient(135deg,${d.hex},${d.hex2})`;
+  const back  = `linear-gradient(135deg,${d.hex2},${d.hex})`;
+
+  wrap.innerHTML = `
+    <div class="card" role="button" aria-label="${d.name} ${d.zh}">
+      <div class="face col-front" style="background:${front}">
+        <div class="col-name">${d.name}</div>
+        <div class="col-zh">${d.zh}</div>
+      </div>
+      <div class="face back-face col-back" style="background:${back}">
+        <div class="col-emoji">${d.emoji}</div>
+        <div class="col-item">${d.item}</div>
+        <div class="col-item-zh">${d.itemZh}</div>
+      </div>
+    </div>`;
+
+  wrap.querySelector('.card').addEventListener('click', function() {
+    const flipped = this.classList.toggle('flipped');
+    makePulse(this);
+    if (flipped) {
+      speakThen(d.zh, 'zh-CN', d.name, 'en-US');           // colour name: Chinese then English
+    } else {
+      speakThen(d.itemZh, 'zh-CN', d.name + ' ' + d.item, 'en-US'); // item: Chinese then English
+    }
+  });
+
+  return wrap;
+}
+
+/* ════════════════════  TAB SWITCHING  ════════════════════ */
+
+function showTab(name) {
+  ['numbers','numbers-en','colors','letters'].forEach(id => {
+    document.getElementById(id).classList.toggle('hidden', id !== name);
+  });
+  document.getElementById('tab-n') .classList.toggle('active', name === 'numbers');
+  document.getElementById('tab-en').classList.toggle('active', name === 'numbers-en');
+  document.getElementById('tab-c') .classList.toggle('active', name === 'colors');
+  document.getElementById('tab-l') .classList.toggle('active', name === 'letters');
+}
+
+/* ══════════════════  BACKGROUND MUSIC  ══════════════════= */
+
+(function initMusic() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+
+  const BEAT = 0.38; // seconds per beat
+  const VOL  = 0.07;
+
+  // Twinkle Twinkle Little Star — [Hz, beats]
+  const MELODY = [
+    [523,1],[523,1],[784,1],[784,1],[880,1],[880,1],[784,2],
+    [698,1],[698,1],[659,1],[659,1],[587,1],[587,1],[523,2],
+    [784,1],[784,1],[698,1],[698,1],[659,1],[659,1],[587,2],
+    [784,1],[784,1],[698,1],[698,1],[659,1],[659,1],[587,2],
+    [523,1],[523,1],[784,1],[784,1],[880,1],[880,1],[784,2],
+    [698,1],[698,1],[659,1],[659,1],[587,1],[587,1],[523,2],
+    [0,3],
+  ];
+  const TOTAL = MELODY.reduce((s,[,b]) => s + b * BEAT, 0);
+
+  let ctx, master, muted = false, started = false;
+
+  function playNote(freq, t, dur) {
+    if (freq === 0) return;
+    // Two sine oscillators for a warm music-box tone
+    [[freq, 1.0],[freq * 2, 0.18]].forEach(([f, amp]) => {
+      const osc = ctx.createOscillator();
+      const env = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(amp, t + 0.012);
+      env.gain.exponentialRampToValueAtTime(amp * 0.35, t + dur * 0.45);
+      env.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.92);
+      osc.connect(env);
+      env.connect(master);
+      osc.start(t);
+      osc.stop(t + dur);
+    });
+  }
+
+  function scheduleMelody(startTime) {
+    let t = startTime;
+    for (const [freq, beats] of MELODY) {
+      playNote(freq, t, beats * BEAT * 0.88);
+      t += beats * BEAT;
+    }
+    return t;
+  }
+
+  function loop(nextStart) {
+    const end = scheduleMelody(nextStart);
+    // Re-schedule 2 s before the current loop finishes
+    setTimeout(() => loop(end + 0.5), Math.max(100, (end - 2 - ctx.currentTime) * 1000));
+  }
+
+  function startMusic() {
+    if (started) return;
+    started = true;
+    ctx    = new AC();
+    master = ctx.createGain();
+    master.gain.value = VOL;
+    master.connect(ctx.destination);
+    ctx.resume().then(() => loop(ctx.currentTime + 0.4));
+  }
+
+  // Start on first user interaction (required by browser autoplay policy)
+  document.addEventListener('click', startMusic, { once: true });
+
+  document.getElementById('music-btn').addEventListener('click', (e) => {
+    e.stopPropagation(); // don't consume the "first click" start event
+    startMusic();        // start if not yet started
+    muted = !muted;
+    if (master) master.gain.setTargetAtTime(muted ? 0 : VOL, ctx.currentTime, 0.3);
+    document.getElementById('music-btn').textContent = muted ? '🔇' : '🎵';
+  });
+})();
+
+/* ══════════════════  BACKGROUND BUBBLES  ════════════════= */
+
+(function spawnBubbles() {
+  const pool = ['⭐','🌸','🎈','💫','🌟','🎀','🍭','🌈','🦋','🐝','❤️','✨'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement('div');
+    el.className = 'bubble';
+    el.textContent = pool[i % pool.length];
+    el.style.left = `${Math.random() * 96}%`;
+    el.style.fontSize = `${1.2 + Math.random() * 1.4}rem`;
+    el.style.animationDuration = `${11 + Math.random() * 14}s`;
+    el.style.animationDelay    = `-${Math.random() * 22}s`;
+    document.body.appendChild(el);
+  }
+})();
+
+/* ══════════════════════  INIT  ═══════════════════════════ */
+
+const numGrid   = document.getElementById('numbers');
+const numEnGrid = document.getElementById('numbers-en');
+const colGrid   = document.getElementById('colors');
+const letGrid   = document.getElementById('letters');
+NUMS  .forEach((d, i) => numGrid  .appendChild(makeNumberCard(d, i)));
+ENUMS .forEach((d, i) => numEnGrid.appendChild(makeEngNumCard(d, i)));
+COLORS.forEach((d, i) => colGrid  .appendChild(makeColorCard(d, i)));
+LETS  .forEach((d, i) => letGrid  .appendChild(makeLetterCard(d, i)));
+</script>
+</body>
+</html>

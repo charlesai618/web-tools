@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Letter Analyzer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin: 0 auto 24px;
+      max-width: 800px;
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 16px;
+    }
+
+    .string-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .string-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #718096;
+      min-width: 60px;
+    }
+
+    .string-row input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .string-row input:focus {
+      border-color: #667eea;
+    }
+
+    .btn-remove {
+      background: none;
+      border: 1.5px solid #fed7d7;
+      color: #fc8181;
+      border-radius: 8px;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-remove:hover {
+      background: #fff5f5;
+      color: #e53e3e;
+    }
+
+    .btn-add {
+      background: none;
+      border: 1.5px dashed #bee3f8;
+      color: #4299e1;
+      border-radius: 8px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-add:hover {
+      background: #ebf8ff;
+    }
+
+    .btn-calc {
+      display: block;
+      margin: 20px auto 0;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 40px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-calc:hover { opacity: 0.92; }
+    .btn-calc:active { transform: scale(0.98); }
+
+    /* Results */
+    #results { max-width: 800px; margin: 0 auto; }
+
+    .result-block {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .result-block h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #553c9a;
+      margin-bottom: 4px;
+    }
+
+    .result-string-display {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 14px;
+      word-break: break-all;
+    }
+
+    .char-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    .char-table th {
+      background: #f7fafc;
+      color: #4a5568;
+      font-weight: 600;
+      padding: 8px 12px;
+      text-align: center;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .char-table td {
+      padding: 7px 12px;
+      text-align: center;
+      border-bottom: 1px solid #f0f4f8;
+    }
+
+    .char-table tr:last-child td { border-bottom: none; }
+
+    .char-cell {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #553c9a;
+      font-family: monospace;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .summary-box {
+      background: #f7fafc;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .summary-box .label {
+      font-size: 0.78rem;
+      color: #718096;
+      font-weight: 600;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .summary-box .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #553c9a;
+    }
+
+    .num1-box .value { color: #2b6cb0; }
+    .num2-box .value { color: #276749; }
+    .num3-box .value { color: #744210; }
+
+    /* Combination section */
+    .combo-section {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .combo-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 16px;
+    }
+
+    .combo-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .combo-table th {
+      background: #f7fafc;
+      color: #4a5568;
+      font-weight: 600;
+      padding: 9px 14px;
+      text-align: center;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .combo-table th:first-child { text-align: left; }
+
+    .combo-table td {
+      padding: 9px 14px;
+      text-align: center;
+      border-bottom: 1px solid #f0f4f8;
+      color: #4a5568;
+    }
+
+    .combo-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .combo-table tr:last-child td { border-bottom: none; }
+
+    .combo-table .num1-val { color: #2b6cb0; font-weight: 700; }
+    .combo-table .num2-val { color: #276749; font-weight: 700; }
+    .combo-table .num3-val { color: #744210; font-weight: 700; }
+
+    .empty-state {
+      text-align: center;
+      color: #a0aec0;
+      padding: 40px 20px;
+      font-size: 0.95rem;
+    }
+
+    .no-chars-note {
+      font-size: 0.8rem;
+      color: #a0aec0;
+      font-style: italic;
+      text-align: center;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Letter Analyzer</h1>
+  <p class="subtitle">Enter one or more strings to analyze letter values</p>
+
+  <div class="card">
+    <h2>Input Strings</h2>
+    <div id="string-inputs">
+      <div class="string-row">
+        <span class="string-label">String 1</span>
+        <input type="text" placeholder="Type letters or numbers..." />
+        <button class="btn-remove" onclick="removeRow(this)" title="Remove">&#x2715;</button>
+      </div>
+    </div>
+    <button class="btn-add" onclick="addRow()">+ Add another string</button>
+    <button class="btn-calc" onclick="calculate()">Analyze</button>
+  </div>
+
+  <div id="results">
+    <div class="empty-state">Enter a string above and click Analyze to see results.</div>
+  </div>
+
+  <script>
+    let rowCount = 1;
+
+    function addRow() {
+      rowCount++;
+      const container = document.getElementById('string-inputs');
+      const div = document.createElement('div');
+      div.className = 'string-row';
+      div.innerHTML = `
+        <span class="string-label">String ${rowCount}</span>
+        <input type="text" placeholder="Type letters or numbers..." />
+        <button class="btn-remove" onclick="removeRow(this)" title="Remove">&#x2715;</button>
+      `;
+      container.appendChild(div);
+      renumberRows();
+      div.querySelector('input').focus();
+    }
+
+    function removeRow(btn) {
+      const rows = document.querySelectorAll('.string-row');
+      if (rows.length === 1) {
+        btn.closest('.string-row').querySelector('input').value = '';
+        return;
+      }
+      btn.closest('.string-row').remove();
+      renumberRows();
+    }
+
+    function renumberRows() {
+      document.querySelectorAll('.string-row').forEach((row, i) => {
+        row.querySelector('.string-label').textContent = `String ${i + 1}`;
+      });
+    }
+
+    function letterOrder(ch) {
+      ch = ch.toUpperCase();
+      if (ch >= 'A' && ch <= 'Z') return ch.charCodeAt(0) - 64;
+      if (ch >= '0' && ch <= '9') return parseInt(ch, 10);
+      return null;
+    }
+
+    function digitSum(n) {
+      return String(n).split('').reduce((s, d) => s + parseInt(d, 10), 0);
+    }
+
+    function analyzeString(str) {
+      const chars = [];
+      let num1 = 0, num2 = 0;
+      for (const ch of str) {
+        if (ch === ' ') continue;
+        const order = letterOrder(ch);
+        if (order !== null) {
+          const ds = digitSum(order);
+          chars.push({ ch: ch.toUpperCase(), order, ds });
+          num1 += order;
+          num2 += ds;
+        }
+      }
+      return { chars, num1, num2, num3: num1 + num2 };
+    }
+
+    function getCombinations(arr) {
+      const result = [];
+      const n = arr.length;
+      for (let size = 2; size <= n; size++) {
+        combineIndices(n, size, 0, [], result);
+      }
+      return result;
+    }
+
+    function combineIndices(n, size, start, current, result) {
+      if (current.length === size) {
+        result.push([...current]);
+        return;
+      }
+      for (let i = start; i < n; i++) {
+        current.push(i);
+        combineIndices(n, size, i + 1, current, result);
+        current.pop();
+      }
+    }
+
+    function calculate() {
+      const inputs = document.querySelectorAll('.string-row input');
+      const strings = Array.from(inputs).map(i => i.value);
+      const nonEmpty = strings.filter(s => s.trim().length > 0);
+
+      const resultsDiv = document.getElementById('results');
+
+      if (nonEmpty.length === 0) {
+        resultsDiv.innerHTML = '<div class="empty-state">Please enter at least one string.</div>';
+        return;
+      }
+
+      const analyses = strings
+        .map((s, idx) => ({ label: `String ${idx + 1}`, value: s, ...analyzeString(s) }))
+        .filter(a => a.value.trim().length > 0);
+
+      let html = '';
+
+      // Per-string results
+      for (const a of analyses) {
+        html += `
+          <div class="result-block">
+            <h3>${a.label}</h3>
+            <div class="result-string-display">"${escHtml(a.value)}"</div>
+        `;
+
+        if (a.chars.length === 0) {
+          html += `<div class="no-chars-note">No recognized letters or digits found.</div>`;
+        } else {
+          html += `
+            <table class="char-table">
+              <thead>
+                <tr>
+                  <th>Character</th>
+                  <th>Order in Alphabet<br><small style="font-weight:400;color:#a0aec0">(A=1 … Z=26)</small></th>
+                  <th>Digit Sum of Order<br><small style="font-weight:400;color:#a0aec0">(sum of digits)</small></th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          for (const c of a.chars) {
+            html += `
+              <tr>
+                <td class="char-cell">${escHtml(c.ch)}</td>
+                <td>${c.order}</td>
+                <td>${c.ds}</td>
+              </tr>
+            `;
+          }
+          html += `</tbody></table>`;
+
+          html += `
+            <div class="summary-grid">
+              <div class="summary-box num1-box">
+                <div class="label">Num1 — Sum of Orders</div>
+                <div class="value">${a.num1}</div>
+              </div>
+              <div class="summary-box num2-box">
+                <div class="label">Num2 — Sum of Digit Sums</div>
+                <div class="value">${a.num2}</div>
+              </div>
+              <div class="summary-box num3-box">
+                <div class="label">Num3 — Num1 + Num2</div>
+                <div class="value">${a.num3}</div>
+              </div>
+            </div>
+          `;
+        }
+
+        html += `</div>`;
+      }
+
+      // Cross-string combinations (only if 2+ strings)
+      if (analyses.length >= 2) {
+        const combos = getCombinations(analyses);
+
+        html += `
+          <div class="combo-section">
+            <h3>Cross-String Combinations</h3>
+            <table class="combo-table">
+              <thead>
+                <tr>
+                  <th>Strings Combined</th>
+                  <th>Sum of Num1</th>
+                  <th>Sum of Num2</th>
+                  <th>Sum of Num3</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        // Individual strings first
+        for (const a of analyses) {
+          html += `
+            <tr>
+              <td>${escHtml(a.value)}</td>
+              <td class="num1-val">${a.num1}</td>
+              <td class="num2-val">${a.num2}</td>
+              <td class="num3-val">${a.num3}</td>
+            </tr>
+          `;
+        }
+
+        // Divider row
+        html += `
+          <tr>
+            <td colspan="4" style="padding:4px;background:#f0f4f8;border-bottom:2px solid #e2e8f0;"></td>
+          </tr>
+        `;
+
+        for (const combo of combos) {
+          const label = combo.map(i => analyses[i].value).join(' + ');
+          const sumNum1 = combo.reduce((s, i) => s + analyses[i].num1, 0);
+          const sumNum2 = combo.reduce((s, i) => s + analyses[i].num2, 0);
+          const sumNum3 = combo.reduce((s, i) => s + analyses[i].num3, 0);
+
+          html += `
+            <tr>
+              <td>${escHtml(label)}</td>
+              <td class="num1-val">${sumNum1}</td>
+              <td class="num2-val">${sumNum2}</td>
+              <td class="num3-val">${sumNum3}</td>
+            </tr>
+          `;
+        }
+
+        html += `</tbody></table></div>`;
+      }
+
+      resultsDiv.innerHTML = html;
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Allow Enter key to trigger calculate
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT') calculate();
+    });
+  </script>
+
+</body>
+</html>
