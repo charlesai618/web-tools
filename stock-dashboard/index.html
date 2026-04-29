@@ -575,19 +575,296 @@
   document.getElementById('ticker-input').addEventListener('keydown', e => { if (e.key === 'Enter') loadTicker(); });
   function quickLoad(sym) { document.getElementById('ticker-input').value = sym; loadTicker(); }
 
+  // ── Client-side data layer (replaces Flask /api/stock backend) ──────────────
+
+  const PROXY = 'https://corsproxy.io/?url=';
+
+  function rawVal(v) {
+    if (v == null) return null;
+    if (typeof v === 'object' && 'raw' in v) return v.raw;
+    return typeof v === 'number' ? v : parseFloat(v) || null;
+  }
+
+  function safeNum(v, d=2) {
+    const n = typeof v === 'number' ? v : parseFloat(v);
+    if (n == null || isNaN(n) || !isFinite(n)) return null;
+    return Math.round(n * Math.pow(10,d)) / Math.pow(10,d);
+  }
+
+  async function yfetch(url) {
+    const r = await fetch(PROXY + encodeURIComponent(url));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  function rollingMean(arr, period) {
+    return arr.map((_, i) => {
+      if (i < period - 1) return null;
+      let sum = 0;
+      for (let k = i - period + 1; k <= i; k++) { if (arr[k] == null) return null; sum += arr[k]; }
+      return sum / period;
+    });
+  }
+
+  function rollingStd(arr, period) {
+    return arr.map((_, i) => {
+      if (i < period - 1) return null;
+      const sl = arr.slice(i - period + 1, i + 1);
+      if (sl.some(v => v == null)) return null;
+      const mean = sl.reduce((a,b) => a+b, 0) / period;
+      return Math.sqrt(sl.reduce((a,b) => a+(b-mean)**2, 0) / (period - 1));
+    });
+  }
+
+  function ewm(arr, span) {
+    const alpha = 2 / (span + 1);
+    let prev = null;
+    return arr.map(v => {
+      if (v == null) return null;
+      if (prev == null) { prev = v; return v; }
+      prev = alpha * v + (1 - alpha) * prev;
+      return prev;
+    });
+  }
+
+  function calcRSI(closes, period=14) {
+    const gains = [null], losses = [null];
+    for (let i = 1; i < closes.length; i++) {
+      const d = closes[i] - closes[i-1];
+      gains.push(d > 0 ? d : 0);
+      losses.push(d < 0 ? -d : 0);
+    }
+    const avgG = rollingMean(gains, period);
+    const avgL = rollingMean(losses, period);
+    return avgG.map((g, i) => {
+      if (g == null || avgL[i] == null) return null;
+      return 100 - 100 / (1 + (avgL[i] === 0 ? 1e10 : g / avgL[i]));
+    });
+  }
+
+  function calcMACD(closes, fast=12, slow=26, sig=9) {
+    const emaFast = ewm(closes, fast);
+    const emaSlow = ewm(closes, slow);
+    const macd = emaFast.map((f, i) => f == null || emaSlow[i] == null ? null : f - emaSlow[i]);
+    const signalLine = ewm(macd, sig);
+    const histogram  = macd.map((m, i) => m == null || signalLine[i] == null ? null : m - signalLine[i]);
+    return { macd, signalLine, histogram };
+  }
+
+  function calcADX(highs, lows, closes, period=14) {
+    const tr = highs.map((h, i) => i === 0 ? h - lows[i] :
+      Math.max(h - lows[i], Math.abs(h - closes[i-1]), Math.abs(lows[i] - closes[i-1])));
+    const plusDM  = highs.map((h, i) => { if (i===0) return 0; const u=h-highs[i-1],d=lows[i-1]-lows[i]; return (u>d&&u>0)?u:0; });
+    const minusDM = lows.map((l, i)  => { if (i===0) return 0; const u=highs[i]-highs[i-1],d=lows[i-1]-l; return (d>u&&d>0)?d:0; });
+    const atr = ewm(tr, period);
+    const plusDI  = ewm(plusDM,  period).map((v, i) => atr[i] ? 100*v/atr[i] : null);
+    const minusDI = ewm(minusDM, period).map((v, i) => atr[i] ? 100*v/atr[i] : null);
+    const dx  = plusDI.map((p, i) => { if (p==null||minusDI[i]==null) return null; const s=p+minusDI[i]; return s===0?0:100*Math.abs(p-minusDI[i])/s; });
+    return { adx: ewm(dx, period), plusDI, minusDI };
+  }
+
+  function calcFibonacci(highs, lows, closes, dates) {
+    const highMax = Math.max(...highs), lowMin = Math.min(...lows);
+    const highIdx = highs.indexOf(highMax), lowIdx = lows.indexOf(lowMin);
+    const cur = closes[closes.length-1], diff = highMax - lowMin;
+    const levels = [[0,'0%'],[0.236,'23.6%'],[0.382,'38.2%'],[0.5,'50%'],
+      [0.618,'61.8%'],[0.764,'76.4%'],[1.0,'100%'],[1.272,'127.2%'],[1.618,'161.8%']]
+      .map(([r,l]) => ({ ratio:r, label:l, price:Math.round((highMax-r*diff)*100)/100, above_price:(highMax-r*diff)>cur }))
+      .sort((a,b) => b.price - a.price);
+    const resistances = levels.filter(l => l.price > cur);
+    const supports    = levels.filter(l => l.price <= cur);
+    return { swing_high:Math.round(highMax*100)/100, swing_low:Math.round(lowMin*100)/100,
+      high_date:dates[highIdx], low_date:dates[lowIdx], trend:lowIdx<highIdx?'uptrend':'downtrend',
+      levels, nearest_resistance:resistances.length?resistances[resistances.length-1]:null,
+      nearest_support:supports.length?supports[0]:null, current_price:Math.round(cur*100)/100 };
+  }
+
+  function calcMaxPain(calls, puts) {
+    const strikes = [...new Set([...calls.map(c=>c.strike),...puts.map(p=>p.strike)])].sort((a,b)=>a-b);
+    let minPain = Infinity, best = strikes[0];
+    for (const price of strikes) {
+      const total = calls.reduce((s,c)=>s+Math.max(0,(price-c.strike)*(c.openInterest||0)),0)
+                  + puts.reduce((s,p)=>s+Math.max(0,(p.strike-price)*(p.openInterest||0)),0);
+      if (total < minPain) { minPain = total; best = price; }
+    }
+    return best;
+  }
+
+  function calcATMHistory(closes, dates, todayPrice) {
+    const MAX_HV = 60, DEFAULT_HV = 30;
+    const extCloses = closes.slice(closes.length >= MAX_HV+91 ? -(MAX_HV+91) : 0).map(v => Math.round(v*100)/100);
+    const tail = closes.slice(-91), n = Math.min(90, tail.length - 1);
+    const dispDates = dates.slice(-91).slice(0, n);
+    const realized  = [];
+    for (let i = 0; i < n; i++) realized.push(Math.round(Math.abs(tail[i+1]-tail[i])*100)/100);
+    const logR = closes.map((c,i) => i===0 ? null : Math.log(c/closes[i-1]));
+    const straddles = [];
+    for (let i = 0; i < n; i++) {
+      const dayIdx = closes.length - 91 + i;
+      const rets = [];
+      for (let k = dayIdx - DEFAULT_HV + 1; k <= dayIdx; k++) if (k>=1 && logR[k]!=null) rets.push(logR[k]);
+      if (rets.length < Math.max(Math.floor(DEFAULT_HV*0.5),2)) { straddles.push(null); continue; }
+      const mean = rets.reduce((a,b)=>a+b,0)/rets.length;
+      const sigma = Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/(rets.length-1)*252);
+      const st = bsAtmStraddleJS(tail[i], sigma, 1/252, 0.04);
+      straddles.push(st!=null ? Math.round(st*100)/100 : null);
+    }
+    const todayRets = [];
+    for (let k = closes.length-DEFAULT_HV; k < closes.length; k++) if (k>=1 && logR[k]!=null) todayRets.push(logR[k]);
+    let todayStraddle = null;
+    if (todayRets.length >= 2) {
+      const mean = todayRets.reduce((a,b)=>a+b,0)/todayRets.length;
+      const sigma = Math.sqrt(todayRets.reduce((a,b)=>a+(b-mean)**2,0)/(todayRets.length-1)*252);
+      const st = bsAtmStraddleJS(todayPrice, sigma, 1/252, 0.04);
+      if (st!=null) todayStraddle = Math.round(st*100)/100;
+    }
+    return { dates:dispDates, straddles, realized, extended_closes:extCloses,
+             default_hv:DEFAULT_HV, max_hv:MAX_HV, today_date:new Date().toISOString().slice(0,10),
+             today_price:todayPrice, today_straddle:todayStraddle };
+  }
+
+  async function fetchStockData(ticker) {
+    ticker = ticker.toUpperCase().trim();
+
+    // Historical OHLCV
+    let chartJson;
+    try { chartJson = await yfetch('https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?range=1y&interval=1d'); }
+    catch(e) { throw new Error('Failed to fetch data for "'+ticker+'". Check the symbol.'); }
+    const result = chartJson.chart?.result?.[0];
+    if (!result) throw new Error('No data found for "'+ticker+'". Check the symbol.');
+
+    const meta = result.meta || {}, q = result.indicators?.quote?.[0] || {}, ts = result.timestamp || [];
+    const allDates = ts.map(t => new Date(t*1000).toISOString().slice(0,10));
+    const vi = (q.close||[]).map((_,i) => q.close[i]!=null&&q.high[i]!=null&&q.low[i]!=null?i:-1).filter(i=>i>=0);
+    if (!vi.length) throw new Error('No data found for "'+ticker+'".');
+    const dates   = vi.map(i=>allDates[i]),   closes  = vi.map(i=>q.close[i]);
+    const highs   = vi.map(i=>q.high[i]),     lows    = vi.map(i=>q.low[i]);
+    const opens   = vi.map(i=>q.open[i]),     volumes = vi.map(i=>(q.volume||[])[i]||0);
+    const cur = closes[closes.length-1], prev = closes.length>1?closes[closes.length-2]:cur;
+    const chg = cur - prev;
+
+    // Summary info (name, sector, PE, etc.)
+    let name = meta.longName||meta.shortName||ticker, sector='N/A';
+    let marketCap=meta.marketCap||null, peRatio=null, divYield=null, avgVol=meta.averageVolume||null;
+    try {
+      const sj = await yfetch('https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=price,summaryProfile,summaryDetail');
+      const sr = sj.quoteSummary?.result?.[0];
+      if (sr) {
+        name      = sr.price?.longName||sr.price?.shortName||name;
+        sector    = sr.summaryProfile?.sector||'N/A';
+        marketCap = rawVal(sr.price?.marketCap)||marketCap;
+        peRatio   = rawVal(sr.summaryDetail?.trailingPE)||rawVal(sr.summaryDetail?.forwardPE)||null;
+        divYield  = (rawVal(sr.summaryDetail?.dividendYield)||0)*100;
+        avgVol    = rawVal(sr.summaryDetail?.averageVolume)||avgVol;
+      }
+    } catch(e) {}
+
+    // Technical indicators
+    let buyC=0, sellC=0;
+    const movingAverages = {};
+    for (const p of [5,10,20,50,100,200]) {
+      if (closes.length >= p) {
+        const ma = rollingMean(closes,p), v = ma[ma.length-1];
+        const sig = cur>v?'BUY':'SELL';
+        if (sig==='BUY') buyC++; else sellC++;
+        movingAverages['MA'+p] = { value:safeNum(v), signal:sig };
+      }
+    }
+    const rsiSeries = calcRSI(closes);
+    const curRSI = safeNum(rsiSeries[rsiSeries.length-1]);
+    let rsiSignal;
+    if (curRSI==null) rsiSignal='N/A';
+    else if (curRSI<30) { rsiSignal='OVERSOLD';   sellC++; }
+    else if (curRSI>70) { rsiSignal='OVERBOUGHT'; buyC++;  }
+    else { rsiSignal='NEUTRAL'; if (curRSI<50) sellC++; else buyC++; }
+
+    const {macd:macdS,signalLine:sigS,histogram:histS} = calcMACD(closes);
+    const curMacd=safeNum(macdS[macdS.length-1]), curSig=safeNum(sigS[sigS.length-1]), curHist=safeNum(histS[histS.length-1]);
+    const macdSig = (curMacd!=null&&curSig!=null&&curMacd>curSig)?'BUY':'SELL';
+    if (macdSig==='BUY') buyC++; else sellC++;
+
+    const {adx:adxS,plusDI:pdiS,minusDI:mdiS} = calcADX(highs,lows,closes);
+    const curADX=safeNum(adxS[adxS.length-1]), curPDI=safeNum(pdiS[pdiS.length-1]), curMDI=safeNum(mdiS[mdiS.length-1]);
+
+    const bbMid=rollingMean(closes,20), bbStd=rollingStd(closes,20);
+    const bbUpper=bbMid.map((m,i)=>m!=null&&bbStd[i]!=null?m+2*bbStd[i]:null);
+    const bbLower=bbMid.map((m,i)=>m!=null&&bbStd[i]!=null?m-2*bbStd[i]:null);
+
+    const totS=buyC+sellC, ratioS=sellC/(totS||1);
+    const overall = ratioS>=0.75?'STRONG SELL':ratioS>=0.5?'SELL':ratioS<=0.25?'STRONG BUY':'BUY';
+
+    // Options
+    let optData = {};
+    try {
+      const oj = await yfetch('https://query1.finance.yahoo.com/v7/finance/options/'+ticker);
+      const or = oj.optionChain?.result?.[0];
+      if (or && or.expirationDates?.length) {
+        const nearDate = new Date(or.expirationDates[0]*1000).toISOString().slice(0,10);
+        const mapOpt = x => ({ strike:rawVal(x.strike), openInterest:rawVal(x.openInterest)||0,
+          impliedVolatility:rawVal(x.impliedVolatility)||0, bid:rawVal(x.bid)||0, ask:rawVal(x.ask)||0, lastPrice:rawVal(x.lastPrice)||0 });
+        const calls = (or.options?.[0]?.calls||[]).map(mapOpt);
+        const puts  = (or.options?.[0]?.puts ||[]).map(mapOpt);
+        const callOI=calls.reduce((s,c)=>s+c.openInterest,0), putOI=puts.reduce((s,p)=>s+p.openInterest,0);
+        const pcr = callOI>0?safeNum(putOI/callOI):null;
+        const avgIV = safeNum(((calls.reduce((s,c)=>s+c.impliedVolatility,0)/(calls.length||1))+(puts.reduce((s,p)=>s+p.impliedVolatility,0)/(puts.length||1)))/2*100);
+        const pcrSig = !pcr?'NEUTRAL':pcr>1.2?'VERY BEARISH':pcr>1.0?'BEARISH':pcr<0.5?'VERY BULLISH':pcr<0.7?'BULLISH':'NEUTRAL';
+        let atmStrike=null,atmCallMid=null,atmPutMid=null,atmStraddle=null,atmIV=null;
+        if (calls.length) {
+          const atm=calls.reduce((b,c)=>Math.abs(c.strike-cur)<Math.abs(b.strike-cur)?c:b,calls[0]);
+          atmStrike=atm.strike; atmCallMid=atm.ask>0?(atm.bid+atm.ask)/2:atm.lastPrice;
+          const ap=puts.find(p=>p.strike===atmStrike);
+          if (ap) atmPutMid=ap.ask>0?(ap.bid+ap.ask)/2:ap.lastPrice;
+          atmStraddle=(atmCallMid||0)+(atmPutMid||0); atmIV=safeNum(atm.impliedVolatility*100,1);
+        }
+        optData = { put_call_ratio:pcr, pcr_signal:pcrSig, implied_volatility:avgIV,
+          iv_signal:avgIV>20?'HIGH':avgIV<10?'LOW':'NORMAL', call_oi:callOI, put_oi:putOI,
+          max_pain:safeNum(calcMaxPain(calls,puts)), nearest_expiry:nearDate, expirations_count:or.expirationDates.length,
+          atm_strike:safeNum(atmStrike), atm_call_mid:safeNum(atmCallMid), atm_put_mid:safeNum(atmPutMid),
+          atm_straddle:safeNum(atmStraddle), atm_iv:atmIV };
+      }
+    } catch(e) { optData = { error: e.message }; }
+
+    // Fear & Greed (alternative.me — CORS-friendly)
+    let fgScore=null, fgRating=null;
+    try {
+      const fg = await (await fetch('https://api.alternative.me/fng/?limit=1')).json();
+      fgScore=safeNum(parseFloat(fg.data[0].value),1); fgRating=fg.data[0].value_classification;
+    } catch(e) {}
+
+    return {
+      ticker, name, sector,
+      price:safeNum(cur), change:safeNum(chg), change_pct:safeNum((chg/prev)*100),
+      prev_close:safeNum(meta.chartPreviousClose||prev), open:safeNum(opens[opens.length-1]),
+      day_low:safeNum(meta.regularMarketDayLow||lows[lows.length-1]),
+      day_high:safeNum(meta.regularMarketDayHigh||highs[highs.length-1]),
+      week_52_low:safeNum(meta.fiftyTwoWeekLow), week_52_high:safeNum(meta.fiftyTwoWeekHigh),
+      market_cap:marketCap, pe_ratio:peRatio?safeNum(peRatio):null, dividend_yield:divYield?safeNum(divYield):null,
+      volume:meta.regularMarketVolume||volumes[volumes.length-1], avg_volume:avgVol,
+      moving_averages:movingAverages, buy_count:buyC, sell_count:sellC, overall_signal:overall,
+      rsi:{value:curRSI,signal:rsiSignal},
+      macd:{value:curMacd,signal_line:curSig,histogram:curHist,signal:macdSig},
+      adx:{value:curADX,plus_di:curPDI,minus_di:curMDI,trend:curADX&&curADX>25?'Strong Trend':'Weak / No Trend'},
+      options:optData, fear_greed:{score:fgScore,rating:fgRating,source:'crypto'},
+      fibonacci:calcFibonacci(highs,lows,closes,dates),
+      atm_history:calcATMHistory(closes,dates,cur),
+      chart_data:{ dates:dates.slice(-90), close:closes.slice(-90), volume:volumes.slice(-90).map(v=>Math.round(v)),
+        ma20:rollingMean(closes,20).slice(-90), ma50:rollingMean(closes,50).slice(-90), ma200:rollingMean(closes,200).slice(-90),
+        bb_upper:bbUpper.slice(-90), bb_lower:bbLower.slice(-90), bb_mid:bbMid.slice(-90),
+        rsi:rsiSeries.slice(-90), macd:macdS.slice(-90), macd_signal:sigS.slice(-90), macd_hist:histS.slice(-90) },
+    };
+  }
+
   async function loadTicker() {
     const raw = document.getElementById('ticker-input').value.trim().toUpperCase();
     if (!raw) return;
     setLoading(true); hideError();
     document.getElementById('dashboard').style.display = 'none';
     try {
-      const res  = await fetch(`/api/stock/${encodeURIComponent(raw)}`);
-      const data = await res.json();
-      if (!res.ok || data.error) { showError(data.error || 'Failed to fetch data.'); return; }
+      const data = await fetchStockData(raw);
       render(data);
       document.getElementById('dashboard').style.display = 'block';
-    } catch (err) {
-      showError('Network error: ' + err.message);
+    } catch(err) {
+      showError(err.message || 'Failed to fetch data.');
     } finally { setLoading(false); }
   }
 
