@@ -570,14 +570,30 @@
 
 <script>
   let priceChart, volChart, rsiChart, macdChart, atmChart;
-  let _atmData = null;   // stored for lookback re-renders
+  let _atmData = null;
 
   document.getElementById('ticker-input').addEventListener('keydown', e => { if (e.key === 'Enter') loadTicker(); });
   function quickLoad(sym) { document.getElementById('ticker-input').value = sym; loadTicker(); }
 
   // ── Client-side data layer (replaces Flask /api/stock backend) ──────────────
 
-  const PROXY = 'https://corsproxy.io/?url=';
+  const PROXIES = [
+    'https://corsproxy.io/?url=',
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.org/?',
+  ];
+
+  async function yfetch(url) {
+    let lastErr;
+    for (const proxy of PROXIES) {
+      try {
+        const r = await fetch(proxy + encodeURIComponent(url));
+        if (!r.ok) continue;
+        return await r.json();
+      } catch(e) { lastErr = e; }
+    }
+    throw lastErr || new Error('All proxies failed');
+  }
 
   function rawVal(v) {
     if (v == null) return null;
@@ -589,12 +605,6 @@
     const n = typeof v === 'number' ? v : parseFloat(v);
     if (n == null || isNaN(n) || !isFinite(n)) return null;
     return Math.round(n * Math.pow(10,d)) / Math.pow(10,d);
-  }
-
-  async function yfetch(url) {
-    const r = await fetch(PROXY + encodeURIComponent(url));
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
   }
 
   function rollingMean(arr, period) {
@@ -688,6 +698,46 @@
       if (total < minPain) { minPain = total; best = price; }
     }
     return best;
+  }
+
+  // Parse a Yahoo Finance optionChain result object into the display format
+  function parseYFChain(or, curPrice) {
+    if (!or?.expirationDates?.length) return null;
+    const nearDate = new Date(or.expirationDates[0]*1000).toISOString().slice(0,10);
+    const mapOpt = x => ({ strike:rawVal(x.strike), openInterest:rawVal(x.openInterest)||0,
+      impliedVolatility:rawVal(x.impliedVolatility)||0, bid:rawVal(x.bid)||0, ask:rawVal(x.ask)||0, lastPrice:rawVal(x.lastPrice)||0 });
+    const calls = (or.options?.[0]?.calls||[]).map(mapOpt);
+    const puts  = (or.options?.[0]?.puts ||[]).map(mapOpt);
+    const callOI=calls.reduce((s,c)=>s+c.openInterest,0), putOI=puts.reduce((s,p)=>s+p.openInterest,0);
+    const pcr=callOI>0?safeNum(putOI/callOI):null;
+    const avgIV=safeNum(((calls.reduce((s,c)=>s+c.impliedVolatility,0)/(calls.length||1))+(puts.reduce((s,p)=>s+p.impliedVolatility,0)/(puts.length||1)))/2*100);
+    const pcrSig=!pcr?'NEUTRAL':pcr>1.2?'VERY BEARISH':pcr>1.0?'BEARISH':pcr<0.5?'VERY BULLISH':pcr<0.7?'BULLISH':'NEUTRAL';
+    let atmStrike=null,atmCallMid=null,atmPutMid=null,atmStraddle=null,atmIV=null;
+    if (calls.length) {
+      const atm=calls.reduce((b,c)=>Math.abs(c.strike-curPrice)<Math.abs(b.strike-curPrice)?c:b,calls[0]);
+      atmStrike=atm.strike; atmCallMid=atm.ask>0?(atm.bid+atm.ask)/2:atm.lastPrice;
+      const ap=puts.find(p=>p.strike===atmStrike);
+      if (ap) atmPutMid=ap.ask>0?(ap.bid+ap.ask)/2:ap.lastPrice;
+      atmStraddle=(atmCallMid||0)+(atmPutMid||0); atmIV=safeNum(atm.impliedVolatility*100,1);
+    }
+    return { put_call_ratio:pcr, pcr_signal:pcrSig, implied_volatility:avgIV,
+      iv_signal:avgIV>20?'HIGH':avgIV<10?'LOW':'NORMAL', call_oi:callOI, put_oi:putOI,
+      max_pain:safeNum(calcMaxPain(calls,puts)), nearest_expiry:nearDate, expirations_count:or.expirationDates.length,
+      atm_strike:safeNum(atmStrike), atm_call_mid:safeNum(atmCallMid), atm_put_mid:safeNum(atmPutMid),
+      atm_straddle:safeNum(atmStraddle), atm_iv:atmIV };
+  }
+
+  // Recursively search an object for a Yahoo Finance optionChain result node
+  function findOptionChainNode(obj, depth=0) {
+    if (!obj || typeof obj !== 'object' || depth > 12) return null;
+    if (Array.isArray(obj)) {
+      for (const v of obj) { const f=findOptionChainNode(v,depth+1); if(f) return f; }
+      return null;
+    }
+    if (obj.expirationDates && Array.isArray(obj.options)) return obj;
+    if (obj.optionChain?.result?.[0]) return obj.optionChain.result[0];
+    for (const v of Object.values(obj)) { const f=findOptionChainNode(v,depth+1); if(f) return f; }
+    return null;
   }
 
   function calcATMHistory(closes, dates, todayPrice) {
@@ -793,36 +843,47 @@
     const totS=buyC+sellC, ratioS=sellC/(totS||1);
     const overall = ratioS>=0.75?'STRONG SELL':ratioS>=0.5?'SELL':ratioS<=0.25?'STRONG BUY':'BUY';
 
-    // Options
-    let optData = {};
+    // Options ─ two strategies, each silently falls through to the next
+    let optData = { _unavailable: true };
+
+    // Strategy 1: direct v7 API (works when proxy forwards cookies)
     try {
-      const oj = await yfetch('https://query1.finance.yahoo.com/v7/finance/options/'+ticker);
-      const or = oj.optionChain?.result?.[0];
-      if (or && or.expirationDates?.length) {
-        const nearDate = new Date(or.expirationDates[0]*1000).toISOString().slice(0,10);
-        const mapOpt = x => ({ strike:rawVal(x.strike), openInterest:rawVal(x.openInterest)||0,
-          impliedVolatility:rawVal(x.impliedVolatility)||0, bid:rawVal(x.bid)||0, ask:rawVal(x.ask)||0, lastPrice:rawVal(x.lastPrice)||0 });
-        const calls = (or.options?.[0]?.calls||[]).map(mapOpt);
-        const puts  = (or.options?.[0]?.puts ||[]).map(mapOpt);
-        const callOI=calls.reduce((s,c)=>s+c.openInterest,0), putOI=puts.reduce((s,p)=>s+p.openInterest,0);
-        const pcr = callOI>0?safeNum(putOI/callOI):null;
-        const avgIV = safeNum(((calls.reduce((s,c)=>s+c.impliedVolatility,0)/(calls.length||1))+(puts.reduce((s,p)=>s+p.impliedVolatility,0)/(puts.length||1)))/2*100);
-        const pcrSig = !pcr?'NEUTRAL':pcr>1.2?'VERY BEARISH':pcr>1.0?'BEARISH':pcr<0.5?'VERY BULLISH':pcr<0.7?'BULLISH':'NEUTRAL';
-        let atmStrike=null,atmCallMid=null,atmPutMid=null,atmStraddle=null,atmIV=null;
-        if (calls.length) {
-          const atm=calls.reduce((b,c)=>Math.abs(c.strike-cur)<Math.abs(b.strike-cur)?c:b,calls[0]);
-          atmStrike=atm.strike; atmCallMid=atm.ask>0?(atm.bid+atm.ask)/2:atm.lastPrice;
-          const ap=puts.find(p=>p.strike===atmStrike);
-          if (ap) atmPutMid=ap.ask>0?(ap.bid+ap.ask)/2:ap.lastPrice;
-          atmStraddle=(atmCallMid||0)+(atmPutMid||0); atmIV=safeNum(atm.impliedVolatility*100,1);
+      const oj = await yfetch('https://query1.finance.yahoo.com/v7/finance/options/' + ticker + '?date=-1&formatted=true&straddle=false&lang=en-US&region=US');
+      const parsed = parseYFChain(oj.optionChain?.result?.[0], cur);
+      if (parsed) optData = parsed;
+    } catch(e) {}
+
+    // Strategy 2: extract pre-fetched data from Yahoo Finance SvelteKit page
+    // The page embeds the full options API response in a <script data-sveltekit-fetched> tag
+    if (optData._unavailable) {
+      try {
+        let html = '';
+        for (const proxy of PROXIES) {
+          try {
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), 20000);
+            const r = await fetch(proxy + encodeURIComponent('https://finance.yahoo.com/quote/' + ticker + '/options/'), { signal: controller.signal });
+            clearTimeout(tid);
+            if (!r.ok) continue;
+            html = await r.text();
+            if (html.length > 50000) break;
+          } catch(e) {}
         }
-        optData = { put_call_ratio:pcr, pcr_signal:pcrSig, implied_volatility:avgIV,
-          iv_signal:avgIV>20?'HIGH':avgIV<10?'LOW':'NORMAL', call_oi:callOI, put_oi:putOI,
-          max_pain:safeNum(calcMaxPain(calls,puts)), nearest_expiry:nearDate, expirations_count:or.expirationDates.length,
-          atm_strike:safeNum(atmStrike), atm_call_mid:safeNum(atmCallMid), atm_put_mid:safeNum(atmPutMid),
-          atm_straddle:safeNum(atmStraddle), atm_iv:atmIV };
-      }
-    } catch(e) { optData = { error: e.message }; }
+        if (html) {
+          // SvelteKit pre-fetches the options API and embeds the response in a script tag
+          const svelteFetchRe = /<script[^>]*data-sveltekit-fetched[^>]*data-url="[^"]*v7\/finance\/options\/[^"]*"[^>]*>([\s\S]*?)<\/script>/;
+          const m = html.match(svelteFetchRe);
+          if (m) {
+            const wrapper = JSON.parse(m[1]);
+            if (wrapper.status === 200) {
+              const apiResp = JSON.parse(wrapper.body);
+              const parsed = parseYFChain(apiResp.optionChain?.result?.[0], cur);
+              if (parsed) optData = parsed;
+            }
+          }
+        }
+      } catch(e) {}
+    }
 
     // Fear & Greed (alternative.me — CORS-friendly)
     let fgScore=null, fgRating=null;
@@ -1078,10 +1139,11 @@
   // ── Options ───────────────────────────────────────────────────────────────
   function renderOptions(d) {
     const o = d.options;
-    if (o.error) {
+    if (o.error || o._unavailable) {
       document.getElementById('options-content').style.display = 'none';
       const e = document.getElementById('options-error');
-      e.style.display = 'block'; e.textContent = 'Options data not available for this security.';
+      e.style.display = 'block';
+      e.innerHTML = 'Options data unavailable for this ticker.';
       return;
     }
     document.getElementById('options-content').style.display = 'block';
