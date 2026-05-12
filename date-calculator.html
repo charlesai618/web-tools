@@ -391,33 +391,53 @@
     .cal-multi-table thead th {
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: 2;
       background: #f7fafc;
       padding: 10px 14px;
-      text-align: left;
-      font-size: 0.72rem;
+      text-align: center;
+      font-size: 0.78rem;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #718096;
+      color: #4a5568;
       border-bottom: 2px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
       white-space: nowrap;
+      min-width: 140px;
+    }
+    .cal-multi-table thead th:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      min-width: 110px;
     }
     .cal-multi-table td {
       padding: 10px 14px;
       border-bottom: 1px solid #f0f4f8;
+      border-right: 1px solid #f0f4f8;
       vertical-align: top;
+      text-align: center;
     }
     .cal-multi-table tr:last-child td { border-bottom: none; }
     .cal-multi-table tbody tr:hover td { background: #f7fafc; }
-    .cal-today td { background: #ebf8ff !important; }
-    .cal-today td:first-child { border-left: 3px solid #667eea; padding-left: 11px; }
+    .cal-row-label {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: #fff;
+      text-align: left !important;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-right: 2px solid #e2e8f0 !important;
+      white-space: nowrap;
+    }
+    .cal-multi-table tbody tr:hover .cal-row-label { background: #f7fafc; }
+    .cal-today-col { background: #ebf8ff !important; border-top: 3px solid #667eea; }
     .cal-td-main { font-weight: 600; color: #2d3748; }
-    .cal-td-sub  { font-size: 0.76rem; color: #a0aec0; margin-top: 2px; }
-    .gz-compact { display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; }
+    .cal-td-sub  { font-size: 0.74rem; color: #a0aec0; margin-top: 3px; }
+    .gz-compact       { display: flex; gap: 4px; align-items: baseline; justify-content: center; margin-bottom: 2px; }
     .gz-compact-label { font-size: 0.68rem; color: #a0aec0; font-weight: 700; }
-    .gz-compact-val   { font-size: 1rem; font-weight: 700; color: #2d3748; margin-right: 3px; }
-    .gz-compact-nums  { font-size: 0.72rem; color: #a0aec0; }
+    .gz-compact-val   { font-size: 1rem; font-weight: 700; color: #2d3748; margin-right: 2px; }
+    .gz-compact-nums  { font-size: 0.7rem; color: #a0aec0; }
 
     /* --- Ganzhi rows --- */
     .gz-rows { margin-top: 10px; }
@@ -939,68 +959,93 @@
       try { fHeEn  = new Intl.DateTimeFormat('en-u-ca-hebrew',           { year:'numeric', month:'long', day:'numeric' }); } catch(e) {}
       try { fHeNum = new Intl.DateTimeFormat('en-u-ca-hebrew',           { year:'numeric', month:'numeric', day:'numeric' }); } catch(e) {}
 
-      const gz   = (g) => `${STEMS[g.si]}${BRANCHES[g.bi]}`;
+      const gz      = (g) => `${STEMS[g.si]}${BRANCHES[g.bi]}`;
       const getParts = (fmt, d) => { try { return fmt ? fmt.formatToParts(d) : []; } catch(e) { return []; } };
-      const partVal  = (parts, type) => (parts.find(p => p.type === type) || {}).value || '';
-      const numLine  = (m, d, y) => m || d || y ? `<div class="cal-td-sub">Month ${m} · Day ${d} · Year ${y}</div>` : '';
+      const pv       = (parts, type) => (parts.find(p => p.type === type) || {}).value || '';
+      const numLine  = (m, d, y) => `<div class="cal-td-sub">Month ${m} · Day ${d} · Year ${y}</div>`;
 
-      const rows = [];
+      // Build all day data first
+      const fHdrEn = (() => { try { return new Intl.DateTimeFormat('en', { weekday:'short', month:'short', day:'numeric' }); } catch(e) {} })();
+      const days = [];
       for (let i = 0; i <= n; i++) {
-        const d = addDays(startDate, i);
+        const d  = addDays(startDate, i);
         const yr = d.getFullYear(), mo = d.getMonth() + 1, dy = d.getDate();
 
-        // Gregorian
-        const gregStr = fGrEn ? fGrEn.format(d) : d.toDateString();
-        const grNums  = numLine(mo, dy, yr);
+        const gregFull = fGrEn ? fGrEn.format(d) : d.toDateString();
+        const hdrLabel = fHdrEn ? fHdrEn.format(d) : gregFull;
 
-        // Chinese
-        const zhEn   = fZhEn ? fZhEn.format(d) : '—';
+        const zhEn  = fZhEn ? fZhEn.format(d) : '—';
         let zhNa = ''; try { zhNa = fZhNa ? fZhNa.format(d) : ''; } catch(e) {}
-        const zhParts = getParts(fZhNum, d);
-        const zhNums  = numLine(partVal(zhParts,'month'), partVal(zhParts,'day'), partVal(zhParts,'year'));
-        const zhNative = zhNa && zhNa !== zhEn ? `<div class="cal-td-sub">${zhNa}</div>` : '';
+        const zhP   = getParts(fZhNum, d);
 
-        // Islamic
-        const isStr  = fIsEn ? fIsEn.format(d) : '—';
-        const isParts = getParts(fIsNum, d);
-        const isNums  = numLine(partVal(isParts,'month'), partVal(isParts,'day'), partVal(isParts,'year'));
+        const isStr = fIsEn ? fIsEn.format(d) : '—';
+        const isP   = getParts(fIsNum, d);
 
-        // Hebrew
-        const heStr  = fHeEn ? fHeEn.format(d) : '—';
-        const heParts = getParts(fHeNum, d);
-        let heMon = partVal(heParts, 'month');
+        const heStr = fHeEn ? fHeEn.format(d) : '—';
+        const heP   = getParts(fHeNum, d);
+        let heMon   = pv(heP, 'month');
         if (!/^\d+$/.test(heMon)) { try { const hm = hebrewMonthNum(d, 'en-u-ca-hebrew'); if (hm && hm.num) heMon = hm.num; } catch(e) {} }
-        const heNums  = numLine(heMon, partVal(heParts,'day'), partVal(heParts,'year'));
 
-        // Ganzhi
         const yGZ = getYearGanzhi(yr);
         const mGZ = getMonthGanzhi(yr, mo, dy);
         const dGZ = getDayGanzhi(d);
 
-        rows.push(`<tr class="${i === 0 ? 'cal-today' : ''}">
-          <td><div class="cal-td-main">${gregStr}</div>${grNums}</td>
-          <td><div class="cal-td-main">${zhEn}</div>${zhNative}${zhNums}</td>
-          <td><div class="cal-td-main">${isStr}</div>${isNums}</td>
-          <td><div class="cal-td-main">${heStr}</div>${heNums}</td>
-          <td>
-            <div class="gz-compact"><span class="gz-compact-label">年</span><span class="gz-compact-val">${gz(yGZ)}</span><span class="gz-compact-nums">干${yGZ.si+1}·支${yGZ.bi+1}·#${yGZ.cy}</span></div>
-            <div class="gz-compact"><span class="gz-compact-label">月</span><span class="gz-compact-val">${gz(mGZ)}</span><span class="gz-compact-nums">干${mGZ.si+1}·支${mGZ.bi+1}</span></div>
-            <div class="gz-compact"><span class="gz-compact-label">日</span><span class="gz-compact-val">${gz(dGZ)}</span><span class="gz-compact-nums">干${dGZ.si+1}·支${dGZ.bi+1}·#${dGZ.cy}</span></div>
-          </td>
-        </tr>`);
+        days.push({ i, hdrLabel, gregFull, mo, dy, yr, zhEn, zhNa, zhP, isStr, isP, heStr, heMon, heP, yGZ, mGZ, dGZ });
       }
+
+      const tc = (day) => day.i === 0 ? 'cal-today-col' : '';
+
+      // Header row: calendar label + one column per day
+      const headerRow = `<tr>
+        <th>Calendar</th>
+        ${days.map(day => `<th class="${tc(day)}">${day.hdrLabel}</th>`).join('')}
+      </tr>`;
+
+      // Helper to wrap a cell
+      const cell = (day, html) => `<td class="${tc(day)}">${html}</td>`;
+
+      // Gregorian row
+      const gregRow = `<tr>
+        <td class="cal-row-label" style="color:#4a6cf7">Gregorian<br><span style="font-size:0.72rem;font-weight:400;color:#a0aec0">Solar</span></td>
+        ${days.map(day => cell(day, `<div class="cal-td-main">${day.gregFull}</div>${numLine(day.mo, day.dy, day.yr)}`)).join('')}
+      </tr>`;
+
+      // Chinese row
+      const zhRow = `<tr>
+        <td class="cal-row-label" style="color:#c53030">Chinese Lunar<br><span style="font-size:0.72rem;font-weight:400;color:#a0aec0">Lunisolar</span></td>
+        ${days.map(day => {
+          const na = day.zhNa && day.zhNa !== day.zhEn ? `<div class="cal-td-sub">${day.zhNa}</div>` : '';
+          return cell(day, `<div class="cal-td-main">${day.zhEn}</div>${na}${numLine(pv(day.zhP,'month'), pv(day.zhP,'day'), pv(day.zhP,'year'))}`);
+        }).join('')}
+      </tr>`;
+
+      // Islamic row
+      const isRow = `<tr>
+        <td class="cal-row-label" style="color:#276749">Islamic (Hijri)<br><span style="font-size:0.72rem;font-weight:400;color:#a0aec0">Lunar</span></td>
+        ${days.map(day => cell(day, `<div class="cal-td-main">${day.isStr}</div>${numLine(pv(day.isP,'month'), pv(day.isP,'day'), pv(day.isP,'year'))}`)).join('')}
+      </tr>`;
+
+      // Hebrew row
+      const heRow = `<tr>
+        <td class="cal-row-label" style="color:#975a16">Hebrew<br><span style="font-size:0.72rem;font-weight:400;color:#a0aec0">Lunisolar</span></td>
+        ${days.map(day => cell(day, `<div class="cal-td-main">${day.heStr}</div>${numLine(day.heMon, pv(day.heP,'day'), pv(day.heP,'year'))}`)).join('')}
+      </tr>`;
+
+      // Ganzhi row
+      const gzRow = `<tr>
+        <td class="cal-row-label" style="color:#b7791f">干支 Ganzhi<br><span style="font-size:0.72rem;font-weight:400;color:#a0aec0">Sexagenary</span></td>
+        ${days.map(day => cell(day, `
+          <div class="gz-compact"><span class="gz-compact-label">年</span><span class="gz-compact-val">${gz(day.yGZ)}</span><span class="gz-compact-nums">干${day.yGZ.si+1}·支${day.yGZ.bi+1}·#${day.yGZ.cy}</span></div>
+          <div class="gz-compact"><span class="gz-compact-label">月</span><span class="gz-compact-val">${gz(day.mGZ)}</span><span class="gz-compact-nums">干${day.mGZ.si+1}·支${day.mGZ.bi+1}</span></div>
+          <div class="gz-compact"><span class="gz-compact-label">日</span><span class="gz-compact-val">${gz(day.dGZ)}</span><span class="gz-compact-nums">干${day.dGZ.si+1}·支${day.dGZ.bi+1}·#${day.dGZ.cy}</span></div>
+        `)).join('')}
+      </tr>`;
 
       resultsEl.innerHTML = `
         <div class="cal-scroll-wrap">
           <table class="cal-multi-table">
-            <thead><tr>
-              <th>Gregorian</th>
-              <th>Chinese Lunar</th>
-              <th>Islamic (Hijri)</th>
-              <th>Hebrew</th>
-              <th>干支 Ganzhi</th>
-            </tr></thead>
-            <tbody>${rows.join('')}</tbody>
+            <thead>${headerRow}</thead>
+            <tbody>${gregRow}${zhRow}${isRow}${heRow}${gzRow}</tbody>
           </table>
         </div>`;
     }
