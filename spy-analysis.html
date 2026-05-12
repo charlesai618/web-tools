@@ -61,15 +61,17 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
 
 /* â”€â”€ Recent Signal panel â”€â”€ */
 .recent-panel{background:#0d1117;border-bottom:1px solid #30363d;flex-shrink:0}
-.recent-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;gap:8px}
-.recent-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:#58a6ff}
-.recent-controls{display:flex;align-items:center;gap:6px}
+.recent-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;gap:6px}
+.recent-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:#58a6ff;flex-shrink:0}
+.recent-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .recent-lb-grp{display:flex;gap:2px;background:#21262d;border-radius:5px;padding:2px}
 .rb-btn{background:transparent;border:none;color:#8b949e;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:11px;transition:all .12s}
 .rb-btn.active{background:#1f6feb40;color:#58a6ff}
-.recent-n{font-size:10px;color:#484f58;margin-left:2px}
+.recent-n{font-size:10px;color:#484f58}
+.create-cond-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:2px 7px;border-radius:4px;font-size:10px;cursor:pointer;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.create-cond-btn:hover{border-color:#58a6ff;color:#58a6ff}
 #recent-content{padding:0 14px 10px}
-.recent-row{display:flex;align-items:center;gap:9px;padding:5px 0;cursor:pointer;border-bottom:1px solid #161b22;transition:background .1s}
+.recent-row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;border-bottom:1px solid #161b22;transition:background .1s}
 .recent-row:last-child{border-bottom:none}
 .recent-row:hover{background:#21262d20;border-radius:4px;padding-left:4px;margin-left:-4px}
 .rec-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -78,7 +80,39 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
 .rec-date{font-size:10px;color:#8b949e;margin-top:1px}
 .rec-prob{font-size:12px;font-weight:700;flex-shrink:0;text-align:right}
 .rec-prob-sub{font-size:9px;color:#8b949e;text-align:right}
+.rec-del-btn{background:none;border:none;color:#484f58;cursor:pointer;font-size:12px;padding:0 2px;transition:color .12s;flex-shrink:0}
+.rec-del-btn:hover{color:#f85149}
 .no-signal{font-size:11px;color:#484f58;padding:8px 0;text-align:center}
+/* â”€â”€ Condition builder modal â”€â”€ */
+.cond-modal-card{position:relative;z-index:1;background:#161b22;border:1px solid #30363d;border-radius:10px;width:600px;max-width:97vw;display:flex;flex-direction:column;overflow:hidden;max-height:92vh}
+.cond-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #30363d;flex-shrink:0}
+.cond-modal-title{font-size:15px;font-weight:700}
+.cond-modal-body{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:13px}
+.cond-section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#8b949e;margin-bottom:5px}
+.cond-logic-grp{display:flex;gap:2px;background:#21262d;border-radius:5px;padding:2px;width:fit-content}
+.cond-logic-btn{background:transparent;border:none;color:#8b949e;padding:4px 12px;border-radius:3px;cursor:pointer;font-size:11px;transition:all .12s}
+.cond-logic-btn.active{background:#1f6feb40;color:#58a6ff}
+.cond-rules-list{display:flex;flex-direction:column;gap:7px}
+.cond-rule-row{display:grid;grid-template-columns:1fr 56px 1fr 72px 26px;gap:5px;align-items:center}
+.cond-sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 4px;border-radius:5px;font-size:11px;cursor:pointer;outline:none;width:100%}
+.cond-sel:focus{border-color:#388bfd}
+.cond-mod{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 6px;border-radius:5px;font-size:11px;width:100%;outline:none;text-align:center}
+.cond-mod:focus{border-color:#388bfd}
+.cond-mod::placeholder{color:#484f58}
+.cond-del-rule{background:none;border:none;color:#484f58;cursor:pointer;font-size:15px;padding:0;transition:color .12s;text-align:center}
+.cond-del-rule:hover{color:#f85149}
+.cond-add-rule-btn{background:#0d1117;border:1px dashed #30363d;color:#8b949e;padding:6px;border-radius:5px;font-size:11px;cursor:pointer;width:100%;transition:all .15s;text-align:center}
+.cond-add-rule-btn:hover{border-color:#58a6ff;color:#58a6ff}
+.cond-rule-hint{font-size:10px;color:#484f58;font-style:italic}
+.cond-test-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cond-test-btn{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:6px 14px;border-radius:5px;font-size:12px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.cond-test-btn:hover{border-color:#58a6ff;color:#58a6ff}
+.cond-test-result{font-size:12px;color:#8b949e;flex:1}
+.cond-actions{display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #21262d}
+.cond-cancel-btn{background:transparent;border:1px solid #30363d;color:#8b949e;padding:7px 16px;border-radius:5px;font-size:12px;cursor:pointer;transition:all .15s}
+.cond-cancel-btn:hover{border-color:#58a6ff;color:#e6edf3}
+.cond-save-btn{background:#238636;border:1px solid #2ea043;color:#fff;padding:7px 18px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.cond-save-btn:hover{background:#2ea043}
 
 /* â”€â”€ Pattern list / toggles â”€â”€ */
 .toggle-bar{display:flex;gap:4px;padding:8px 14px;flex-shrink:0;border-bottom:1px solid #21262d;flex-wrap:wrap}
@@ -260,6 +294,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
               <button class="rb-btn" data-rb="3">3d</button>
             </div>
             <span class="recent-n" id="recent-n-label">N=5d</span>
+            <button class="create-cond-btn" id="create-cond-btn">+ Rule</button>
           </div>
         </div>
         <div id="recent-content"><div class="no-signal">Loadingâ€¦</div></div>
@@ -380,6 +415,44 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
   </div>
 </div>
 
+<!-- Condition builder modal -->
+<div class="modal" id="cond-modal">
+  <div class="modal-overlay" id="cond-modal-overlay"></div>
+  <div class="cond-modal-card">
+    <div class="cond-modal-hdr">
+      <span class="cond-modal-title">Create Market Condition</span>
+      <button class="close-btn" id="cond-modal-close">&#10005;</button>
+    </div>
+    <div class="cond-modal-body">
+      <div>
+        <div class="cond-section-label">Condition Name</div>
+        <input class="form-input" type="text" id="cond-name" placeholder="e.g. Gap Up with Wide Body">
+      </div>
+      <div>
+        <div class="cond-section-label" style="margin-bottom:6px">Match logic</div>
+        <div class="cond-logic-grp">
+          <button class="cond-logic-btn active" data-logic="AND">ALL rules (AND)</button>
+          <button class="cond-logic-btn" data-logic="OR">ANY rule (OR)</button>
+        </div>
+      </div>
+      <div>
+        <div class="cond-section-label">Rules</div>
+        <div class="cond-rule-hint" style="margin-bottom:8px">Each rule: [Field] [op] [Field] [&#177;% offset on right side]</div>
+        <div class="cond-rules-list" id="cond-rules-list"></div>
+        <button class="cond-add-rule-btn" id="cond-add-rule-btn">+ Add Rule</button>
+      </div>
+      <div class="cond-test-row">
+        <button class="cond-test-btn" id="cond-test-btn">Test on History</button>
+        <span class="cond-test-result" id="cond-test-result">â€”</span>
+      </div>
+      <div class="cond-actions">
+        <button class="cond-cancel-btn" id="cond-cancel-btn">Cancel</button>
+        <button class="cond-save-btn" id="cond-save-btn">Save Condition</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 var RAW=[
 
@@ -394,7 +467,6 @@ var RAW=[
 /* â”€â”€ RAW â†’ data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function toIso(d){var p=d.split('/');return p[2]+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');}
 
-/* custom candles stored in localStorage */
 var customCandles=[];
 function loadCustomCandles(){
   try{var s=localStorage.getItem('spy_custom_candles');if(s)customCandles=JSON.parse(s);}catch(e){}
@@ -405,11 +477,9 @@ function saveCustomCandles(){
 
 var data=[];
 function rebuildData(){
-  /* start from RAW (reverse â†’ chronological) */
   var base=RAW.slice().reverse().map(function(r){
     return{time:toIso(r.d),open:r.o,high:r.h,low:r.l,close:r.c,vol:r.v,change:r.ch,custom:false};
   });
-  /* merge custom entries â€” custom overrides same date */
   var map={};
   base.forEach(function(d){map[d.time]=d;});
   customCandles.forEach(function(c){map[c.time]=c;});
@@ -459,7 +529,7 @@ function renderCandleSVG(candles,w,h){
   return '<svg width="'+w+'" height="'+h+'" xmlns="http://www.w3.org/2000/svg" style="display:block">'+els+'</svg>';
 }
 
-/* â”€â”€ Patterns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Named Patterns (for main chart markers + detail view) â”€â”€â”€â”€â”€ */
 var PATTERNS=[
   {id:'doji',name:'Doji',type:'neutral',
    desc:'Open equals Close â€” market indecision. Watch the next candle for direction.',
@@ -479,7 +549,7 @@ var PATTERNS=[
    detect:function(d,i){var c=d[i],b=bdy(c),l=loSh(c),u=upSh(c);
      return b>0&&l>=2*b&&u<=0.3*b&&bull(c);}},
   {id:'hanging_man',name:'Hanging Man',type:'bearish',
-   desc:'Hammer shape after an uptrend â€” bearish reversal warning, especially with high volume.',
+   desc:'Hammer shape after an uptrend â€” bearish reversal warning.',
    ex:[{o:30,h:48,l:28,c:46},{o:46,h:62,l:44,c:60},{o:60,h:76,l:58,c:74},{o:74,h:78,l:40,c:76}],
    exNote:'Same shape as Hammer but appears at top of an uptrend',
    detect:function(d,i){if(i<5)return false;var c=d[i],b=bdy(c),l=loSh(c),u=upSh(c);
@@ -491,7 +561,7 @@ var PATTERNS=[
    detect:function(d,i){var c=d[i],b=bdy(c),l=loSh(c),u=upSh(c);
      return b>0&&u>=2*b&&l<=0.3*b&&bear(c);}},
   {id:'inv_hammer',name:'Inverted Hammer',type:'bullish',
-   desc:'Long upper wick after a downtrend â€” potential bullish reversal, confirm with next candle.',
+   desc:'Long upper wick after a downtrend â€” potential bullish reversal.',
    ex:[{o:80,h:84,l:60,c:62},{o:62,h:66,l:42,c:44},{o:44,h:80,l:40,c:48}],
    exNote:'Appears at downtrend bottom; long upper wick, small bull body',
    detect:function(d,i){if(i<5)return false;var c=d[i],b=bdy(c),l=loSh(c),u=upSh(c);
@@ -499,13 +569,13 @@ var PATTERNS=[
   {id:'marubozu_bull',name:'Bullish Marubozu',type:'bullish',
    desc:'Large bull candle with no shadows â€” powerful uninterrupted buying pressure.',
    ex:[{o:62,h:66,l:42,c:44},{o:30,h:72,l:30,c:72}],
-   exNote:'Full body from open to close, no wicks â€” pure buying control',
+   exNote:'Full body from open to close, no wicks',
    detect:function(d,i){var c=d[i],b=bdy(c),r=rng(c);
      return bull(c)&&r>0&&b/r>0.92&&b/c.open>0.005;}},
   {id:'marubozu_bear',name:'Bearish Marubozu',type:'bearish',
    desc:'Large bear candle with no shadows â€” powerful uninterrupted selling pressure.',
    ex:[{o:40,h:62,l:36,c:60},{o:72,h:72,l:28,c:28}],
-   exNote:'Full body from open to close, no wicks â€” pure selling control',
+   exNote:'Full body from open to close, no wicks',
    detect:function(d,i){var c=d[i],b=bdy(c),r=rng(c);
      return bear(c)&&r>0&&b/r>0.92&&b/c.open>0.005;}},
   {id:'bull_engulf',name:'Bullish Engulfing',type:'bullish',
@@ -533,38 +603,38 @@ var PATTERNS=[
    detect:function(d,i){if(i<1)return false;var p=d[i-1],c=d[i],mid=(p.open+p.close)/2;
      return bull(p)&&bear(c)&&c.open>p.high&&c.close<mid&&c.close>p.open;}},
   {id:'bull_harami',name:'Bullish Harami',type:'bullish',
-   desc:'Small bull candle contained inside a large bear candle â€” selling momentum is slowing.',
+   desc:'Small bull candle contained inside a large bear candle â€” selling momentum slowing.',
    ex:[{o:72,h:76,l:28,c:32},{o:38,h:56,l:36,c:54}],
    exNote:'Small green body sits entirely inside the prior large red body',
    detect:function(d,i){if(i<1)return false;var p=d[i-1],c=d[i];
      return bear(p)&&bull(c)&&c.open>p.close&&c.close<p.open&&bdy(c)<bdy(p)*0.5;}},
   {id:'bear_harami',name:'Bearish Harami',type:'bearish',
-   desc:'Small bear candle contained inside a large bull candle â€” buying momentum is slowing.',
+   desc:'Small bear candle contained inside a large bull candle â€” buying momentum slowing.',
    ex:[{o:28,h:70,l:24,c:66},{o:60,h:62,l:42,c:46}],
    exNote:'Small red body sits entirely inside the prior large green body',
    detect:function(d,i){if(i<1)return false;var p=d[i-1],c=d[i];
      return bull(p)&&bear(c)&&c.open<p.close&&c.close>p.open&&bdy(c)<bdy(p)*0.5;}},
   {id:'morning_star',name:'Morning Star',type:'bullish',
-   desc:'Bear + small indecision candle + Bull â€” powerful 3-candle bullish reversal.',
+   desc:'Bear + small indecision + Bull â€” powerful 3-candle bullish reversal.',
    ex:[{o:72,h:76,l:44,c:48},{o:46,h:54,l:38,c:46},{o:44,h:74,l:42,c:72}],
    exNote:'Large red -> small body -> large green past midpoint of 1st candle',
    detect:function(d,i){if(i<2)return false;var a=d[i-2],b=d[i-1],c=d[i],m=(a.open+a.close)/2;
      return bear(a)&&bdy(a)>0&&bdy(b)<bdy(a)*0.35&&bull(c)&&c.close>m&&bdy(a)/a.open>0.005;}},
   {id:'evening_star',name:'Evening Star',type:'bearish',
-   desc:'Bull + small indecision candle + Bear â€” powerful 3-candle bearish reversal.',
+   desc:'Bull + small indecision + Bear â€” powerful 3-candle bearish reversal.',
    ex:[{o:28,h:56,l:24,c:52},{o:54,h:64,l:50,c:58},{o:60,h:62,l:28,c:32}],
    exNote:'Large green -> small body -> large red past midpoint of 1st candle',
    detect:function(d,i){if(i<2)return false;var a=d[i-2],b=d[i-1],c=d[i],m=(a.open+a.close)/2;
      return bull(a)&&bdy(a)>0&&bdy(b)<bdy(a)*0.35&&bear(c)&&c.close<m&&bdy(a)/a.open>0.005;}},
   {id:'three_soldiers',name:'Three White Soldiers',type:'bullish',
-   desc:'3 consecutive bull candles each opening within prior body â€” sustained buying conviction.',
+   desc:'3 consecutive bull candles each opening within prior body.',
    ex:[{o:28,h:50,l:26,c:48},{o:47,h:68,l:45,c:66},{o:65,h:86,l:63,c:84}],
    exNote:'Each candle opens inside prior body and closes near its high',
    detect:function(d,i){if(i<2)return false;var a=d[i-2],b=d[i-1],c=d[i];
      return bull(a)&&bull(b)&&bull(c)&&b.close>a.close&&c.close>b.close
        &&b.open>a.open&&b.open<a.close&&c.open>b.open&&c.open<b.close;}},
   {id:'three_crows',name:'Three Black Crows',type:'bearish',
-   desc:'3 consecutive bear candles each opening within prior body â€” sustained selling conviction.',
+   desc:'3 consecutive bear candles each opening within prior body.',
    ex:[{o:72,h:74,l:52,c:54},{o:55,h:57,l:35,c:37},{o:38,h:40,l:18,c:20}],
    exNote:'Each candle opens inside prior body and closes near its low',
    detect:function(d,i){if(i<2)return false;var a=d[i-2],b=d[i-1],c=d[i];
@@ -574,21 +644,189 @@ var PATTERNS=[
 
 var TYPE_COLOR={bullish:'#3fb950',bearish:'#f85149',neutral:'#d29922'};
 
-/* â”€â”€ All occurrences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-var allOcc={};
-function recomputeAllOccurrences(){
+/* â”€â”€ Field definitions for condition builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var FIELD_DEFS=[
+  {id:'c0.high',  label:"Today High"},
+  {id:'c0.low',   label:"Today Low"},
+  {id:'c0.open',  label:"Today Open"},
+  {id:'c0.close', label:"Today Close"},
+  {id:'c0.range', label:"Today Range (H-L)"},
+  {id:'c0.body',  label:"Today Body |C-O|"},
+  {id:'c0.upper', label:"Today Upper Wick"},
+  {id:'c0.lower', label:"Today Lower Wick"},
+  {id:'c1.high',  label:"Yest High"},
+  {id:'c1.low',   label:"Yest Low"},
+  {id:'c1.open',  label:"Yest Open"},
+  {id:'c1.close', label:"Yest Close"},
+  {id:'c1.range', label:"Yest Range (H-L)"},
+  {id:'c1.body',  label:"Yest Body |C-O|"},
+  {id:'c2.high',  label:"2d Ago High"},
+  {id:'c2.low',   label:"2d Ago Low"},
+  {id:'c2.close', label:"2d Ago Close"}
+];
+
+function getFieldVal(data,i,fieldId){
+  var parts=fieldId.split('.');
+  var off=parseInt(parts[0].slice(1));
+  if(i-off<0)return null;
+  var c=data[i-off],prop=parts[1];
+  if(prop==='high')return c.high;
+  if(prop==='low')return c.low;
+  if(prop==='open')return c.open;
+  if(prop==='close')return c.close;
+  if(prop==='range')return c.high-c.low;
+  if(prop==='body')return Math.abs(c.close-c.open);
+  if(prop==='upper')return c.high-Math.max(c.open,c.close);
+  if(prop==='lower')return Math.min(c.open,c.close)-c.low;
+  return null;
+}
+
+function evalRule(data,i,rule){
+  var a=getFieldVal(data,i,rule.fieldA);
+  var b=getFieldVal(data,i,rule.fieldB);
+  if(a===null||b===null)return false;
+  var bAdj=b*(1+(rule.mod||0)/100);
+  if(rule.op==='>')return a>bAdj;
+  if(rule.op==='<')return a<bAdj;
+  if(rule.op==='>=')return a>=bAdj;
+  if(rule.op==='<=')return a<=bAdj;
+  return false;
+}
+
+function evalUserBucket(data,i,bucket){
+  if(!bucket.rules||!bucket.rules.length)return false;
+  var results=bucket.rules.map(function(r){return evalRule(data,i,r);});
+  return bucket.logic==='OR'?results.some(Boolean):results.every(Boolean);
+}
+
+/* â”€â”€ Pre-built market condition buckets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var BUCKETS=[
+  {id:'inside_day',name:'Inside Day',type:'neutral',
+   desc:'Today\'s range is fully contained within yesterday\'s â€” compression before a breakout.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i].high<d[i-1].high&&d[i].low>d[i-1].low;}},
+  {id:'outside_day',name:'Outside Day',type:'neutral',
+   desc:'Today\'s range exceeds yesterday\'s on both sides â€” volatile expansion.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i].high>d[i-1].high&&d[i].low<d[i-1].low;}},
+  {id:'gap_up',name:'Gap Up Open',type:'bullish',
+   desc:'Today opened at least 0.3% above yesterday\'s close.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i].open>d[i-1].close*1.003;}},
+  {id:'gap_down',name:'Gap Down Open',type:'bearish',
+   desc:'Today opened at least 0.3% below yesterday\'s close.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i].open<d[i-1].close*0.997;}},
+  {id:'strong_bull',name:'Strong Bull Close',type:'bullish',
+   desc:'Bullish candle closing in the top 20% of its range â€” buyers firmly in control.',
+   detect:function(d,i){
+     var c=d[i],r=c.high-c.low;
+     return r>0&&c.close>c.open&&(c.close-c.low)/r>0.8;}},
+  {id:'strong_bear',name:'Strong Bear Close',type:'bearish',
+   desc:'Bearish candle closing in the bottom 20% of its range â€” sellers firmly in control.',
+   detect:function(d,i){
+     var c=d[i],r=c.high-c.low;
+     return r>0&&c.close<c.open&&(c.high-c.close)/r>0.8;}},
+  {id:'wide_range',name:'Wide Range Day',type:'neutral',
+   desc:'Today\'s range exceeds 1.5Ã— the 20-day average â€” elevated volatility.',
+   detect:function(d,i){
+     if(i<20)return false;
+     var sum=0;for(var k=i-20;k<i;k++)sum+=(d[k].high-d[k].low);
+     return(d[i].high-d[i].low)>1.5*(sum/20);}},
+  {id:'narrow_range',name:'Narrow Range Day',type:'neutral',
+   desc:'Today\'s range is under 0.5Ã— the 20-day average â€” volatility compression.',
+   detect:function(d,i){
+     if(i<20)return false;
+     var sum=0;for(var k=i-20;k<i;k++)sum+=(d[k].high-d[k].low);
+     return(d[i].high-d[i].low)<0.5*(sum/20);}},
+  {id:'three_up',name:'3-Day Bull Trend',type:'bullish',
+   desc:'Three consecutive higher closes â€” short-term upward momentum.',
+   detect:function(d,i){
+     if(i<2)return false;
+     return d[i].close>d[i-1].close&&d[i-1].close>d[i-2].close;}},
+  {id:'three_down',name:'3-Day Bear Trend',type:'bearish',
+   desc:'Three consecutive lower closes â€” short-term downward momentum.',
+   detect:function(d,i){
+     if(i<2)return false;
+     return d[i].close<d[i-1].close&&d[i-1].close<d[i-2].close;}},
+  {id:'bull_reversal',name:'Bull Reversal Day',type:'bullish',
+   desc:'Yesterday was bearish; today closes above yesterday\'s close.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i-1].close<d[i-1].open&&d[i].close>d[i-1].close;}},
+  {id:'bear_reversal',name:'Bear Reversal Day',type:'bearish',
+   desc:'Yesterday was bullish; today closes below yesterday\'s close.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i-1].close>d[i-1].open&&d[i].close<d[i-1].close;}},
+  {id:'upper_wick_rej',name:'Upper Wick Rejection',type:'bearish',
+   desc:'Upper wick is twice the body â€” sellers pushed price back from the highs.',
+   detect:function(d,i){
+     var c=d[i],b=Math.abs(c.close-c.open),u=c.high-Math.max(c.open,c.close);
+     return b>0&&u>=2*b;}},
+  {id:'lower_wick_sup',name:'Lower Wick Support',type:'bullish',
+   desc:'Lower wick is twice the body â€” buyers absorbed selling pressure at the lows.',
+   detect:function(d,i){
+     var c=d[i],b=Math.abs(c.close-c.open),l=Math.min(c.open,c.close)-c.low;
+     return b>0&&l>=2*b;}},
+  {id:'close_above_yh',name:'Close Above Yest High',type:'bullish',
+   desc:'Today closed above yesterday\'s high â€” a clear breakout with follow-through.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i].close>d[i-1].high;}},
+  {id:'close_below_yl',name:'Close Below Yest Low',type:'bearish',
+   desc:'Today closed below yesterday\'s low â€” a confirmed breakdown.',
+   detect:function(d,i){
+     if(i<1)return false;
+     return d[i].close<d[i-1].low;}}
+];
+
+/* â”€â”€ User-defined buckets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var userBuckets=[];
+function loadUserBuckets(){
+  try{var s=localStorage.getItem('spy_user_buckets');if(s)userBuckets=JSON.parse(s);}catch(e){}
+}
+function saveUserBuckets(){
+  try{localStorage.setItem('spy_user_buckets',JSON.stringify(userBuckets));}catch(e){}
+}
+loadUserBuckets();
+
+/* â”€â”€ Occurrence maps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var allOcc={};       /* pattern id -> [{idx,time}] */
+var allBucketOcc={}; /* bucket id  -> [{idx,time}] */
+
+function recomputeAllOcc(){
   PATTERNS.forEach(function(p){allOcc[p.id]=[];});
+  BUCKETS.forEach(function(b){allBucketOcc[b.id]=[];});
+  userBuckets.forEach(function(b){allBucketOcc[b.id]=[];});
   for(var i=2;i<data.length-1;i++){
     PATTERNS.forEach(function(p){
       if(p.detect(data,i))allOcc[p.id].push({idx:i,time:data[i].time});
     });
+    BUCKETS.forEach(function(b){
+      if(b.detect(data,i))allBucketOcc[b.id].push({idx:i,time:data[i].time});
+    });
+    userBuckets.forEach(function(b){
+      if(evalUserBucket(data,i,b))allBucketOcc[b.id].push({idx:i,time:data[i].time});
+    });
   }
 }
-recomputeAllOccurrences();
+recomputeAllOcc();
 
 /* â”€â”€ Probability â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function calcProb(patternId,n){
   var occs=allOcc[patternId].filter(function(o){return o.idx+n<data.length;});
+  return _prob(occs,n);
+}
+function calcBucketProb(bucketId,n){
+  var occs=(allBucketOcc[bucketId]||[]).filter(function(o){return o.idx+n<data.length;});
+  return _prob(occs,n);
+}
+function _prob(occs,n){
   var up=0,rets=[];
   occs.forEach(function(o){
     var ret=(data[o.idx+n].close-data[o.idx].close)/data[o.idx].close*100;
@@ -603,7 +841,7 @@ function calcProb(patternId,n){
 
 /* â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 var currentRange=252,hiddenMA={},hiddenPatType={},hiddenPat={};
-var selectedPat=null,nDays=5,modalNDays=5,modalPatId=null;
+var selectedPat=null,nDays=5,modalNDays=5,modalPatId=null,modalIsBucket=false;
 var recentLookback=1;
 var autoFetchedDate=null;
 var mainChart,volChart,candleSeries,volSeries,ma5S,ma20S,ma60S;
@@ -632,24 +870,27 @@ function buildMainMarkers(){
 }
 function updateMarkers(){if(candleSeries)candleSeries.setMarkers(buildMainMarkers());}
 
-/* â”€â”€ Rebuild hist chart markers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function buildHistMarkers(highlightIdx){
-  var p=PATTERNS.find(function(x){return x.id===modalPatId;});
-  if(!p)return;
+  var col=modalIsBucket?TYPE_COLOR[_findBucket(modalPatId).type||'neutral']:TYPE_COLOR[_findPattern(modalPatId).type];
   var markers=processedOccs.map(function(o,i){
     var isCur=(i===highlightIdx);
     return{time:o.time,
-      position:mPos(p.type),
+      position:o.isUp?'belowBar':'aboveBar',
       color:isCur?'#ffffff':(o.isUp?'#3fb950':'#f85149'),
       shape:isCur?'circle':(o.isUp?'arrowUp':'arrowDown'),
-      size:isCur?3:1,
-      text:''};
+      size:isCur?3:1,text:''};
   });
   markers.sort(function(a,b){return a.time<b.time?-1:a.time>b.time?1:0;});
   histCandle.setMarkers(markers);
 }
 
-/* â”€â”€ Navigate to occurrence idx â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function _findPattern(id){return PATTERNS.find(function(x){return x.id===id;})||{};}
+function _findBucket(id){
+  return BUCKETS.find(function(x){return x.id===id;})
+      ||userBuckets.find(function(x){return x.id===id;})||{};
+}
+
+/* â”€â”€ Navigate occurrences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function goToOccurrence(idx){
   if(!processedOccs.length)return;
   idx=Math.max(0,Math.min(idx,processedOccs.length-1));
@@ -674,13 +915,12 @@ function goToOccurrence(idx){
   var allBtn=document.querySelector('[data-range="9999"]');
   if(allBtn)allBtn.classList.add('active');
   updateChart();
-  var mCtx=30;
-  var mFrom=data[Math.max(0,occ.idx-mCtx)].time;
-  var mTo=data[Math.min(data.length-1,occ.idx+mCtx)].time;
+  var mFrom=data[Math.max(0,occ.idx-30)].time;
+  var mTo=data[Math.min(data.length-1,occ.idx+30)].time;
   mainChart.timeScale().setVisibleRange({from:mFrom,to:mTo});
 }
 
-/* â”€â”€ Chart data helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Chart helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function parseVol(v){
   if(!v)return 0;
   var n=parseFloat(v.replace('M','').replace('B','').replace(/,/g,''));
@@ -712,80 +952,97 @@ function updateChart(){
   chEl.className=last.change&&last.change.charAt(0)==='-'?'down':'up';
 }
 
-/* â”€â”€ Data management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Custom candle management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function addCustomCandle(candle){
-  /* remove existing entry with same date if any */
   customCandles=customCandles.filter(function(c){return c.time!==candle.time;});
   customCandles.push(candle);
   saveCustomCandles();
-  rebuildData();
-  recomputeAllOccurrences();
-  updateChart();
-  renderPatternList();
-  renderRecentSignal();
-  renderCustomList();
-  /* update hist chart if modal is open */
+  rebuildData();recomputeAllOcc();
+  updateChart();renderPatternList();renderRecentSignal();renderCustomList();
   if(document.getElementById('modal').style.display!=='none'&&modalPatId){
-    renderHistChart(modalPatId,modalNDays);
+    renderHistChart(modalPatId,modalIsBucket,modalNDays);
   }
 }
 function deleteCustomCandle(time){
   customCandles=customCandles.filter(function(c){return c.time!==time;});
   saveCustomCandles();
-  rebuildData();
-  recomputeAllOccurrences();
-  updateChart();
-  renderPatternList();
-  renderRecentSignal();
-  renderCustomList();
+  rebuildData();recomputeAllOcc();
+  updateChart();renderPatternList();renderRecentSignal();renderCustomList();
 }
 
-/* â”€â”€ Recent Signal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Recent Signal (bucket-based) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderRecentSignal(){
-  /* update N label */
   document.getElementById('recent-n-label').textContent='N='+nDays+'d';
   var el=document.getElementById('recent-content');
   if(data.length<3){el.innerHTML='<div class="no-signal">Not enough data</div>';return;}
-  /* scan last recentLookback candles */
-  var signals=[];
   var startIdx=Math.max(2,data.length-recentLookback);
+  var signals=[];
   for(var i=startIdx;i<data.length;i++){
-    PATTERNS.forEach(function(p){
-      if(p.detect(data,i)){
-        var prob=calcProb(p.id,nDays);
-        signals.push({pid:p.id,name:p.name,type:p.type,time:data[i].time,upPct:prob.upPct,total:prob.total,idx:i});
-      }
+    /* pre-built buckets */
+    BUCKETS.forEach(function(b){
+      if(!b.detect(data,i))return;
+      var prob=calcBucketProb(b.id,nDays);
+      signals.push({id:b.id,name:b.name,type:b.type,time:data[i].time,
+        upPct:prob.upPct,total:prob.total,idx:i,isUser:false});
+    });
+    /* user buckets */
+    userBuckets.forEach(function(b){
+      if(!evalUserBucket(data,i,b))return;
+      var prob=calcBucketProb(b.id,nDays);
+      signals.push({id:b.id,name:b.name,type:b.type||'neutral',time:data[i].time,
+        upPct:prob.upPct,total:prob.total,idx:i,isUser:true});
     });
   }
-  if(!signals.length){el.innerHTML='<div class="no-signal">No patterns in last '+recentLookback+' candle'+(recentLookback>1?'s':'')+'</div>';return;}
-  /* sort: most recent first, then by confidence deviation from 50 */
+  if(!signals.length){
+    el.innerHTML='<div class="no-signal">No conditions matched last '
+      +recentLookback+' candle'+(recentLookback>1?'s':'')+'</div>';
+    return;
+  }
   signals.sort(function(a,b){
     if(b.idx!==a.idx)return b.idx-a.idx;
     return Math.abs(b.upPct-50)-Math.abs(a.upPct-50);
   });
   var html='';
   signals.forEach(function(s){
-    var col=TYPE_COLOR[s.type];
+    var col=TYPE_COLOR[s.type]||'#d29922';
     var pctCol=s.upPct>=55?'#3fb950':s.upPct<=45?'#f85149':'#d29922';
-    html+='<div class="recent-row" data-pid="'+s.pid+'">'
+    html+='<div class="recent-row" data-bid="'+s.id+'">'
       +'<div class="rec-dot" style="background:'+col+'"></div>'
       +'<div class="rec-info">'
-        +'<div class="rec-name">'+s.name+'</div>'
+        +'<div class="rec-name">'+s.name+(s.isUser?' <span style="font-size:9px;color:#484f58">[custom]</span>':'')+'</div>'
         +'<div class="rec-date">'+s.time+'</div>'
       +'</div>'
-      +'<div>'
+      +'<div style="text-align:right">'
         +'<div class="rec-prob" style="color:'+pctCol+'">'+s.upPct+'%</div>'
         +'<div class="rec-prob-sub">UP / '+s.total+' occ</div>'
       +'</div>'
+      +(s.isUser?'<button class="rec-del-btn" data-del-bid="'+s.id+'" title="Delete condition">&#128465;</button>':'')
       +'</div>';
   });
   el.innerHTML=html;
   el.querySelectorAll('.recent-row').forEach(function(row){
-    row.addEventListener('click',function(){selectPattern(row.getAttribute('data-pid'));});
+    row.addEventListener('click',function(e){
+      if(e.target.closest('.rec-del-btn'))return;
+      openModal(row.getAttribute('data-bid'),true);
+    });
+  });
+  el.querySelectorAll('.rec-del-btn').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      deleteUserBucket(btn.getAttribute('data-del-bid'));
+    });
   });
 }
 
-/* â”€â”€ Custom entries list (in Add Day modal) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ User bucket management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function deleteUserBucket(id){
+  userBuckets=userBuckets.filter(function(b){return b.id!==id;});
+  saveUserBuckets();
+  delete allBucketOcc[id];
+  renderRecentSignal();
+}
+
+/* â”€â”€ Custom entries list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderCustomList(){
   var el=document.getElementById('custom-list-body');
   if(!customCandles.length){el.innerHTML='<div class="no-custom">No custom entries yet</div>';return;}
@@ -794,7 +1051,9 @@ function renderCustomList(){
   sorted.forEach(function(c){
     html+='<div class="custom-entry-row">'
       +'<span class="ce-date">'+c.time+'</span>'
-      +(c.autoFetched?'<span class="ce-badge" style="background:#3fb95020;color:#3fb950;border-color:#3fb95040">auto</span>':'<span class="ce-badge">manual</span>')
+      +(c.autoFetched
+        ?'<span class="ce-badge" style="background:#3fb95020;color:#3fb950;border-color:#3fb95040">auto</span>'
+        :'<span class="ce-badge">manual</span>')
       +'<span class="ce-prices">O:'+c.open.toFixed(2)+' H:'+c.high.toFixed(2)+' L:'+c.low.toFixed(2)+' C:'+c.close.toFixed(2)+'</span>'
       +'<button class="ce-del" data-time="'+c.time+'" title="Delete">&#10005;</button>'
       +'</div>';
@@ -805,7 +1064,7 @@ function renderCustomList(){
   });
 }
 
-/* â”€â”€ Sidebar: pattern list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Pattern list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderPatternList(){
   var el=document.getElementById('pattern-list');
   var groups=[{label:'Bullish',type:'bullish'},{label:'Bearish',type:'bearish'},{label:'Neutral',type:'neutral'}];
@@ -841,12 +1100,11 @@ function renderPatternList(){
   });
 }
 
-/* â”€â”€ Sidebar: detail view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Pattern detail view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderDetailView(patId){
-  var p=PATTERNS.find(function(x){return x.id===patId;});
-  if(!p)return;
+  var p=_findPattern(patId);
+  if(!p.id)return;
   document.getElementById('detail-name').textContent=p.name;
-  /* update recent signal N label */
   document.getElementById('recent-n-label').textContent='N='+nDays+'d';
   var prob=calcProb(patId,nDays),sign=prob.avg>=0?'+':'';
   var bc=p.type==='bullish'?'badge-bull':p.type==='bearish'?'badge-bear':'badge-neu';
@@ -880,15 +1138,13 @@ function renderDetailView(patId){
         +'<div class="prob-meta-item"><div class="prob-meta-k">Worst case</div><div class="prob-meta-v down">'+prob.min.toFixed(2)+'%</div></div>'
       +'</div></div>'
     +'<button class="hist-btn" id="open-hist-btn">&#128202; View All '+allOcc[patId].length+' Historical Occurrences</button>';
-
   document.querySelectorAll('#det-n-btns .n-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
       nDays=parseInt(btn.getAttribute('data-n'));
-      renderDetailView(patId);
-      renderRecentSignal();
+      renderDetailView(patId);renderRecentSignal();
     });
   });
-  document.getElementById('open-hist-btn').addEventListener('click',function(){openModal(patId);});
+  document.getElementById('open-hist-btn').addEventListener('click',function(){openModal(patId,false);});
 }
 
 function selectPattern(patId){
@@ -904,18 +1160,18 @@ function showListView(){
   renderPatternList();
 }
 
-/* â”€â”€ Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function openModal(patId){
-  modalPatId=patId;
-  var p=PATTERNS.find(function(x){return x.id===patId;});
-  document.getElementById('modal-title').textContent=p.name+' â€” Historical Occurrences';
+/* â”€â”€ Historical occurrences modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function openModal(id,isBucket){
+  modalPatId=id;modalIsBucket=!!isBucket;
+  var item=isBucket?_findBucket(id):_findPattern(id);
+  document.getElementById('modal-title').textContent=(item.name||id)+' â€” Historical Occurrences';
   document.getElementById('modal').style.display='flex';
   currentOccIdx=-1;
   document.getElementById('occ-counter').textContent='-- / --';
   document.getElementById('occ-detail').textContent='Loading...';
   document.getElementById('occ-prev').disabled=true;
   document.getElementById('occ-next').disabled=true;
-  setTimeout(function(){initHistChart();renderHistChart(patId,modalNDays);},60);
+  setTimeout(function(){initHistChart();renderHistChart(id,isBucket,modalNDays);},60);
 }
 function closeModal(){document.getElementById('modal').style.display='none';}
 
@@ -942,8 +1198,9 @@ function initHistChart(){
   new ResizeObserver(function(){histChart.applyOptions({width:el.clientWidth});}).observe(el);
 }
 
-function renderHistChart(patId,n){
-  var rawOccs=allOcc[patId].filter(function(o){return o.idx+n<data.length;});
+function renderHistChart(id,isBucket,n){
+  var rawOccs=(isBucket?(allBucketOcc[id]||[]):allOcc[id]||[])
+    .filter(function(o){return o.idx+n<data.length;});
   processedOccs=rawOccs.map(function(o){
     var ret=(data[o.idx+n].close-data[o.idx].close)/data[o.idx].close*100;
     return{idx:o.idx,time:o.time,ret:ret,isUp:ret>0};
@@ -965,13 +1222,22 @@ function renderHistChart(patId,n){
   var bLabels=['<-5%','-5~-2','-2~0','0~2','2~5','>5%'];
   var bCols=['#f85149','#f85149','#f85149bb','#3fb950bb','#3fb950','#3fb950'];
   var maxB=Math.max.apply(null,bins.concat([1]));
-  var p=PATTERNS.find(function(x){return x.id===patId;});
-  var exSvg=renderCandleSVG(p.ex,160,70);
+  /* stats panel */
+  var item=isBucket?_findBucket(id):_findPattern(id);
+  var formationHtml='';
+  if(!isBucket&&item.ex){
+    formationHtml='<div class="stat-card"><div class="stat-card-title">Typical Formation</div>'
+      +'<div style="display:flex;justify-content:center">'+renderCandleSVG(item.ex,160,70)+'</div>'
+      +(item.exNote?'<div style="font-size:10px;color:#484f58;text-align:center;margin-top:4px">'+item.exNote+'</div>':'')
+      +'</div>';
+  } else if(isBucket&&item.desc){
+    formationHtml='<div class="stat-card"><div class="stat-card-title">Condition</div>'
+      +'<div style="font-size:12px;color:#8b949e;line-height:1.5">'+item.desc+'</div>'
+      +(item.rules?'<div style="margin-top:8px">'+renderRulesHtml(item)+'</div>':'')
+      +'</div>';
+  }
   document.getElementById('modal-stats').innerHTML=
-    '<div class="stat-card"><div class="stat-card-title">Typical Formation</div>'
-      +'<div style="display:flex;justify-content:center">'+exSvg+'</div>'
-      +(p.exNote?'<div style="font-size:10px;color:#484f58;text-align:center;margin-top:4px">'+p.exNote+'</div>':'')
-    +'</div>'
+    formationHtml
     +'<div class="stat-card"><div class="stat-card-title">Probability (N='+n+'d)</div>'
       +'<div class="big-prob"><div class="big-prob-num" style="color:'+posCol+'">'+upPct+'%</div>'
       +'<div class="big-prob-label">chance of UP</div></div>'
@@ -981,18 +1247,18 @@ function renderHistChart(patId,n){
         +'<span class="up">&#9650; '+up+' UP</span><span class="down">'+(total-up)+' DOWN &#9660;</span></div>'
     +'</div>'
     +'<div class="stat-card"><div class="stat-card-title">Return Stats</div>'
-      +'<div class="stat-row"><span class="stat-lbl">Total occurrences</span><span class="stat-val">'+total+'</span></div>'
+      +'<div class="stat-row"><span class="stat-lbl">Occurrences</span><span class="stat-val">'+total+'</span></div>'
       +'<div class="stat-row"><span class="stat-lbl">Avg return</span><span class="stat-val '+(avg>=0?'up':'down')+'">'+(avg>=0?'+':'')+avg.toFixed(2)+'%</span></div>'
       +'<div class="stat-row"><span class="stat-lbl">Best</span><span class="stat-val up">+'+mx.toFixed(2)+'%</span></div>'
       +'<div class="stat-row"><span class="stat-lbl">Worst</span><span class="stat-val down">'+mn.toFixed(2)+'%</span></div>'
     +'</div>'
     +'<div class="stat-card"><div class="stat-card-title">Return Distribution</div>'
       +'<div style="display:flex;align-items:flex-end;gap:3px;height:72px;margin-bottom:4px">'
-      +bins.map(function(v,bIdx){
+      +bins.map(function(v,bi){
         var bh=Math.max(3,Math.round(v/maxB*60));
         return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">'
           +'<div style="font-size:9px;color:#8b949e">'+v+'</div>'
-          +'<div style="width:100%;height:'+bh+'px;background:'+bCols[bIdx]+';border-radius:2px 2px 0 0"></div>'
+          +'<div style="width:100%;height:'+bh+'px;background:'+bCols[bi]+';border-radius:2px 2px 0 0"></div>'
           +'</div>';
       }).join('')+'</div>'
       +'<div style="display:flex;gap:3px">'
@@ -1000,6 +1266,21 @@ function renderHistChart(patId,n){
         return '<div style="flex:1;font-size:8px;color:#8b949e;text-align:center;overflow:hidden">'+l+'</div>';
       }).join('')+'</div>'
     +'</div>';
+}
+
+function renderRulesHtml(bucket){
+  if(!bucket.rules||!bucket.rules.length)return '';
+  var logic=bucket.logic||'AND';
+  var lines=bucket.rules.map(function(r,i){
+    var fa=FIELD_DEFS.find(function(f){return f.id===r.fieldA;})||{label:r.fieldA};
+    var fb=FIELD_DEFS.find(function(f){return f.id===r.fieldB;})||{label:r.fieldB};
+    var mod=r.mod?(' '+(r.mod>0?'+':'')+r.mod+'%'):'';
+    return (i>0?'<span style="color:#484f58;font-size:9px;margin:2px 0;display:block">'+logic+'</span>':'')
+      +'<div style="font-size:11px;color:#e6edf3;background:#21262d;padding:4px 7px;border-radius:4px">'
+      +fa.label+' <span style="color:#58a6ff">'+r.op+'</span> '+fb.label+(mod?'<span style="color:#d29922">'+mod+'</span>':'')
+      +'</div>';
+  });
+  return lines.join('');
 }
 
 /* â”€â”€ Chart init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -1025,7 +1306,6 @@ function initCharts(){
   ma60S=mainChart.addLineSeries({color:'#9c27b0',lineWidth:1,priceLineVisible:false,lastValueVisible:false});
   mainChart.timeScale().subscribeVisibleLogicalRangeChange(function(r){if(r)volChart.timeScale().setVisibleLogicalRange(r);});
   volChart.timeScale().subscribeVisibleLogicalRangeChange(function(r){if(r)mainChart.timeScale().setVisibleLogicalRange(r);});
-
   mainChart.subscribeCrosshairMove(function(param){
     var tip=document.getElementById('ctip');
     if(!param.point||!param.time){tip.style.display='none';return;}
@@ -1044,7 +1324,6 @@ function initCharts(){
       +'<span class="ctip-lbl">C</span><span class="ctip-val">'+d.close.toFixed(2)+'</span>'
       +'<span style="color:'+col+'">'+(parseFloat(chg)>=0?'+':'')+chg+'%</span></div>'+pl;
   });
-
   mainChart.subscribeClick(function(param){
     if(!param.time)return;
     var found=PATTERNS.filter(function(p){return allOcc[p.id].some(function(o){return o.time===param.time;});});
@@ -1057,20 +1336,114 @@ function initCharts(){
     clearTimeout(ind._t);ind._t=setTimeout(function(){ind.style.display='none';},2200);
     selectPattern(found[0].id);
   });
+  new ResizeObserver(function(){mainChart.applyOptions({width:cEl.clientWidth,height:cEl.clientHeight});}).observe(cEl);
+  new ResizeObserver(function(){volChart.applyOptions({width:vEl.clientWidth,height:vEl.clientHeight});}).observe(vEl);
+  updateChart();renderPatternList();renderRecentSignal();
+}
 
-  new ResizeObserver(function(){
-    mainChart.applyOptions({width:cEl.clientWidth,height:cEl.clientHeight});
-  }).observe(cEl);
-  new ResizeObserver(function(){
-    volChart.applyOptions({width:vEl.clientWidth,height:vEl.clientHeight});
-  }).observe(vEl);
+/* â”€â”€ Condition builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+var condRules=[];
+var condLogic='AND';
 
-  updateChart();
-  renderPatternList();
+function fieldOptions(selectedId){
+  return FIELD_DEFS.map(function(f){
+    return '<option value="'+f.id+'"'+(f.id===selectedId?' selected':'')+'>'+f.label+'</option>';
+  }).join('');
+}
+
+function renderCondRuleRow(rule,idx){
+  var row=document.createElement('div');
+  row.className='cond-rule-row';
+  row.innerHTML=
+    '<select class="cond-sel cond-fa">'+fieldOptions(rule.fieldA)+'</select>'
+    +'<select class="cond-sel cond-op">'
+    +'<option value=">"'+(rule.op==='>'?' selected':'')+'>  &gt;  </option>'
+    +'<option value="<"'+(rule.op==='<'?' selected':'')+'> &lt; </option>'
+    +'<option value=">="'+(rule.op==='>='?' selected':'')+'>  &ge;  </option>'
+    +'<option value="<="'+(rule.op==='<='?' selected':'')+'> &le; </option>'
+    +'</select>'
+    +'<select class="cond-sel cond-fb">'+fieldOptions(rule.fieldB)+'</select>'
+    +'<input class="cond-mod" type="number" step="0.1" placeholder="Â±%" value="'+(rule.mod||'')+'">'
+    +'<button class="cond-del-rule" data-idx="'+idx+'">&#10005;</button>';
+  row.querySelector('.cond-fa').addEventListener('change',function(){condRules[idx].fieldA=this.value;});
+  row.querySelector('.cond-op').addEventListener('change',function(){condRules[idx].op=this.value;});
+  row.querySelector('.cond-fb').addEventListener('change',function(){condRules[idx].fieldB=this.value;});
+  row.querySelector('.cond-mod').addEventListener('input',function(){condRules[idx].mod=parseFloat(this.value)||0;});
+  row.querySelector('.cond-del-rule').addEventListener('click',function(){
+    condRules.splice(idx,1);refreshCondRulesList();
+  });
+  return row;
+}
+
+function refreshCondRulesList(){
+  var list=document.getElementById('cond-rules-list');
+  list.innerHTML='';
+  condRules.forEach(function(r,i){list.appendChild(renderCondRuleRow(r,i));});
+}
+
+function addCondRule(){
+  condRules.push({fieldA:'c0.high',op:'>',fieldB:'c1.close',mod:0});
+  refreshCondRulesList();
+}
+
+function testCondition(){
+  if(!condRules.length){
+    document.getElementById('cond-test-result').textContent='Add at least one rule first.';
+    return;
+  }
+  var tmpBucket={rules:condRules,logic:condLogic};
+  var matches=[];
+  for(var i=2;i<data.length-1;i++){
+    if(evalUserBucket(data,i,tmpBucket))matches.push({idx:i,time:data[i].time});
+  }
+  var occs=matches.filter(function(o){return o.idx+nDays<data.length;});
+  var up=occs.filter(function(o){return data[o.idx+nDays].close>data[o.idx].close;}).length;
+  var pct=occs.length?Math.round(up/occs.length*100):50;
+  var col=pct>=55?'#3fb950':pct<=45?'#f85149':'#d29922';
+  document.getElementById('cond-test-result').innerHTML=
+    '<span style="color:#e6edf3">'+matches.length+' occurrences</span>'
+    +' &nbsp; <span style="color:'+col+'">'+pct+'% UP</span>'
+    +' <span style="color:#484f58">in '+nDays+'d ('+occs.length+' with data)</span>';
+}
+
+function openConditionBuilder(){
+  condRules=[{fieldA:'c0.high',op:'>',fieldB:'c1.close',mod:0}];
+  condLogic='AND';
+  document.getElementById('cond-name').value='';
+  document.getElementById('cond-test-result').textContent='â€”';
+  document.querySelectorAll('.cond-logic-btn').forEach(function(b){
+    b.classList.toggle('active',b.getAttribute('data-logic')==='AND');
+  });
+  refreshCondRulesList();
+  document.getElementById('cond-modal').style.display='flex';
+}
+function closeConditionBuilder(){document.getElementById('cond-modal').style.display='none';}
+
+function saveCondition(){
+  if(!condRules.length){alert('Add at least one rule.');return;}
+  var name=document.getElementById('cond-name').value.trim()||('Custom Condition '+(userBuckets.length+1));
+  var id='user_'+Date.now();
+  var bucket={id:id,name:name,type:'neutral',rules:condRules.map(function(r){return Object.assign({},r);}),logic:condLogic};
+  userBuckets.push(bucket);
+  saveUserBuckets();
+  /* compute occurrences for the new bucket */
+  allBucketOcc[id]=[];
+  for(var i=2;i<data.length-1;i++){
+    if(evalUserBucket(data,i,bucket))allBucketOcc[id].push({idx:i,time:data[i].time});
+  }
+  closeConditionBuilder();
   renderRecentSignal();
 }
 
-/* â”€â”€ Auto-fetch latest SPY price â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Add Day helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function nextTradingDate(){
+  var last=data[data.length-1];
+  var d=new Date(last.time+'T00:00:00');
+  do{d.setDate(d.getDate()+1);}while(d.getDay()===0||d.getDay()===6);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* â”€â”€ Auto-fetch latest price â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function setFetchStatus(state,label){
   var dot=document.getElementById('fetch-dot');
   var lbl=document.getElementById('fetch-label');
@@ -1083,23 +1456,15 @@ function setFetchStatus(state,label){
 function autoFetchLatestPrice(){
   setFetchStatus('loading','Fetching live priceâ€¦');
   fetch('https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d&range=5d&includePrePost=false')
-    .then(function(r){
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      return r.json();
-    })
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(function(json){
       var result=json.chart.result[0];
       var timestamps=result.timestamp;
       var q=result.indicators.quote[0];
-      /* use last timestamp â€” most recent trading day */
       var i=timestamps.length-1;
-      /* skip if any value is null (partial day sometimes returns nulls) */
       while(i>0&&(q.open[i]==null||q.close[i]==null))i--;
       if(i<0)throw new Error('no data');
-      var ts=timestamps[i];
-      /* Yahoo timestamps are seconds; daily bars use market-open time in ET.
-         toISOString gives UTC date â€” subtract 4h to land on ET date safely */
-      var d=new Date((ts+4*3600)*1000);
+      var d=new Date((timestamps[i]+4*3600)*1000);
       var time=d.getUTCFullYear()+'-'
         +String(d.getUTCMonth()+1).padStart(2,'0')+'-'
         +String(d.getUTCDate()).padStart(2,'0');
@@ -1115,19 +1480,7 @@ function autoFetchLatestPrice(){
         vol:volStr,change:change,custom:true,autoFetched:true});
       setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));
     })
-    .catch(function(){
-      setFetchStatus('err','Live fetch failed â€” add manually');
-    });
-}
-
-/* â”€â”€ Add Day: default date helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function nextTradingDate(){
-  var last=data[data.length-1];
-  var d=new Date(last.time+'T00:00:00');
-  do{d.setDate(d.getDate()+1);}while(d.getDay()===0||d.getDay()===6);
-  var mm=String(d.getMonth()+1).padStart(2,'0');
-  var dd=String(d.getDate()).padStart(2,'0');
-  return d.getFullYear()+'-'+mm+'-'+dd;
+    .catch(function(){setFetchStatus('err','Live fetch failed â€” add manually');});
 }
 
 /* â”€â”€ Event wiring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -1170,7 +1523,6 @@ document.getElementById('tb-none').addEventListener('click',function(){
 document.getElementById('back-btn').addEventListener('click',showListView);
 document.getElementById('modal-close').addEventListener('click',closeModal);
 document.getElementById('modal-overlay').addEventListener('click',closeModal);
-
 document.getElementById('occ-prev').addEventListener('click',function(){goToOccurrence(currentOccIdx-1);});
 document.getElementById('occ-next').addEventListener('click',function(){goToOccurrence(currentOccIdx+1);});
 
@@ -1185,17 +1537,32 @@ document.querySelectorAll('#modal-n-btns .n-btn').forEach(function(btn){
     modalNDays=parseInt(btn.getAttribute('data-n'));
     document.querySelectorAll('#modal-n-btns .n-btn').forEach(function(b){b.classList.remove('active');});
     btn.classList.add('active');
-    if(modalPatId)renderHistChart(modalPatId,modalNDays);
+    if(modalPatId)renderHistChart(modalPatId,modalIsBucket,modalNDays);
   });
 });
 
-/* Recent Signal lookback buttons */
+/* Recent lookback */
 document.querySelectorAll('.rb-btn').forEach(function(btn){
   btn.addEventListener('click',function(){
     recentLookback=parseInt(btn.getAttribute('data-rb'));
     document.querySelectorAll('.rb-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');renderRecentSignal();
+  });
+});
+
+/* Condition builder */
+document.getElementById('create-cond-btn').addEventListener('click',openConditionBuilder);
+document.getElementById('cond-modal-close').addEventListener('click',closeConditionBuilder);
+document.getElementById('cond-modal-overlay').addEventListener('click',closeConditionBuilder);
+document.getElementById('cond-cancel-btn').addEventListener('click',closeConditionBuilder);
+document.getElementById('cond-add-rule-btn').addEventListener('click',addCondRule);
+document.getElementById('cond-test-btn').addEventListener('click',testCondition);
+document.getElementById('cond-save-btn').addEventListener('click',saveCondition);
+document.querySelectorAll('.cond-logic-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    condLogic=btn.getAttribute('data-logic');
+    document.querySelectorAll('.cond-logic-btn').forEach(function(b){b.classList.remove('active');});
     btn.classList.add('active');
-    renderRecentSignal();
   });
 });
 
@@ -1211,13 +1578,8 @@ document.getElementById('add-day-btn').addEventListener('click',function(){
   renderCustomList();
   document.getElementById('add-modal').style.display='flex';
 });
-document.getElementById('add-modal-close').addEventListener('click',function(){
-  document.getElementById('add-modal').style.display='none';
-});
-document.getElementById('add-modal-overlay').addEventListener('click',function(){
-  document.getElementById('add-modal').style.display='none';
-});
-
+document.getElementById('add-modal-close').addEventListener('click',function(){document.getElementById('add-modal').style.display='none';});
+document.getElementById('add-modal-overlay').addEventListener('click',function(){document.getElementById('add-modal').style.display='none';});
 document.getElementById('form-submit').addEventListener('click',function(){
   var dateVal=document.getElementById('f-date').value;
   var openVal=parseFloat(document.getElementById('f-open').value);
@@ -1234,16 +1596,12 @@ document.getElementById('form-submit').addEventListener('click',function(){
   if(highVal<Math.max(openVal,closeVal)){errEl.textContent='High must be >= Open and Close.';return;}
   if(lowVal>Math.min(openVal,closeVal)){errEl.textContent='Low must be <= Open and Close.';return;}
   errEl.textContent='';
-  var change=((closeVal-openVal)/openVal*100).toFixed(2)+'%';
-  addCustomCandle({
-    time:dateVal,
-    open:openVal,high:highVal,low:lowVal,close:closeVal,
-    vol:volVal,change:change,custom:true
-  });
+  addCustomCandle({time:dateVal,open:openVal,high:highVal,low:lowVal,close:closeVal,
+    vol:volVal,change:((closeVal-openVal)/openVal*100).toFixed(2)+'%',custom:true,autoFetched:false});
   document.getElementById('add-modal').style.display='none';
 });
 
-/* fetch-del-btn: remove auto-fetched candle */
+/* fetch-del-btn */
 document.getElementById('fetch-del-btn').addEventListener('click',function(){
   if(!autoFetchedDate)return;
   deleteCustomCandle(autoFetchedDate);
