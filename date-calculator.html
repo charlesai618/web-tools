@@ -374,6 +374,85 @@
       margin-top: 2px;
     }
 
+    /* --- Ganzhi rows --- */
+    .gz-rows { margin-top: 10px; }
+    .gz-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .gz-row:last-child { border-bottom: none; }
+    .gz-label { font-size: 0.82rem; font-weight: 700; color: #a0aec0; min-width: 22px; }
+    .gz-chars { font-size: 1.3rem; font-weight: 800; min-width: 44px; }
+    .gz-nums  { font-size: 0.82rem; color: #718096; }
+
+    /* --- Tab 3: Calendar Conversions --- */
+    .cal-date-input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .cal-card {
+      border-left: 4px solid;
+      border-radius: 10px;
+      padding: 15px 18px;
+      margin-bottom: 12px;
+    }
+
+    .cal-card-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+    }
+
+    .cal-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .cal-type-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 7px;
+      border-radius: 20px;
+      opacity: 0.75;
+    }
+
+    .cal-subtitle {
+      font-size: 0.78rem;
+      color: #718096;
+      margin-left: auto;
+    }
+
+    .cal-date-display {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #2d3748;
+      line-height: 1.4;
+    }
+
+    .cal-date-native {
+      font-size: 0.88rem;
+      color: #718096;
+      margin-top: 2px;
+    }
+
+    .cal-placeholder {
+      text-align: center;
+      color: #a0aec0;
+      padding: 32px 0;
+      font-size: 0.95rem;
+    }
+
     @media (max-width: 640px) {
       h1 { font-size: 1.4rem; }
       .card { padding: 16px; }
@@ -382,6 +461,7 @@
       .pair-table th, .pair-table td { padding: 8px 7px; }
       .offset-form { grid-template-columns: 1fr; }
       .offset-arrow { display: none; }
+      .cal-subtitle { display: none; }
     }
   </style>
 </head>
@@ -392,6 +472,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="tab-position">Year Position &amp; Distance</button>
     <button class="tab-btn" data-tab="tab-offset">Date Offset</button>
+    <button class="tab-btn" data-tab="tab-calendars">Calendar Systems</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════ TAB 1 -->
@@ -487,6 +568,26 @@
     </div>
 
   </div><!-- /tab-offset -->
+
+  <!-- ═══════════════════════════════════════════════ TAB 3 -->
+  <div id="tab-calendars" class="tab-panel">
+    <div class="card">
+      <h2>Calendar Systems</h2>
+      <p style="font-size:0.88rem;color:#718096;margin-bottom:20px;">
+        See how any date looks across different calendar traditions.
+      </p>
+      <div class="cal-date-input-row">
+        <div class="field-group">
+          <span class="field-label">Date</span>
+          <input type="date" id="cal-date">
+        </div>
+        <button class="btn-primary" id="btn-cal-convert" style="margin-top:0;width:auto;padding:11px 28px;">Convert</button>
+      </div>
+      <div id="cal-results">
+        <div class="cal-placeholder">Enter a date above to see calendar conversions.</div>
+      </div>
+    </div>
+  </div><!-- /tab-calendars -->
 
   <script>
     // ── Tab switching ──────────────────────────────────────────
@@ -627,6 +728,233 @@
         document.getElementById('card-pairs').style.display = 'none';
       }
     }
+
+    // ── Tab 3: Calendar Conversions ───────────────────────────
+    const CALENDARS = [
+      {
+        id: 'gregory',
+        name: 'Gregorian',
+        type: 'Solar',
+        subtitle: 'International standard civil calendar',
+        color: '#4a6cf7',
+        bg: '#ebf4ff',
+        tagBg: '#c3dafe',
+        enLocale: 'en-u-ca-gregory',
+        nativeLocale: null,
+        formatOptions: { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' },
+        showNumeric: true
+      },
+      {
+        id: 'chinese',
+        name: 'Chinese Lunar',
+        type: 'Lunisolar',
+        subtitle: 'Traditional Chinese calendar',
+        color: '#c53030',
+        bg: '#fff5f5',
+        tagBg: '#fed7d7',
+        enLocale: 'en-u-ca-chinese',
+        nativeLocale: 'zh-TW-u-ca-chinese',
+        formatOptions: { year: 'numeric', month: 'long', day: 'numeric' },
+        showNumeric: true
+      },
+      {
+        id: 'islamic',
+        name: 'Islamic (Hijri)',
+        type: 'Lunar',
+        subtitle: 'Umm al-Qura — used in Saudi Arabia',
+        color: '#276749',
+        bg: '#f0fff4',
+        tagBg: '#c6f6d5',
+        enLocale: 'en-u-ca-islamic-umalqura',
+        nativeLocale: 'ar-u-ca-islamic-umalqura',
+        formatOptions: { year: 'numeric', month: 'long', day: 'numeric' },
+        showNumeric: true
+      },
+      {
+        id: 'hebrew',
+        name: 'Hebrew',
+        type: 'Lunisolar',
+        subtitle: 'Jewish traditional calendar',
+        color: '#975a16',
+        bg: '#fffff0',
+        tagBg: '#fefcbf',
+        enLocale: 'en-u-ca-hebrew',
+        nativeLocale: 'he-u-ca-hebrew',
+        formatOptions: { year: 'numeric', month: 'long', day: 'numeric' },
+        showNumeric: true
+      },
+      {
+        id: 'ganzhi',
+        name: '干支 (Ganzhi)',
+        type: 'Sexagenary',
+        subtitle: 'Chinese 60-year cycle — Heavenly Stems & Earthly Branches',
+        color: '#b7791f',
+        bg: '#fffaf0',
+        tagBg: '#fbd38d',
+        showNumeric: false
+      }
+    ];
+
+    const STEMS    = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    const BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+
+    function getYearGanzhi(year) {
+      const si = ((year - 4) % 10 + 10) % 10;
+      const bi = ((year - 4) % 12 + 12) % 12;
+      const cy = ((year - 4) % 60 + 60) % 60 + 1;
+      return { si, bi, cy };
+    }
+
+    // Month ganzhi uses solar terms (节气). The year changes at 立春 (~Feb 4).
+    // Month sequence: 寅(0)→卯(1)→...→子(10)→丑(11), branch index = (2+seqIdx)%12
+    // Month stem depends on the year stem: 甲/己→丙, 乙/庚→戊, 丙/辛→庚, 丁/壬→壬, 戊/癸→甲
+    function getMonthGanzhi(year, month, day) {
+      const ganzhiYear = (month < 2 || (month === 2 && day < 4)) ? year - 1 : year;
+      const yearSi = ((ganzhiYear - 4) % 10 + 10) % 10;
+      // Approximate start dates [gMonth, gDay] for seqIdx 0(寅)..10(子), then 11(丑)=Jan6
+      const starts = [[2,4],[3,6],[4,5],[5,6],[6,6],[7,7],[8,7],[9,8],[10,8],[11,7],[12,7],[1,6]];
+      let seqIdx;
+      if (month === 1) {
+        seqIdx = (day >= 6) ? 11 : 10;
+      } else {
+        seqIdx = -1;
+        for (let i = 0; i <= 10; i++) {
+          const [sm, sd] = starts[i];
+          if (month > sm || (month === sm && day >= sd)) seqIdx = i;
+        }
+        if (seqIdx === -1) seqIdx = 10;
+      }
+      const bi = (2 + seqIdx) % 12;
+      const firstStem = [2, 4, 6, 8, 0][yearSi % 5];
+      const si = (firstStem + seqIdx) % 10;
+      return { si, bi };
+    }
+
+    // Day ganzhi: Jan 1 1900 = 甲戌 = 60-cycle position 10 (0-based)
+    function getDayGanzhi(date) {
+      const ref = Date.UTC(1900, 0, 1);
+      const cur = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+      const pos = (((Math.round((cur - ref) / 86400000) + 10) % 60) + 60) % 60;
+      return { si: pos % 10, bi: pos % 12, cy: pos + 1 };
+    }
+
+    function tryFormat(locale, options, date) {
+      try {
+        return new Intl.DateTimeFormat(locale, options).format(date);
+      } catch(e) {
+        return null;
+      }
+    }
+
+    function isHebrewLeapYear(y) { return ((7 * y + 1) % 19) < 7; }
+
+    function hebrewMonthNum(date, locale) {
+      try {
+        const yearPart = new Intl.DateTimeFormat(locale, { year: 'numeric' }).formatToParts(date).find(p => p.type === 'year');
+        const monthPart = new Intl.DateTimeFormat(locale, { month: 'long' }).formatToParts(date).find(p => p.type === 'month');
+        if (!yearPart || !monthPart) return null;
+        const monthName = monthPart.value.toLowerCase().trim();
+        const yr = parseInt(yearPart.value, 10);
+        const months = isHebrewLeapYear(yr)
+          ? ['tishri','heshvan','kislev','tevet','shevat','adar i','adar ii','nisan','iyar','sivan','tammuz','av','elul']
+          : ['tishri','heshvan','kislev','tevet','shevat','adar','nisan','iyar','sivan','tammuz','av','elul'];
+        const i = months.indexOf(monthName);
+        return { num: i >= 0 ? String(i + 1) : null, name: monthPart.value };
+      } catch(e) { return null; }
+    }
+
+    function convertCalendars() {
+      const val = document.getElementById('cal-date').value;
+      const resultsEl = document.getElementById('cal-results');
+      if (!val) {
+        resultsEl.innerHTML = '<div class="cal-placeholder">Enter a date above to see calendar conversions.</div>';
+        return;
+      }
+      const d = parseLocalDate(val);
+
+      resultsEl.innerHTML = CALENDARS.map(cal => {
+        if (cal.id === 'ganzhi') {
+          const yr = d.getFullYear(), mo = d.getMonth() + 1, dy = d.getDate();
+          const yGZ = getYearGanzhi(yr);
+          const mGZ = getMonthGanzhi(yr, mo, dy);
+          const dGZ = getDayGanzhi(d);
+          const gz = (g) => `${STEMS[g.si]}${BRANCHES[g.bi]}`;
+          const nums = (g, showCy) =>
+            `天干 ${STEMS[g.si]} · No.${g.si+1}/10 &nbsp;·&nbsp; 地支 ${BRANCHES[g.bi]} · No.${g.bi+1}/12`
+            + (showCy ? ` &nbsp;·&nbsp; Day ${g.cy}/60` : '');
+          return `
+            <div class="cal-card" style="border-left-color:${cal.color}; background:${cal.bg};">
+              <div class="cal-card-header">
+                <span class="cal-name" style="color:${cal.color}">${cal.name}</span>
+                <span class="cal-type-tag" style="background:${cal.tagBg};color:${cal.color}">${cal.type}</span>
+                <span class="cal-subtitle">${cal.subtitle}</span>
+              </div>
+              <div class="gz-rows">
+                <div class="gz-row">
+                  <span class="gz-label">年</span>
+                  <span class="gz-chars" style="color:${cal.color}">${gz(yGZ)}</span>
+                  <span class="gz-nums">${nums(yGZ, false)} &nbsp;·&nbsp; Cycle ${yGZ.cy}/60</span>
+                </div>
+                <div class="gz-row">
+                  <span class="gz-label">月</span>
+                  <span class="gz-chars" style="color:${cal.color}">${gz(mGZ)}</span>
+                  <span class="gz-nums">${nums(mGZ, false)}</span>
+                </div>
+                <div class="gz-row">
+                  <span class="gz-label">日</span>
+                  <span class="gz-chars" style="color:${cal.color}">${gz(dGZ)}</span>
+                  <span class="gz-nums">${nums(dGZ, true)}</span>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        let enStr = tryFormat(cal.enLocale, cal.formatOptions, d) || 'Not supported in this browser';
+        const nativeStr = cal.nativeLocale ? tryFormat(cal.nativeLocale, cal.formatOptions, d) : null;
+
+        const nativeHtml = (nativeStr && nativeStr !== enStr)
+          ? `<div class="cal-date-native">${nativeStr}</div>` : '';
+
+        let numericHtml = '';
+        if (cal.showNumeric) {
+          try {
+            const parts = new Intl.DateTimeFormat(cal.enLocale, { year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(d);
+            const get = type => (parts.find(p => p.type === type) || {}).value || '?';
+            let monthVal = get('month');
+            if (cal.id === 'hebrew') {
+              const hm = hebrewMonthNum(d, cal.enLocale);
+              if (hm && hm.num) monthVal = hm.num;
+            }
+            numericHtml = `<div class="cal-date-numeric">Month ${monthVal} &nbsp;·&nbsp; Day ${get('day')} &nbsp;·&nbsp; Year ${get('year')}</div>`;
+          } catch(e) {}
+        }
+
+        return `
+          <div class="cal-card" style="border-left-color:${cal.color}; background:${cal.bg};">
+            <div class="cal-card-header">
+              <span class="cal-name" style="color:${cal.color}">${cal.name}</span>
+              <span class="cal-type-tag" style="background:${cal.tagBg};color:${cal.color}">${cal.type}</span>
+              <span class="cal-subtitle">${cal.subtitle}</span>
+            </div>
+            <div class="cal-date-display">${enStr}</div>
+            ${numericHtml}
+            ${nativeHtml}
+          </div>`;
+      }).join('');
+    }
+
+    // Set today as default and auto-convert
+    (function() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById('cal-date').value = `${yyyy}-${mm}-${dd}`;
+      convertCalendars();
+    })();
+
+    document.getElementById('btn-cal-convert').addEventListener('click', convertCalendars);
+    document.getElementById('cal-date').addEventListener('change', convertCalendars);
 
     // ── Tab 2: Date offset ─────────────────────────────────────
     let sign = 1;
