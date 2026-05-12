@@ -1,0 +1,464 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPY ETF  -  K-line Pattern Analysis</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── Header ── */
+.hdr{background:#161b22;border-bottom:1px solid #30363d;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap}
+.logo{font-size:17px;font-weight:700;color:#58a6ff;white-space:nowrap}
+.price-wrap{display:flex;align-items:baseline;gap:8px}
+#hdr-price{font-size:26px;font-weight:700}
+#hdr-change{font-size:14px;font-weight:600}
+.hdr-controls{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.btn-grp{display:flex;gap:2px;background:#21262d;border-radius:6px;padding:3px}
+.btn{background:transparent;border:none;color:#8b949e;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;transition:all .15s}
+.btn:hover{color:#e6edf3;background:#30363d}
+.btn.active{background:#1f6feb40;color:#58a6ff}
+.sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 8px;border-radius:6px;font-size:12px;cursor:pointer}
+.add-day-btn{background:#238636;border:1px solid #2ea043;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.add-day-btn:hover{background:#2ea043}
+.fetch-indicator{display:flex;align-items:center;gap:6px;background:#21262d;border:1px solid #30363d;padding:4px 10px;border-radius:6px;font-size:11px;white-space:nowrap}
+.fetch-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.fetch-dot.loading{background:#d29922;animation:pulse 1s infinite}
+.fetch-dot.ok{background:#3fb950}
+.fetch-dot.err{background:#f85149}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.fetch-del-btn{background:none;border:none;color:#8b949e;cursor:pointer;font-size:14px;padding:0 2px;margin-left:2px;transition:color .15s;line-height:1}
+.fetch-del-btn:hover{color:#f85149}
+
+/* ── Layout ── */
+.layout{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* ── Chart area ── */
+.chart-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.chart-legend{display:flex;align-items:center;gap:6px;padding:5px 12px;background:#0d1117;border-bottom:1px solid #21262d;flex-wrap:wrap;flex-shrink:0}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#8b949e;cursor:pointer;padding:2px 7px;border-radius:4px;user-select:none;transition:all .15s}
+.leg-item:hover{background:#21262d;color:#e6edf3}
+.leg-item.off{opacity:.35}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leg-sep{width:1px;height:16px;background:#30363d;margin:0 2px}
+.chart-wrap{position:relative;flex:1;min-height:0}
+#chart{width:100%;height:100%}
+.vol-wrap{height:90px;border-top:1px solid #21262d;flex-shrink:0}
+#vol-chart{width:100%;height:100%}
+.ctip{position:absolute;top:8px;left:12px;background:rgba(22,27,34,.9);border:1px solid #30363d;border-radius:6px;padding:7px 11px;font-size:11px;pointer-events:none;z-index:20}
+.ctip-row{display:flex;gap:9px;align-items:center}
+.ctip-lbl{color:#8b949e}.ctip-val{font-weight:600}
+.click-indicator{position:absolute;background:#1f6feb20;border:1px solid #58a6ff60;border-radius:4px;padding:3px 7px;font-size:11px;color:#58a6ff;pointer-events:none;z-index:19;white-space:nowrap}
+
+/* ── Sidebar ── */
+.sidebar{width:310px;background:#161b22;border-left:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.sb-view{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.sb-header{padding:10px 14px;border-bottom:1px solid #30363d;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:#8b949e;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.back-btn{background:none;border:none;color:#58a6ff;cursor:pointer;font-size:13px;padding:0;white-space:nowrap}
+.back-btn:hover{color:#79c0ff}
+
+/* ── Recent Signal panel ── */
+.recent-panel{background:#0d1117;border-bottom:1px solid #30363d;flex-shrink:0}
+.recent-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;gap:6px}
+.recent-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:#58a6ff;flex-shrink:0}
+.recent-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.recent-lb-grp{display:flex;gap:2px;background:#21262d;border-radius:5px;padding:2px}
+.rb-btn{background:transparent;border:none;color:#8b949e;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:11px;transition:all .12s}
+.rb-btn.active{background:#1f6feb40;color:#58a6ff}
+.recent-n{font-size:10px;color:#484f58}
+.create-cond-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:2px 7px;border-radius:4px;font-size:10px;cursor:pointer;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.create-cond-btn:hover{border-color:#58a6ff;color:#58a6ff}
+#recent-content{padding:0 14px 10px}
+.recent-row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;border-bottom:1px solid #161b22;transition:background .1s}
+.recent-row:last-child{border-bottom:none}
+.recent-row:hover{background:#21262d20;border-radius:4px;padding-left:4px;margin-left:-4px}
+.rec-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rec-info{flex:1;min-width:0}
+.rec-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-date{font-size:10px;color:#8b949e;margin-top:1px}
+.rec-prob{font-size:12px;font-weight:700;flex-shrink:0;text-align:right}
+.rec-prob-sub{font-size:9px;color:#8b949e;text-align:right}
+.rec-del-btn{background:none;border:none;color:#484f58;cursor:pointer;font-size:12px;padding:0 2px;transition:color .12s;flex-shrink:0}
+.rec-del-btn:hover{color:#f85149}
+.no-signal{font-size:11px;color:#484f58;padding:8px 0;text-align:center}
+/* ── Condition builder modal ── */
+.cond-modal-card{position:relative;z-index:1;background:#161b22;border:1px solid #30363d;border-radius:10px;width:600px;max-width:97vw;display:flex;flex-direction:column;overflow:hidden;max-height:92vh}
+.cond-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #30363d;flex-shrink:0}
+.cond-modal-title{font-size:15px;font-weight:700}
+.cond-modal-body{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:13px}
+.cond-section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#8b949e;margin-bottom:5px}
+.cond-logic-grp{display:flex;gap:2px;background:#21262d;border-radius:5px;padding:2px;width:fit-content}
+.cond-logic-btn{background:transparent;border:none;color:#8b949e;padding:4px 12px;border-radius:3px;cursor:pointer;font-size:11px;transition:all .12s}
+.cond-logic-btn.active{background:#1f6feb40;color:#58a6ff}
+.cond-rules-list{display:flex;flex-direction:column;gap:7px}
+.cond-rule-row{display:grid;grid-template-columns:1fr 56px 1fr 72px 26px;gap:5px;align-items:center}
+.cond-sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 4px;border-radius:5px;font-size:11px;cursor:pointer;outline:none;width:100%}
+.cond-sel:focus{border-color:#388bfd}
+.cond-mod{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 6px;border-radius:5px;font-size:11px;width:100%;outline:none;text-align:center}
+.cond-mod:focus{border-color:#388bfd}
+.cond-mod::placeholder{color:#484f58}
+.cond-del-rule{background:none;border:none;color:#484f58;cursor:pointer;font-size:15px;padding:0;transition:color .12s;text-align:center}
+.cond-del-rule:hover{color:#f85149}
+.cond-add-rule-btn{background:#0d1117;border:1px dashed #30363d;color:#8b949e;padding:6px;border-radius:5px;font-size:11px;cursor:pointer;width:100%;transition:all .15s;text-align:center}
+.cond-add-rule-btn:hover{border-color:#58a6ff;color:#58a6ff}
+.cond-rule-hint{font-size:10px;color:#484f58;font-style:italic}
+.cond-test-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cond-test-btn{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:6px 14px;border-radius:5px;font-size:12px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.cond-test-btn:hover{border-color:#58a6ff;color:#58a6ff}
+.cond-test-result{font-size:12px;color:#8b949e;flex:1}
+.cond-actions{display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #21262d}
+.cond-cancel-btn{background:transparent;border:1px solid #30363d;color:#8b949e;padding:7px 16px;border-radius:5px;font-size:12px;cursor:pointer;transition:all .15s}
+.cond-cancel-btn:hover{border-color:#58a6ff;color:#e6edf3}
+.cond-save-btn{background:#238636;border:1px solid #2ea043;color:#fff;padding:7px 18px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.cond-save-btn:hover{background:#2ea043}
+
+/* ── Pattern list / toggles ── */
+.toggle-bar{display:flex;gap:4px;padding:8px 14px;flex-shrink:0;border-bottom:1px solid #21262d;flex-wrap:wrap}
+.tbtn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:3px 9px;border-radius:4px;font-size:11px;cursor:pointer;transition:all .15s}
+.tbtn:hover{border-color:#58a6ff;color:#e6edf3}
+.pattern-list{overflow-y:auto;flex:1}
+.pat-group-hdr{padding:7px 14px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;background:#0d1117;border-bottom:1px solid #21262d}
+.pat-row{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;border-bottom:1px solid #161b22;transition:background .12s}
+.pat-row:hover{background:#21262d40}
+.pat-row.selected{background:#1f6feb20;border-left:3px solid #58a6ff;padding-left:11px}
+.pat-row.off{opacity:.45}
+.pat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pat-name{flex:1;font-size:12px}
+.pat-count{background:#21262d;color:#8b949e;font-size:10px;padding:1px 5px;border-radius:3px}
+.eye-btn{background:none;border:none;cursor:pointer;color:#8b949e;font-size:12px;padding:0 2px;transition:color .15s;flex-shrink:0}
+.eye-btn:hover{color:#e6edf3}
+
+/* ── Detail view ── */
+.detail-body{overflow-y:auto;flex:1;padding:12px}
+.pat-example{background:#0d1117;border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.pat-example-title{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.pat-example-svg{display:flex;justify-content:center}
+.pat-example-note{font-size:10px;color:#484f58;margin-top:5px;text-align:center}
+.detail-type-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;margin-bottom:8px}
+.badge-bull{background:#3fb95020;color:#3fb950;border:1px solid #3fb95040}
+.badge-bear{background:#f8514920;color:#f85149;border:1px solid #f8514940}
+.badge-neu{background:#d2992220;color:#d29922;border:1px solid #d2992240}
+.detail-desc{font-size:12px;color:#8b949e;line-height:1.5;margin-bottom:12px}
+.n-selector{margin-bottom:12px}
+.n-label{font-size:10px;color:#8b949e;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.n-btns{display:flex;gap:3px;flex-wrap:wrap}
+.n-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;transition:all .15s}
+.n-btn:hover{border-color:#58a6ff;color:#e6edf3}
+.n-btn.active{background:#1f6feb30;border-color:#388bfd;color:#58a6ff}
+.prob-block{background:#0d1117;border-radius:8px;padding:12px;margin-bottom:10px}
+.prob-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.prob-num{font-size:32px;font-weight:700;min-width:64px;text-align:center}
+.prob-right{flex:1}
+.prob-dir{font-size:11px;color:#8b949e;margin-bottom:4px}
+.prob-bar-bg{height:6px;background:#21262d;border-radius:3px;overflow:hidden}
+.prob-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.prob-meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}
+.prob-meta-item{background:#21262d;border-radius:5px;padding:6px 8px}
+.prob-meta-k{font-size:10px;color:#8b949e;margin-bottom:2px}
+.prob-meta-v{font-size:13px;font-weight:600}
+.hist-btn{width:100%;background:#1f6feb20;border:1px solid #388bfd;color:#58a6ff;padding:8px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .15s;margin-top:4px}
+.hist-btn:hover{background:#1f6feb40}
+.up{color:#3fb950}.down{color:#f85149}.neu{color:#d29922}
+
+/* ── Historical modal ── */
+.modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center}
+.modal-overlay{position:absolute;inset:0;background:rgba(1,4,9,.78)}
+.modal-card{position:relative;z-index:1;background:#161b22;border:1px solid #30363d;border-radius:10px;width:93vw;height:88vh;max-width:1340px;display:flex;flex-direction:column;overflow:hidden}
+.modal-hdr{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid #30363d;flex-shrink:0;flex-wrap:wrap}
+.modal-title{font-size:15px;font-weight:700}
+.modal-subtitle{font-size:11px;color:#8b949e;margin-top:2px}
+.modal-hdr-right{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap}
+.close-btn{background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;padding:0 4px;line-height:1;transition:color .15s}
+.close-btn:hover{color:#e6edf3}
+.modal-body{display:flex;flex:1;overflow:hidden;min-height:0}
+#hist-chart-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;border-right:1px solid #30363d}
+.occ-nav-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0;gap:8px}
+.nav-arr-btn{display:flex;align-items:center;gap:6px;background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all .18s;white-space:nowrap;flex-shrink:0}
+.nav-arr-btn:hover:not(:disabled){background:#388bfd;border-color:#388bfd;color:#fff}
+.nav-arr-btn:disabled{opacity:.35;cursor:not-allowed}
+.occ-info{flex:1;text-align:center;min-width:0}
+.occ-counter{font-size:13px;font-weight:600;color:#e6edf3}
+.occ-detail{font-size:11px;color:#8b949e;margin-top:2px}
+.occ-outcome-up{color:#3fb950;font-weight:600}
+.occ-outcome-down{color:#f85149;font-weight:600}
+.hist-legend-bar{padding:5px 12px;font-size:11px;color:#8b949e;background:#0d1117;display:flex;gap:14px;flex-shrink:0;border-bottom:1px solid #21262d;align-items:center}
+.hist-leg-item{display:flex;align-items:center;gap:5px}
+#hist-chart{flex:1;min-height:0}
+.modal-stats-panel{width:235px;overflow-y:auto;padding:12px;flex-shrink:0}
+.stat-card{background:#0d1117;border-radius:7px;padding:10px 12px;margin-bottom:8px}
+.stat-card-title{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.big-prob{text-align:center;margin-bottom:6px}
+.big-prob-num{font-size:42px;font-weight:700;line-height:1}
+.big-prob-label{font-size:11px;color:#8b949e;margin-top:2px}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #21262d;font-size:12px}
+.stat-row:last-child{border-bottom:none}
+.stat-lbl{color:#8b949e}.stat-val{font-weight:600}
+
+/* ── Add Day modal ── */
+.add-modal-card{position:relative;z-index:1;background:#161b22;border:1px solid #30363d;border-radius:10px;width:520px;max-width:95vw;display:flex;flex-direction:column;overflow:hidden}
+.add-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #30363d}
+.add-modal-title{font-size:15px;font-weight:700}
+.add-modal-body{display:flex;flex-direction:column;gap:0;max-height:80vh;overflow-y:auto}
+.add-form{padding:18px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:11px;color:#8b949e;font-weight:500}
+.form-input{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:7px 10px;border-radius:6px;font-size:13px;outline:none;transition:border-color .15s;width:100%}
+.form-input:focus{border-color:#388bfd}
+.form-input::placeholder{color:#484f58}
+.form-hint{font-size:10px;color:#484f58;margin-top:2px}
+.form-submit{width:100%;background:#238636;border:1px solid #2ea043;color:#fff;padding:9px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:14px}
+.form-submit:hover{background:#2ea043}
+.form-error{font-size:11px;color:#f85149;margin-top:6px;min-height:16px}
+/* custom entries list */
+.custom-entries{border-top:1px solid #30363d;padding:14px 18px}
+.custom-entries-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#8b949e;margin-bottom:10px}
+.custom-entry-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #21262d;font-size:12px}
+.custom-entry-row:last-child{border-bottom:none}
+.ce-date{color:#58a6ff;font-weight:600;flex-shrink:0}
+.ce-badge{font-size:9px;background:#388bfd20;color:#58a6ff;border:1px solid #388bfd40;padding:1px 5px;border-radius:3px;flex-shrink:0}
+.ce-prices{flex:1;color:#8b949e}
+.ce-del{background:none;border:none;color:#8b949e;cursor:pointer;font-size:14px;padding:0 3px;transition:color .15s}
+.ce-del:hover{color:#f85149}
+.no-custom{font-size:11px;color:#484f58;text-align:center;padding:10px 0}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:#161b22}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">SPY ETF &nbsp;K&#32447;&#22270; Analysis</div>
+  <div class="price-wrap"><span id="hdr-price">--</span><span id="hdr-change">--</span></div>
+  <div class="hdr-controls">
+    <div class="btn-grp" id="range-btns">
+      <button class="btn" data-range="60">3M</button>
+      <button class="btn" data-range="120">6M</button>
+      <button class="btn active" data-range="252">1Y</button>
+      <button class="btn" data-range="756">3Y</button>
+      <button class="btn" data-range="1260">5Y</button>
+      <button class="btn" data-range="9999">All</button>
+    </div>
+    <select class="sel" id="ma-select">
+      <option value="5,20,60">MA 5/20/60</option>
+      <option value="10,30,100">MA 10/30/100</option>
+      <option value="">No MA</option>
+    </select>
+    <button class="add-day-btn" id="add-day-btn">+ Add Day</button>
+    <div class="fetch-indicator" id="fetch-indicator">
+      <div class="fetch-dot loading" id="fetch-dot"></div>
+      <span id="fetch-label">Fetching live price…</span>
+      <button class="fetch-del-btn" id="fetch-del-btn" style="display:none" title="Remove auto-fetched price">&#10005;</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="chart-area">
+    <div class="chart-legend">
+      <div class="leg-item" data-id="ma5"><div class="leg-dot" style="background:#f7931a"></div>MA5</div>
+      <div class="leg-item" data-id="ma20"><div class="leg-dot" style="background:#2962ff"></div>MA20</div>
+      <div class="leg-item" data-id="ma60"><div class="leg-dot" style="background:#9c27b0"></div>MA60</div>
+      <div class="leg-sep"></div>
+      <div class="leg-item" data-id="pat-bull"><div class="leg-dot" style="background:#3fb950"></div>Bullish</div>
+      <div class="leg-item" data-id="pat-bear"><div class="leg-dot" style="background:#f85149"></div>Bearish</div>
+      <div class="leg-item" data-id="pat-neu"><div class="leg-dot" style="background:#d29922"></div>Neutral</div>
+      <div style="margin-left:auto;font-size:11px;color:#484f58">Click marker or pattern name to analyze</div>
+    </div>
+    <div class="chart-wrap" id="chart-wrap">
+      <div id="chart"></div>
+      <div class="ctip" id="ctip" style="display:none"></div>
+      <div class="click-indicator" id="click-ind" style="display:none"></div>
+    </div>
+    <div class="vol-wrap"><div id="vol-chart"></div></div>
+  </div>
+
+  <div class="sidebar">
+    <!-- List View -->
+    <div class="sb-view" id="view-list">
+      <div class="sb-header">Pattern Markers</div>
+
+      <!-- Recent Signal panel -->
+      <div class="recent-panel">
+        <div class="recent-header">
+          <span class="recent-title">Recent Signal</span>
+          <div class="recent-controls">
+            <div class="recent-lb-grp">
+              <button class="rb-btn active" data-rb="1">1d</button>
+              <button class="rb-btn" data-rb="2">2d</button>
+              <button class="rb-btn" data-rb="3">3d</button>
+            </div>
+            <select class="sel" id="recent-n-sel" style="font-size:10px;padding:2px 5px;height:auto">
+              <option value="1" selected>N=1d</option>
+              <option value="2">N=2d</option>
+              <option value="3">N=3d</option>
+              <option value="5">N=5d</option>
+              <option value="10">N=10d</option>
+              <option value="20">N=20d</option>
+            </select>
+            <button class="create-cond-btn" id="create-cond-btn">+ Rule</button>
+          </div>
+        </div>
+        <div id="recent-content"><div class="no-signal">Loading…</div></div>
+      </div>
+
+      <!-- All-pattern toggles -->
+      <div class="toggle-bar">
+        <button class="tbtn" id="tb-all">All On</button>
+        <button class="tbtn" id="tb-none">All Off</button>
+        <button class="tbtn" id="tb-bull" style="color:#3fb950;border-color:#3fb95040">&#9650; Bull</button>
+        <button class="tbtn" id="tb-bear" style="color:#f85149;border-color:#f8514940">&#9660; Bear</button>
+        <button class="tbtn" id="tb-neu"  style="color:#d29922;border-color:#d2992240">&#9679; Neutral</button>
+      </div>
+      <div class="pattern-list" id="pattern-list"></div>
+    </div>
+
+    <!-- Detail View -->
+    <div class="sb-view" id="view-detail" style="display:none">
+      <div class="sb-header">
+        <button class="back-btn" id="back-btn">&#8592; All Patterns</button>
+        <span id="detail-name" style="color:#e6edf3;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;margin-left:4px"></span>
+      </div>
+      <div class="detail-body" id="detail-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Historical occurrences modal -->
+<div class="modal" id="modal">
+  <div class="modal-overlay" id="modal-overlay"></div>
+  <div class="modal-card">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title" id="modal-title">--</div>
+        <div class="modal-subtitle">Use &#8592; &#8594; to walk through occurrences  -  main chart updates automatically</div>
+      </div>
+      <div class="modal-hdr-right">
+        <span style="font-size:11px;color:#8b949e">N days =</span>
+        <div class="n-btns" id="modal-n-btns">
+          <button class="n-btn active" data-n="1">1d</button>
+          <button class="n-btn" data-n="2">2d</button>
+          <button class="n-btn" data-n="3">3d</button>
+          <button class="n-btn" data-n="5">5d</button>
+          <button class="n-btn" data-n="10">10d</button>
+          <button class="n-btn" data-n="20">20d</button>
+        </div>
+        <button class="close-btn" id="modal-close">&#10005;</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="hist-chart-wrap">
+        <div class="occ-nav-bar">
+          <button class="nav-arr-btn" id="occ-prev" disabled><span>&#8592;</span> Prev</button>
+          <div class="occ-info">
+            <div class="occ-counter" id="occ-counter">-- / --</div>
+            <div class="occ-detail" id="occ-detail">Select a pattern to begin</div>
+          </div>
+          <button class="nav-arr-btn" id="occ-next" disabled>Next <span>&#8594;</span></button>
+        </div>
+        <div class="hist-legend-bar">
+          <div class="hist-leg-item"><span style="color:#3fb950">&#9650;</span> UP after N days</div>
+          <div class="hist-leg-item"><span style="color:#f85149">&#9660;</span> DOWN after N days</div>
+          <div class="hist-leg-item"><span style="color:#fff;font-size:16px">&#9679;</span> Current</div>
+          <div id="hist-info" style="margin-left:auto;font-size:11px"></div>
+        </div>
+        <div id="hist-chart"></div>
+      </div>
+      <div class="modal-stats-panel" id="modal-stats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Day modal -->
+<div class="modal" id="add-modal">
+  <div class="modal-overlay" id="add-modal-overlay"></div>
+  <div class="add-modal-card">
+    <div class="add-modal-hdr">
+      <span class="add-modal-title">Add / Update Trading Day</span>
+      <button class="close-btn" id="add-modal-close">&#10005;</button>
+    </div>
+    <div class="add-modal-body">
+      <div class="add-form">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">Date</label>
+            <input class="form-input" type="date" id="f-date">
+            <div class="form-hint">If date already exists in base data, your entry overrides it.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Open</label>
+            <input class="form-input" type="number" id="f-open" step="0.01" min="0" placeholder="e.g. 736.45">
+          </div>
+          <div class="form-group">
+            <label class="form-label">High</label>
+            <input class="form-input" type="number" id="f-high" step="0.01" min="0" placeholder="e.g. 740.79">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Low</label>
+            <input class="form-input" type="number" id="f-low" step="0.01" min="0" placeholder="e.g. 736.45">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Close</label>
+            <input class="form-input" type="number" id="f-close" step="0.01" min="0" placeholder="e.g. 739.30">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Volume <span style="color:#484f58;font-weight:400">(optional)</span></label>
+            <input class="form-input" type="text" id="f-vol" placeholder="e.g. 44.02M">
+          </div>
+        </div>
+        <div class="form-error" id="form-error"></div>
+        <button class="form-submit" id="form-submit">Add to Chart</button>
+      </div>
+      <div class="custom-entries">
+        <div class="custom-entries-title">Manually Added Entries</div>
+        <div id="custom-list-body"><div class="no-custom">No custom entries yet</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Condition builder modal -->
+<div class="modal" id="cond-modal">
+  <div class="modal-overlay" id="cond-modal-overlay"></div>
+  <div class="cond-modal-card">
+    <div class="cond-modal-hdr">
+      <span class="cond-modal-title">Create Market Condition</span>
+      <button class="close-btn" id="cond-modal-close">&#10005;</button>
+    </div>
+    <div class="cond-modal-body">
+      <div>
+        <div class="cond-section-label">Condition Name</div>
+        <input class="form-input" type="text" id="cond-name" placeholder="e.g. Gap Up with Wide Body">
+      </div>
+      <div>
+        <div class="cond-section-label" style="margin-bottom:6px">Match logic</div>
+        <div class="cond-logic-grp">
+          <button class="cond-logic-btn active" data-logic="AND">ALL rules (AND)</button>
+          <button class="cond-logic-btn" data-logic="OR">ANY rule (OR)</button>
+        </div>
+      </div>
+      <div>
+        <div class="cond-section-label">Rules</div>
+        <div class="cond-rule-hint" style="margin-bottom:8px">Each rule: [Field] [op] [Field] [&#177;% offset on right side]</div>
+        <div class="cond-rules-list" id="cond-rules-list"></div>
+        <button class="cond-add-rule-btn" id="cond-add-rule-btn">+ Add Rule</button>
+      </div>
+      <div class="cond-test-row">
+        <button class="cond-test-btn" id="cond-test-btn">Test on History</button>
+        <span class="cond-test-result" id="cond-test-result"> - </span>
+      </div>
+      <div class="cond-actions">
+        <button class="cond-cancel-btn" id="cond-cancel-btn">Cancel</button>
+        <button class="cond-save-btn" id="cond-save-btn">Save Condition</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var RAW=[
