@@ -374,6 +374,51 @@
       margin-top: 2px;
     }
 
+    /* --- Multi-day calendar table --- */
+    .cal-scroll-wrap {
+      overflow: auto;
+      max-height: 520px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    .cal-multi-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      min-width: 700px;
+    }
+    .cal-multi-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f7fafc;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #718096;
+      border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    .cal-multi-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f4f8;
+      vertical-align: top;
+    }
+    .cal-multi-table tr:last-child td { border-bottom: none; }
+    .cal-multi-table tbody tr:hover td { background: #f7fafc; }
+    .cal-today td { background: #ebf8ff !important; }
+    .cal-today td:first-child { border-left: 3px solid #667eea; padding-left: 11px; }
+    .cal-td-main { font-weight: 600; color: #2d3748; }
+    .cal-td-sub  { font-size: 0.76rem; color: #a0aec0; margin-top: 2px; }
+    .gz-compact { display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; }
+    .gz-compact-label { font-size: 0.68rem; color: #a0aec0; font-weight: 700; }
+    .gz-compact-val   { font-size: 1rem; font-weight: 700; color: #2d3748; margin-right: 3px; }
+    .gz-compact-nums  { font-size: 0.72rem; color: #a0aec0; }
+
     /* --- Ganzhi rows --- */
     .gz-rows { margin-top: 10px; }
     .gz-row {
@@ -578,10 +623,17 @@
       </p>
       <div class="cal-date-input-row">
         <div class="field-group">
-          <span class="field-label">Date</span>
+          <span class="field-label">Start date</span>
           <input type="date" id="cal-date">
         </div>
-        <button class="btn-primary" id="btn-cal-convert" style="margin-top:0;width:auto;padding:11px 28px;">Convert</button>
+        <div class="field-group">
+          <span class="field-label">Show next</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" id="cal-n" value="10" min="0" max="365" style="width:72px;">
+            <span style="font-size:0.88rem;color:#718096;font-weight:600;">days</span>
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-cal-convert" style="margin-top:0;width:auto;padding:11px 28px;">Show</button>
       </div>
       <div id="cal-results">
         <div class="cal-placeholder">Enter a date above to see calendar conversions.</div>
@@ -865,82 +917,92 @@
 
     function convertCalendars() {
       const val = document.getElementById('cal-date').value;
+      const nVal = parseInt(document.getElementById('cal-n').value, 10);
+      const n = isNaN(nVal) || nVal < 0 ? 10 : Math.min(nVal, 365);
       const resultsEl = document.getElementById('cal-results');
+
       if (!val) {
         resultsEl.innerHTML = '<div class="cal-placeholder">Enter a date above to see calendar conversions.</div>';
         return;
       }
-      const d = parseLocalDate(val);
 
-      resultsEl.innerHTML = CALENDARS.map(cal => {
-        if (cal.id === 'ganzhi') {
-          const yr = d.getFullYear(), mo = d.getMonth() + 1, dy = d.getDate();
-          const yGZ = getYearGanzhi(yr);
-          const mGZ = getMonthGanzhi(yr, mo, dy);
-          const dGZ = getDayGanzhi(d);
-          const gz = (g) => `${STEMS[g.si]}${BRANCHES[g.bi]}`;
-          const nums = (g, showCy) =>
-            `天干 ${STEMS[g.si]} · No.${g.si+1}/10 &nbsp;·&nbsp; 地支 ${BRANCHES[g.bi]} · No.${g.bi+1}/12`
-            + (showCy ? ` &nbsp;·&nbsp; Day ${g.cy}/60` : '');
-          return `
-            <div class="cal-card" style="border-left-color:${cal.color}; background:${cal.bg};">
-              <div class="cal-card-header">
-                <span class="cal-name" style="color:${cal.color}">${cal.name}</span>
-                <span class="cal-type-tag" style="background:${cal.tagBg};color:${cal.color}">${cal.type}</span>
-                <span class="cal-subtitle">${cal.subtitle}</span>
-              </div>
-              <div class="gz-rows">
-                <div class="gz-row">
-                  <span class="gz-label">年</span>
-                  <span class="gz-chars" style="color:${cal.color}">${gz(yGZ)}</span>
-                  <span class="gz-nums">${nums(yGZ, false)} &nbsp;·&nbsp; Cycle ${yGZ.cy}/60</span>
-                </div>
-                <div class="gz-row">
-                  <span class="gz-label">月</span>
-                  <span class="gz-chars" style="color:${cal.color}">${gz(mGZ)}</span>
-                  <span class="gz-nums">${nums(mGZ, false)}</span>
-                </div>
-                <div class="gz-row">
-                  <span class="gz-label">日</span>
-                  <span class="gz-chars" style="color:${cal.color}">${gz(dGZ)}</span>
-                  <span class="gz-nums">${nums(dGZ, true)}</span>
-                </div>
-              </div>
-            </div>`;
-        }
+      const startDate = parseLocalDate(val);
 
-        let enStr = tryFormat(cal.enLocale, cal.formatOptions, d) || 'Not supported in this browser';
-        const nativeStr = cal.nativeLocale ? tryFormat(cal.nativeLocale, cal.formatOptions, d) : null;
+      // Build formatters once for efficiency
+      let fGrEn, fZhEn, fZhNa, fZhNum, fIsEn, fIsNum, fHeEn, fHeNum;
+      try { fGrEn  = new Intl.DateTimeFormat('en-u-ca-gregory',          { weekday:'short', year:'numeric', month:'short', day:'numeric' }); } catch(e) {}
+      try { fZhEn  = new Intl.DateTimeFormat('en-u-ca-chinese',          { year:'numeric', month:'long', day:'numeric' }); } catch(e) {}
+      try { fZhNa  = new Intl.DateTimeFormat('zh-TW-u-ca-chinese',       { year:'numeric', month:'long', day:'numeric' }); } catch(e) {}
+      try { fZhNum = new Intl.DateTimeFormat('en-u-ca-chinese',          { year:'numeric', month:'numeric', day:'numeric' }); } catch(e) {}
+      try { fIsEn  = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { year:'numeric', month:'long', day:'numeric' }); } catch(e) {}
+      try { fIsNum = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { year:'numeric', month:'numeric', day:'numeric' }); } catch(e) {}
+      try { fHeEn  = new Intl.DateTimeFormat('en-u-ca-hebrew',           { year:'numeric', month:'long', day:'numeric' }); } catch(e) {}
+      try { fHeNum = new Intl.DateTimeFormat('en-u-ca-hebrew',           { year:'numeric', month:'numeric', day:'numeric' }); } catch(e) {}
 
-        const nativeHtml = (nativeStr && nativeStr !== enStr)
-          ? `<div class="cal-date-native">${nativeStr}</div>` : '';
+      const gz   = (g) => `${STEMS[g.si]}${BRANCHES[g.bi]}`;
+      const getParts = (fmt, d) => { try { return fmt ? fmt.formatToParts(d) : []; } catch(e) { return []; } };
+      const partVal  = (parts, type) => (parts.find(p => p.type === type) || {}).value || '';
+      const numLine  = (m, d, y) => m || d || y ? `<div class="cal-td-sub">Month ${m} · Day ${d} · Year ${y}</div>` : '';
 
-        let numericHtml = '';
-        if (cal.showNumeric) {
-          try {
-            const parts = new Intl.DateTimeFormat(cal.enLocale, { year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(d);
-            const get = type => (parts.find(p => p.type === type) || {}).value || '?';
-            let monthVal = get('month');
-            if (cal.id === 'hebrew') {
-              const hm = hebrewMonthNum(d, cal.enLocale);
-              if (hm && hm.num) monthVal = hm.num;
-            }
-            numericHtml = `<div class="cal-date-numeric">Month ${monthVal} &nbsp;·&nbsp; Day ${get('day')} &nbsp;·&nbsp; Year ${get('year')}</div>`;
-          } catch(e) {}
-        }
+      const rows = [];
+      for (let i = 0; i <= n; i++) {
+        const d = addDays(startDate, i);
+        const yr = d.getFullYear(), mo = d.getMonth() + 1, dy = d.getDate();
 
-        return `
-          <div class="cal-card" style="border-left-color:${cal.color}; background:${cal.bg};">
-            <div class="cal-card-header">
-              <span class="cal-name" style="color:${cal.color}">${cal.name}</span>
-              <span class="cal-type-tag" style="background:${cal.tagBg};color:${cal.color}">${cal.type}</span>
-              <span class="cal-subtitle">${cal.subtitle}</span>
-            </div>
-            <div class="cal-date-display">${enStr}</div>
-            ${numericHtml}
-            ${nativeHtml}
-          </div>`;
-      }).join('');
+        // Gregorian
+        const gregStr = fGrEn ? fGrEn.format(d) : d.toDateString();
+        const grNums  = numLine(mo, dy, yr);
+
+        // Chinese
+        const zhEn   = fZhEn ? fZhEn.format(d) : '—';
+        let zhNa = ''; try { zhNa = fZhNa ? fZhNa.format(d) : ''; } catch(e) {}
+        const zhParts = getParts(fZhNum, d);
+        const zhNums  = numLine(partVal(zhParts,'month'), partVal(zhParts,'day'), partVal(zhParts,'year'));
+        const zhNative = zhNa && zhNa !== zhEn ? `<div class="cal-td-sub">${zhNa}</div>` : '';
+
+        // Islamic
+        const isStr  = fIsEn ? fIsEn.format(d) : '—';
+        const isParts = getParts(fIsNum, d);
+        const isNums  = numLine(partVal(isParts,'month'), partVal(isParts,'day'), partVal(isParts,'year'));
+
+        // Hebrew
+        const heStr  = fHeEn ? fHeEn.format(d) : '—';
+        const heParts = getParts(fHeNum, d);
+        let heMon = partVal(heParts, 'month');
+        if (!/^\d+$/.test(heMon)) { try { const hm = hebrewMonthNum(d, 'en-u-ca-hebrew'); if (hm && hm.num) heMon = hm.num; } catch(e) {} }
+        const heNums  = numLine(heMon, partVal(heParts,'day'), partVal(heParts,'year'));
+
+        // Ganzhi
+        const yGZ = getYearGanzhi(yr);
+        const mGZ = getMonthGanzhi(yr, mo, dy);
+        const dGZ = getDayGanzhi(d);
+
+        rows.push(`<tr class="${i === 0 ? 'cal-today' : ''}">
+          <td><div class="cal-td-main">${gregStr}</div>${grNums}</td>
+          <td><div class="cal-td-main">${zhEn}</div>${zhNative}${zhNums}</td>
+          <td><div class="cal-td-main">${isStr}</div>${isNums}</td>
+          <td><div class="cal-td-main">${heStr}</div>${heNums}</td>
+          <td>
+            <div class="gz-compact"><span class="gz-compact-label">年</span><span class="gz-compact-val">${gz(yGZ)}</span><span class="gz-compact-nums">干${yGZ.si+1}·支${yGZ.bi+1}·#${yGZ.cy}</span></div>
+            <div class="gz-compact"><span class="gz-compact-label">月</span><span class="gz-compact-val">${gz(mGZ)}</span><span class="gz-compact-nums">干${mGZ.si+1}·支${mGZ.bi+1}</span></div>
+            <div class="gz-compact"><span class="gz-compact-label">日</span><span class="gz-compact-val">${gz(dGZ)}</span><span class="gz-compact-nums">干${dGZ.si+1}·支${dGZ.bi+1}·#${dGZ.cy}</span></div>
+          </td>
+        </tr>`);
+      }
+
+      resultsEl.innerHTML = `
+        <div class="cal-scroll-wrap">
+          <table class="cal-multi-table">
+            <thead><tr>
+              <th>Gregorian</th>
+              <th>Chinese Lunar</th>
+              <th>Islamic (Hijri)</th>
+              <th>Hebrew</th>
+              <th>干支 Ganzhi</th>
+            </tr></thead>
+            <tbody>${rows.join('')}</tbody>
+          </table>
+        </div>`;
     }
 
     // Set today as default and auto-convert
@@ -955,6 +1017,7 @@
 
     document.getElementById('btn-cal-convert').addEventListener('click', convertCalendars);
     document.getElementById('cal-date').addEventListener('change', convertCalendars);
+    document.getElementById('cal-n').addEventListener('change', convertCalendars);
 
     // ── Tab 2: Date offset ─────────────────────────────────────
     let sign = 1;
