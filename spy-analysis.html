@@ -293,7 +293,14 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
               <button class="rb-btn" data-rb="2">2d</button>
               <button class="rb-btn" data-rb="3">3d</button>
             </div>
-            <span class="recent-n" id="recent-n-label">N=5d</span>
+            <select class="sel" id="recent-n-sel" style="font-size:10px;padding:2px 5px;height:auto">
+              <option value="1" selected>N=1d</option>
+              <option value="2">N=2d</option>
+              <option value="3">N=3d</option>
+              <option value="5">N=5d</option>
+              <option value="10">N=10d</option>
+              <option value="20">N=20d</option>
+            </select>
             <button class="create-cond-btn" id="create-cond-btn">+ Rule</button>
           </div>
         </div>
@@ -334,10 +341,10 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
       <div class="modal-hdr-right">
         <span style="font-size:11px;color:#8b949e">N days =</span>
         <div class="n-btns" id="modal-n-btns">
-          <button class="n-btn" data-n="1">1d</button>
+          <button class="n-btn active" data-n="1">1d</button>
           <button class="n-btn" data-n="2">2d</button>
           <button class="n-btn" data-n="3">3d</button>
-          <button class="n-btn active" data-n="5">5d</button>
+          <button class="n-btn" data-n="5">5d</button>
           <button class="n-btn" data-n="10">10d</button>
           <button class="n-btn" data-n="20">20d</button>
         </div>
@@ -841,7 +848,7 @@ function _prob(occs,n){
 
 /* â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 var currentRange=252,hiddenMA={},hiddenPatType={},hiddenPat={};
-var selectedPat=null,nDays=5,modalNDays=5,modalPatId=null,modalIsBucket=false;
+var selectedPat=null,nDays=1,modalNDays=1,modalPatId=null,modalIsBucket=false;
 var recentLookback=1;
 var autoFetchedDate=null;
 var mainChart,volChart,candleSeries,volSeries,ma5S,ma20S,ma60S;
@@ -971,8 +978,11 @@ function deleteCustomCandle(time){
 }
 
 /* â”€â”€ Recent Signal (bucket-based) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function syncNSelect(){
+  var sel=document.getElementById('recent-n-sel');
+  if(sel)sel.value=String(nDays);
+}
 function renderRecentSignal(){
-  document.getElementById('recent-n-label').textContent='N='+nDays+'d';
   var el=document.getElementById('recent-content');
   if(data.length<3){el.innerHTML='<div class="no-signal">Not enough data</div>';return;}
   var startIdx=Math.max(2,data.length-recentLookback);
@@ -1105,7 +1115,7 @@ function renderDetailView(patId){
   var p=_findPattern(patId);
   if(!p.id)return;
   document.getElementById('detail-name').textContent=p.name;
-  document.getElementById('recent-n-label').textContent='N='+nDays+'d';
+  syncNSelect();
   var prob=calcProb(patId,nDays),sign=prob.avg>=0?'+':'';
   var bc=p.type==='bullish'?'badge-bull':p.type==='bearish'?'badge-bear':'badge-neu';
   var tl=p.type.charAt(0).toUpperCase()+p.type.slice(1),dnPct=100-prob.upPct;
@@ -1141,7 +1151,7 @@ function renderDetailView(patId){
   document.querySelectorAll('#det-n-btns .n-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
       nDays=parseInt(btn.getAttribute('data-n'));
-      renderDetailView(patId);renderRecentSignal();
+      syncNSelect();renderDetailView(patId);renderRecentSignal();
     });
   });
   document.getElementById('open-hist-btn').addEventListener('click',function(){openModal(patId,false);});
@@ -1490,7 +1500,7 @@ function autoFetchLatestPrice(){
      parse:function(r){return r.json().then(parseYahooJson);}}
   ];
   function tryNext(i){
-    if(i>=sources.length){setFetchStatus('err','Live fetch failed â€” add manually');return;}
+    if(i>=sources.length){setFetchStatus('err','Live fetch failed - add manually');return;}
     fetch(sources[i].url)
       .then(function(r){
         if(!r.ok)throw new Error('HTTP '+r.status);
@@ -1557,6 +1567,12 @@ document.querySelectorAll('#modal-n-btns .n-btn').forEach(function(btn){
     btn.classList.add('active');
     if(modalPatId)renderHistChart(modalPatId,modalIsBucket,modalNDays);
   });
+});
+
+/* Recent Signal N selector */
+document.getElementById('recent-n-sel').addEventListener('change',function(){
+  nDays=parseInt(this.value);
+  renderRecentSignal();
 });
 
 /* Recent lookback */
