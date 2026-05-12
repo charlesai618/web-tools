@@ -23,6 +23,14 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
 .sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 8px;border-radius:6px;font-size:12px;cursor:pointer}
 .add-day-btn{background:#238636;border:1px solid #2ea043;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
 .add-day-btn:hover{background:#2ea043}
+.fetch-indicator{display:flex;align-items:center;gap:6px;background:#21262d;border:1px solid #30363d;padding:4px 10px;border-radius:6px;font-size:11px;white-space:nowrap}
+.fetch-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.fetch-dot.loading{background:#d29922;animation:pulse 1s infinite}
+.fetch-dot.ok{background:#3fb950}
+.fetch-dot.err{background:#f85149}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.fetch-del-btn{background:none;border:none;color:#8b949e;cursor:pointer;font-size:14px;padding:0 2px;margin-left:2px;transition:color .15s;line-height:1}
+.fetch-del-btn:hover{color:#f85149}
 
 /* â”€â”€ Layout â”€â”€ */
 .layout{display:flex;flex:1;overflow:hidden;min-height:0}
@@ -208,6 +216,11 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
       <option value="">No MA</option>
     </select>
     <button class="add-day-btn" id="add-day-btn">+ Add Day</button>
+    <div class="fetch-indicator" id="fetch-indicator">
+      <div class="fetch-dot loading" id="fetch-dot"></div>
+      <span id="fetch-label">Fetching live priceâ€¦</span>
+      <button class="fetch-del-btn" id="fetch-del-btn" style="display:none" title="Remove auto-fetched price">&#10005;</button>
+    </div>
   </div>
 </div>
 
@@ -592,6 +605,7 @@ function calcProb(patternId,n){
 var currentRange=252,hiddenMA={},hiddenPatType={},hiddenPat={};
 var selectedPat=null,nDays=5,modalNDays=5,modalPatId=null;
 var recentLookback=1;
+var autoFetchedDate=null;
 var mainChart,volChart,candleSeries,volSeries,ma5S,ma20S,ma60S;
 var histChart,histCandle;
 var processedOccs=[],currentOccIdx=-1;
@@ -780,7 +794,7 @@ function renderCustomList(){
   sorted.forEach(function(c){
     html+='<div class="custom-entry-row">'
       +'<span class="ce-date">'+c.time+'</span>'
-      +'<span class="ce-badge">custom</span>'
+      +(c.autoFetched?'<span class="ce-badge" style="background:#3fb95020;color:#3fb950;border-color:#3fb95040">auto</span>':'<span class="ce-badge">manual</span>')
       +'<span class="ce-prices">O:'+c.open.toFixed(2)+' H:'+c.high.toFixed(2)+' L:'+c.low.toFixed(2)+' C:'+c.close.toFixed(2)+'</span>'
       +'<button class="ce-del" data-time="'+c.time+'" title="Delete">&#10005;</button>'
       +'</div>';
@@ -1056,6 +1070,56 @@ function initCharts(){
   renderRecentSignal();
 }
 
+/* â”€â”€ Auto-fetch latest SPY price â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function setFetchStatus(state,label){
+  var dot=document.getElementById('fetch-dot');
+  var lbl=document.getElementById('fetch-label');
+  var btn=document.getElementById('fetch-del-btn');
+  dot.className='fetch-dot '+state;
+  lbl.textContent=label;
+  btn.style.display=(state==='ok')?'inline':'none';
+}
+
+function autoFetchLatestPrice(){
+  setFetchStatus('loading','Fetching live priceâ€¦');
+  fetch('https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d&range=5d&includePrePost=false')
+    .then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    })
+    .then(function(json){
+      var result=json.chart.result[0];
+      var timestamps=result.timestamp;
+      var q=result.indicators.quote[0];
+      /* use last timestamp â€” most recent trading day */
+      var i=timestamps.length-1;
+      /* skip if any value is null (partial day sometimes returns nulls) */
+      while(i>0&&(q.open[i]==null||q.close[i]==null))i--;
+      if(i<0)throw new Error('no data');
+      var ts=timestamps[i];
+      /* Yahoo timestamps are seconds; daily bars use market-open time in ET.
+         toISOString gives UTC date â€” subtract 4h to land on ET date safely */
+      var d=new Date((ts+4*3600)*1000);
+      var time=d.getUTCFullYear()+'-'
+        +String(d.getUTCMonth()+1).padStart(2,'0')+'-'
+        +String(d.getUTCDate()).padStart(2,'0');
+      var open=Math.round(q.open[i]*100)/100;
+      var high=Math.round(q.high[i]*100)/100;
+      var low=Math.round(q.low[i]*100)/100;
+      var close=Math.round(q.close[i]*100)/100;
+      var vol=q.volume[i]||0;
+      var volStr=vol>=1e9?(vol/1e9).toFixed(2)+'B':(vol/1e6).toFixed(2)+'M';
+      var change=((close-open)/open*100).toFixed(2)+'%';
+      autoFetchedDate=time;
+      addCustomCandle({time:time,open:open,high:high,low:low,close:close,
+        vol:volStr,change:change,custom:true,autoFetched:true});
+      setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));
+    })
+    .catch(function(){
+      setFetchStatus('err','Live fetch failed â€” add manually');
+    });
+}
+
 /* â”€â”€ Add Day: default date helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function nextTradingDate(){
   var last=data[data.length-1];
@@ -1179,7 +1243,18 @@ document.getElementById('form-submit').addEventListener('click',function(){
   document.getElementById('add-modal').style.display='none';
 });
 
-window.addEventListener('DOMContentLoaded',initCharts);
+/* fetch-del-btn: remove auto-fetched candle */
+document.getElementById('fetch-del-btn').addEventListener('click',function(){
+  if(!autoFetchedDate)return;
+  deleteCustomCandle(autoFetchedDate);
+  autoFetchedDate=null;
+  setFetchStatus('err','Auto-fetch removed â€” add manually');
+});
+
+window.addEventListener('DOMContentLoaded',function(){
+  initCharts();
+  autoFetchLatestPrice();
+});
 </script>
 </body>
 </html>
