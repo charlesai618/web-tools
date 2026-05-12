@@ -1453,34 +1453,52 @@ function setFetchStatus(state,label){
   btn.style.display=(state==='ok')?'inline':'none';
 }
 
+function parseYahooJson(json){
+  var result=json.chart.result[0];
+  var timestamps=result.timestamp;
+  var q=result.indicators.quote[0];
+  var i=timestamps.length-1;
+  while(i>0&&(q.open[i]==null||q.close[i]==null))i--;
+  if(i<0)throw new Error('no data');
+  /* Yahoo timestamps are ET market-open; add 4h to stay on ET date in UTC */
+  var d=new Date((timestamps[i]+4*3600)*1000);
+  var time=d.getUTCFullYear()+'-'
+    +String(d.getUTCMonth()+1).padStart(2,'0')+'-'
+    +String(d.getUTCDate()).padStart(2,'0');
+  var open=Math.round(q.open[i]*100)/100;
+  var high=Math.round(q.high[i]*100)/100;
+  var low=Math.round(q.low[i]*100)/100;
+  var close=Math.round(q.close[i]*100)/100;
+  var vol=q.volume[i]||0;
+  var volStr=vol>=1e9?(vol/1e9).toFixed(2)+'B':(vol/1e6).toFixed(2)+'M';
+  var change=((close-open)/open*100).toFixed(2)+'%';
+  autoFetchedDate=time;
+  addCustomCandle({time:time,open:open,high:high,low:low,close:close,
+    vol:volStr,change:change,custom:true,autoFetched:true});
+  setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));
+}
+
 function autoFetchLatestPrice(){
   setFetchStatus('loading','Fetching live priceâ€¦');
-  fetch('https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d&range=5d&includePrePost=false')
-    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
-    .then(function(json){
-      var result=json.chart.result[0];
-      var timestamps=result.timestamp;
-      var q=result.indicators.quote[0];
-      var i=timestamps.length-1;
-      while(i>0&&(q.open[i]==null||q.close[i]==null))i--;
-      if(i<0)throw new Error('no data');
-      var d=new Date((timestamps[i]+4*3600)*1000);
-      var time=d.getUTCFullYear()+'-'
-        +String(d.getUTCMonth()+1).padStart(2,'0')+'-'
-        +String(d.getUTCDate()).padStart(2,'0');
-      var open=Math.round(q.open[i]*100)/100;
-      var high=Math.round(q.high[i]*100)/100;
-      var low=Math.round(q.low[i]*100)/100;
-      var close=Math.round(q.close[i]*100)/100;
-      var vol=q.volume[i]||0;
-      var volStr=vol>=1e9?(vol/1e9).toFixed(2)+'B':(vol/1e6).toFixed(2)+'M';
-      var change=((close-open)/open*100).toFixed(2)+'%';
-      autoFetchedDate=time;
-      addCustomCandle({time:time,open:open,high:high,low:low,close:close,
-        vol:volStr,change:change,custom:true,autoFetched:true});
-      setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));
-    })
-    .catch(function(){setFetchStatus('err','Live fetch failed â€” add manually');});
+  var yUrl='https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d&range=5d&includePrePost=false';
+  /* Try direct then two CORS-proxy fallbacks */
+  var sources=[
+    {url:yUrl, parse:function(r){return r.json().then(parseYahooJson);}},
+    {url:'https://corsproxy.io/?'+encodeURIComponent(yUrl),
+     parse:function(r){return r.json().then(parseYahooJson);}},
+    {url:'https://api.allorigins.win/raw?url='+encodeURIComponent(yUrl),
+     parse:function(r){return r.json().then(parseYahooJson);}}
+  ];
+  function tryNext(i){
+    if(i>=sources.length){setFetchStatus('err','Live fetch failed â€” add manually');return;}
+    fetch(sources[i].url)
+      .then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        return sources[i].parse(r);
+      })
+      .catch(function(){tryNext(i+1);});
+  }
+  tryNext(0);
 }
 
 /* â”€â”€ Event wiring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
