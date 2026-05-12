@@ -1061,7 +1061,7 @@ function deleteUserBucket(id){
   userBuckets=userBuckets.filter(function(b){return b.id!==id;});
   saveUserBuckets();
   delete allBucketOcc[id];
-  renderRecentSignal();
+  renderRecentSignal();renderPatternList();
 }
 
 /* ── Custom entries list ─────────────────────────────────────── */
@@ -1107,19 +1107,44 @@ function renderPatternList(){
         +'</div>';
     });
   });
+  if(userBuckets.length){
+    html+='<div class="pat-group-hdr" style="color:#a5b4fc;margin-top:8px">My Rules</div>';
+    userBuckets.forEach(function(b){
+      var cnt=(allBucketOcc[b.id]||[]).length;
+      html+='<div class="pat-row" data-bid="'+b.id+'">'
+        +'<div class="pat-dot" style="background:#818cf8"></div>'
+        +'<div class="pat-name">'+b.name+'</div>'
+        +'<span class="pat-count">'+cnt+'</span>'
+        +'<button class="eye-btn" data-del-bid="'+b.id+'" title="Delete rule" style="color:#f85149;font-size:12px">&#10005;</button>'
+        +'</div>';
+    });
+  }
   el.innerHTML=html;
-  el.querySelectorAll('.pat-row').forEach(function(row){
+  el.querySelectorAll('.pat-row[data-id]').forEach(function(row){
     row.addEventListener('click',function(e){
       if(e.target.closest('.eye-btn'))return;
       selectPattern(row.getAttribute('data-id'));
     });
   });
-  el.querySelectorAll('.eye-btn').forEach(function(btn){
+  el.querySelectorAll('.eye-btn[data-eye]').forEach(function(btn){
     btn.addEventListener('click',function(e){
       e.stopPropagation();
       var id=btn.getAttribute('data-eye');
       hiddenPat[id]=!hiddenPat[id];
       renderPatternList();updateMarkers();
+    });
+  });
+  el.querySelectorAll('.pat-row[data-bid]').forEach(function(row){
+    row.addEventListener('click',function(e){
+      if(e.target.closest('[data-del-bid]'))return;
+      openModal(row.getAttribute('data-bid'),true);
+    });
+  });
+  el.querySelectorAll('[data-del-bid]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(confirm('Delete rule "'+btn.closest('.pat-row').querySelector('.pat-name').textContent+'"?'))
+        deleteUserBucket(btn.getAttribute('data-del-bid'));
     });
   });
 }
@@ -1456,7 +1481,7 @@ function saveCondition(){
     if(evalUserBucket(data,i,bucket))allBucketOcc[id].push({idx:i,time:data[i].time});
   }
   closeConditionBuilder();
-  renderRecentSignal();
+  renderRecentSignal();renderPatternList();
 }
 
 /* ── Add Day helpers ─────────────────────────────────────────── */
