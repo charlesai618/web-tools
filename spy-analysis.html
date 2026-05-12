@@ -252,7 +252,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
     <button class="add-day-btn" id="add-day-btn">+ Add Day</button>
     <div class="fetch-indicator" id="fetch-indicator">
       <div class="fetch-dot loading" id="fetch-dot"></div>
-      <span id="fetch-label">Fetching live price…</span>
+      <span id="fetch-label">Fetching live price...</span>
       <button class="fetch-del-btn" id="fetch-del-btn" style="display:none" title="Remove auto-fetched price">&#10005;</button>
     </div>
   </div>
@@ -496,6 +496,18 @@ function rebuildData(){
 }
 loadCustomCandles();
 rebuildData();
+
+/* ── Market-close helpers ────────────────────────────────────── */
+function getTodayET(){
+  var d=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function isMarketClosed(dateStr){
+  var todayET=getTodayET();
+  if(dateStr<todayET)return true;
+  var nowET=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  return nowET.getHours()>=16;
+}
 
 /* ── MA ──────────────────────────────────────────────────────── */
 function calcMA(arr,n){
@@ -1061,9 +1073,11 @@ function renderCustomList(){
   sorted.forEach(function(c){
     html+='<div class="custom-entry-row">'
       +'<span class="ce-date">'+c.time+'</span>'
-      +(c.autoFetched
-        ?'<span class="ce-badge" style="background:#3fb95020;color:#3fb950;border-color:#3fb95040">auto</span>'
-        :'<span class="ce-badge">manual</span>')
+      +(c.confirmed
+        ?'<span class="ce-badge" style="background:#3fb95030;color:#3fb950;border-color:#3fb95060">saved</span>'
+        :c.autoFetched
+          ?'<span class="ce-badge" style="background:#3fb95020;color:#3fb950;border-color:#3fb95040">auto</span>'
+          :'<span class="ce-badge">manual</span>')
       +'<span class="ce-prices">O:'+c.open.toFixed(2)+' H:'+c.high.toFixed(2)+' L:'+c.low.toFixed(2)+' C:'+c.close.toFixed(2)+'</span>'
       +'<button class="ce-del" data-time="'+c.time+'" title="Delete">&#10005;</button>'
       +'</div>';
@@ -1458,7 +1472,7 @@ function setFetchStatus(state,label){
   var dot=document.getElementById('fetch-dot');
   var lbl=document.getElementById('fetch-label');
   var btn=document.getElementById('fetch-del-btn');
-  dot.className='fetch-dot '+state;
+  dot.className='fetch-dot '+(state==='confirmed'?'ok':state);
   lbl.textContent=label;
   btn.style.display=(state==='ok')?'inline':'none';
 }
@@ -1482,10 +1496,27 @@ function parseYahooJson(json){
   var vol=q.volume[i]||0;
   var volStr=vol>=1e9?(vol/1e9).toFixed(2)+'B':(vol/1e6).toFixed(2)+'M';
   var change=((close-open)/open*100).toFixed(2)+'%';
-  autoFetchedDate=time;
-  addCustomCandle({time:time,open:open,high:high,low:low,close:close,
-    vol:volStr,change:change,custom:true,autoFetched:true});
-  setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));
+  /* Skip if date already exists in RAW historical data */
+  var inRaw=RAW.some(function(r){return toIso(r.d)===time;});
+  if(inRaw){setFetchStatus('confirmed','History up to date ('+time+')');return;}
+  /* Skip if already confirmed in localStorage */
+  var alreadyConfirmed=customCandles.find(function(c){return c.time===time&&c.confirmed;});
+  if(alreadyConfirmed){
+    setFetchStatus('confirmed','Saved: '+time+' $'+alreadyConfirmed.close.toFixed(2));
+    return;
+  }
+  var closed=isMarketClosed(time);
+  if(closed){
+    autoFetchedDate=null;
+    addCustomCandle({time:time,open:open,high:high,low:low,close:close,
+      vol:volStr,change:change,custom:true,autoFetched:false,confirmed:true});
+    setFetchStatus('confirmed','Saved: '+time+' $'+close.toFixed(2));
+  } else {
+    autoFetchedDate=time;
+    addCustomCandle({time:time,open:open,high:high,low:low,close:close,
+      vol:volStr,change:change,custom:true,autoFetched:true,confirmed:false});
+    setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));
+  }
 }
 
 function autoFetchLatestPrice(){
