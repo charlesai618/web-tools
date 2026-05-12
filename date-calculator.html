@@ -899,7 +899,8 @@
       const bi = (2 + seqIdx) % 12;
       const firstStem = [2, 4, 6, 8, 0][yearSi % 5];
       const si = (firstStem + seqIdx) % 10;
-      return { si, bi };
+      const cy = ((6 * si - 5 * bi) % 60 + 60) % 60 + 1;
+      return { si, bi, cy };
     }
 
     // Day ganzhi: Jan 1 1900 = 甲戌 = 60-cycle position 10 (0-based)
@@ -1036,7 +1037,7 @@
         <td class="cal-row-label" style="color:#b7791f">干支 Ganzhi<br><span style="font-size:0.72rem;font-weight:400;color:#a0aec0">Sexagenary</span></td>
         ${days.map(day => cell(day, `
           <div class="gz-compact"><span class="gz-compact-label">年</span><span class="gz-compact-val">${gz(day.yGZ)}</span><span class="gz-compact-nums">干${day.yGZ.si+1}·支${day.yGZ.bi+1}·#${day.yGZ.cy}</span></div>
-          <div class="gz-compact"><span class="gz-compact-label">月</span><span class="gz-compact-val">${gz(day.mGZ)}</span><span class="gz-compact-nums">干${day.mGZ.si+1}·支${day.mGZ.bi+1}</span></div>
+          <div class="gz-compact"><span class="gz-compact-label">月</span><span class="gz-compact-val">${gz(day.mGZ)}</span><span class="gz-compact-nums">干${day.mGZ.si+1}·支${day.mGZ.bi+1}·#${day.mGZ.cy}</span></div>
           <div class="gz-compact"><span class="gz-compact-label">日</span><span class="gz-compact-val">${gz(day.dGZ)}</span><span class="gz-compact-nums">干${day.dGZ.si+1}·支${day.dGZ.bi+1}·#${day.dGZ.cy}</span></div>
         `)).join('')}
       </tr>`;
