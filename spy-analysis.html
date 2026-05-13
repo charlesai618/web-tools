@@ -1506,42 +1506,42 @@ function parseYahooJson(json){
   var result=json.chart.result[0];
   var timestamps=result.timestamp;
   var q=result.indicators.quote[0];
-  var i=timestamps.length-1;
-  while(i>0&&(q.open[i]==null||q.close[i]==null))i--;
-  if(i<0)throw new Error('no data');
-  /* Yahoo timestamps are ET market-open; add 4h to stay on ET date in UTC */
-  var d=new Date((timestamps[i]+4*3600)*1000);
-  var time=d.getUTCFullYear()+'-'
-    +String(d.getUTCMonth()+1).padStart(2,'0')+'-'
-    +String(d.getUTCDate()).padStart(2,'0');
-  var open=Math.round(q.open[i]*100)/100;
-  var high=Math.round(q.high[i]*100)/100;
-  var low=Math.round(q.low[i]*100)/100;
-  var close=Math.round(q.close[i]*100)/100;
-  var vol=q.volume[i]||0;
-  var volStr=vol>=1e9?(vol/1e9).toFixed(2)+'B':(vol/1e6).toFixed(2)+'M';
-  var change=((close-open)/open*100).toFixed(2)+'%';
-  /* Skip if date already exists in RAW historical data */
-  var inRaw=RAW.some(function(r){return toIso(r.d)===time;});
-  if(inRaw){setFetchStatus('confirmed','History up to date ('+time+')');return;}
-  /* Skip if already confirmed in localStorage */
-  var alreadyConfirmed=customCandles.find(function(c){return c.time===time&&c.confirmed;});
-  if(alreadyConfirmed){
-    setFetchStatus('confirmed','Saved: '+time+' $'+alreadyConfirmed.close.toFixed(2));
-    return;
+  var latestStatusSet=false;
+  autoFetchedDate=null;
+  /* Process all returned days newest-first so auto-fetch always overrides manual entries */
+  for(var i=timestamps.length-1;i>=0;i--){
+    if(q.open[i]==null||q.close[i]==null)continue;
+    /* Yahoo timestamps are ET market-open; add 4h to stay on ET date in UTC */
+    var d=new Date((timestamps[i]+4*3600)*1000);
+    var time=d.getUTCFullYear()+'-'
+      +String(d.getUTCMonth()+1).padStart(2,'0')+'-'
+      +String(d.getUTCDate()).padStart(2,'0');
+    /* Skip if date already exists in RAW historical data */
+    var inRaw=RAW.some(function(r){return toIso(r.d)===time;});
+    if(inRaw){
+      if(!latestStatusSet){setFetchStatus('confirmed','History up to date ('+time+')');latestStatusSet=true;}
+      continue;
+    }
+    var open=Math.round(q.open[i]*100)/100;
+    var high=Math.round(q.high[i]*100)/100;
+    var low=Math.round(q.low[i]*100)/100;
+    var close=Math.round(q.close[i]*100)/100;
+    var vol=q.volume[i]||0;
+    var volStr=vol>=1e9?(vol/1e9).toFixed(2)+'B':(vol/1e6).toFixed(2)+'M';
+    var change=((close-open)/open*100).toFixed(2)+'%';
+    var closed=isMarketClosed(time);
+    if(closed){
+      addCustomCandle({time:time,open:open,high:high,low:low,close:close,
+        vol:volStr,change:change,custom:true,autoFetched:false,confirmed:true});
+      if(!latestStatusSet){setFetchStatus('confirmed','Saved: '+time+' $'+close.toFixed(2));latestStatusSet=true;}
+    } else {
+      autoFetchedDate=time;
+      addCustomCandle({time:time,open:open,high:high,low:low,close:close,
+        vol:volStr,change:change,custom:true,autoFetched:true,confirmed:false});
+      if(!latestStatusSet){setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));latestStatusSet=true;}
+    }
   }
-  var closed=isMarketClosed(time);
-  if(closed){
-    autoFetchedDate=null;
-    addCustomCandle({time:time,open:open,high:high,low:low,close:close,
-      vol:volStr,change:change,custom:true,autoFetched:false,confirmed:true});
-    setFetchStatus('confirmed','Saved: '+time+' $'+close.toFixed(2));
-  } else {
-    autoFetchedDate=time;
-    addCustomCandle({time:time,open:open,high:high,low:low,close:close,
-      vol:volStr,change:change,custom:true,autoFetched:true,confirmed:false});
-    setFetchStatus('ok','Live: '+time+' $'+close.toFixed(2));
-  }
+  if(!latestStatusSet)throw new Error('no data');
 }
 
 function autoFetchLatestPrice(){
