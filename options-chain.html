@@ -68,17 +68,6 @@
     padding: 5px 12px; border-radius: 999px; font-weight: 600;
   }
 
-  .straddle {
-    display: none; flex-wrap: wrap; gap: 10px 28px; align-items: stretch;
-    background: #16233b; border: 1px solid #334155; border-left: 3px solid #60a5fa;
-    border-radius: 12px; padding: 14px 22px; margin-bottom: 16px;
-  }
-  .straddle .grp { display: flex; flex-direction: column; gap: 3px; }
-  .straddle .lab { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; }
-  .straddle .val { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; }
-  .straddle .sub { font-size: 0.74rem; color: #94a3b8; }
-  .straddle .note { flex-basis: 100%; font-size: 0.72rem; color: #64748b; }
-
   .strangle-title { font-size: 1rem; font-weight: 600; color: #f1f5f9; margin: 6px 2px 10px; }
   .strangle-sub { font-weight: 400; font-size: 0.76rem; color: #94a3b8; margin-left: 6px; }
   table.strangle { font-size: 0.84rem; }
@@ -149,8 +138,6 @@
 
   <div class="expbar" id="expbar"></div>
 
-  <div class="straddle" id="straddle" style="display:none"></div>
-
   <div class="strangle-wrap" id="strangleWrap" style="display:none">
     <div class="strangle-title">Straddle &amp; strangle breakevens
       <span class="strangle-sub">long call above + long put below spot, paired N strikes out (±0 = ATM straddle)</span>
@@ -158,7 +145,7 @@
     <div class="tablewrap">
       <table class="strangle">
         <thead><tr>
-          <th>Width</th><th>Call K</th><th>Put K</th><th>Cost</th>
+          <th>Width</th><th>Call K</th><th>Put K</th><th>Call $</th><th>Put $</th><th>Cost</th>
           <th>Lower breakeven</th><th>Upper breakeven</th><th>Move to profit</th>
         </tr></thead>
         <tbody id="strangleBody"></tbody>
@@ -402,7 +389,6 @@ function renderChain(){
   var atm = 0, best = Infinity;
   strikes.forEach(function(s,i){ var diff = Math.abs(s.strike-price); if (diff<best){best=diff;atm=i;} });
 
-  renderStraddle(strikes[atm], price);
   renderStrangles(strikes, atm, price);
 
   /* optional window around ATM */
@@ -492,36 +478,6 @@ function legPrice(o){
   return null;
 }
 
-/* ATM straddle (long call + long put at the ATM strike): cost and breakevens */
-function renderStraddle(atmS, S){
-  var box = document.getElementById("straddle");
-  var cP = legPrice(atmS && atmS.C), pP = legPrice(atmS && atmS.P);
-  if (!atmS || cP==null || pP==null || !S){ box.style.display = "none"; return; }
-
-  var K = atmS.strike;
-  var debit = cP + pP;
-  var upBE = K + debit, dnBE = K - debit;
-  var upPct = (upBE - S) / S * 100;
-  var dnPct = (dnBE - S) / S * 100;
-  var movePct = debit / S * 100;
-  var f = function(v){ return v.toFixed(2); };
-  var kStr = (K % 1) ? K.toFixed(2) : K;
-
-  box.style.display = "flex";
-  box.innerHTML =
-    "<div class='grp'><span class='lab'>ATM straddle</span>" +
-      "<span class='val'>" + kStr + " strike</span><span class='sub'>buy call + put</span></div>" +
-    "<div class='grp'><span class='lab'>Cost (debit)</span>" +
-      "<span class='val'>$" + f(debit) + "</span><span class='sub'>call " + f(cP) + " + put " + f(pP) + "</span></div>" +
-    "<div class='grp'><span class='lab'>Upper breakeven</span>" +
-      "<span class='val'>$" + f(upBE) + "</span><span class='sub' style='color:#4ade80'>+" + upPct.toFixed(2) + "%</span></div>" +
-    "<div class='grp'><span class='lab'>Lower breakeven</span>" +
-      "<span class='val'>$" + f(dnBE) + "</span><span class='sub' style='color:#f87171'>" + dnPct.toFixed(2) + "%</span></div>" +
-    "<div class='grp'><span class='lab'>Move to profit</span>" +
-      "<span class='val'>&plusmn;" + movePct.toFixed(2) + "%</span><span class='sub'>from spot $" + f(S) + "</span></div>" +
-    "<div class='note'>Profit if price closes beyond a breakeven at expiry. Cost uses the bid/ask mid of the ATM call &amp; put; excludes commissions.</div>";
-}
-
 function kfmt(k){ return (k % 1) ? k.toFixed(2) : k; }
 
 /* table of the ATM straddle (±0) and strangles stepping outward from it.
@@ -547,6 +503,8 @@ function renderStrangles(strikes, atm, S){
       "<td class='combo'>" + (k===0 ? "±0 straddle" : "±" + k) + "</td>" +
       "<td>" + kfmt(callK) + "</td>" +
       "<td>" + kfmt(putK) + "</td>" +
+      "<td>$" + cP.toFixed(2) + "</td>" +
+      "<td>$" + pP.toFixed(2) + "</td>" +
       "<td>$" + debit.toFixed(2) + "</td>" +
       "<td>$" + dnBE.toFixed(2) + "<span class='sub2' style='color:#f87171'>" + dnPct.toFixed(2) + "%</span></td>" +
       "<td>$" + upBE.toFixed(2) + "<span class='sub2' style='color:#4ade80'>+" + upPct.toFixed(2) + "%</span></td>" +
@@ -566,7 +524,6 @@ function load(){
   document.getElementById("summary").style.display = "none";
   document.getElementById("tablewrap").style.display = "none";
   document.getElementById("expbar").style.display = "none";
-  document.getElementById("straddle").style.display = "none";
   document.getElementById("strangleWrap").style.display = "none";
   document.getElementById("legend").style.display = "none";
 
