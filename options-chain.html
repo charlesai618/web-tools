@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Options Chain</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 32px 16px 80px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  a.back { color: #60a5fa; text-decoration: none; font-size: 0.85rem; }
+  a.back:hover { text-decoration: underline; }
+  h1 { font-size: 1.6rem; font-weight: 700; color: #f8fafc; margin: 14px 0 4px; }
+  p.subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 24px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 20px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; }
+  input[type=text], select {
+    background: #0f172a; border: 1px solid #334155; color: #f1f5f9;
+    border-radius: 8px; padding: 9px 12px; font-size: 0.95rem; min-width: 120px;
+  }
+  input[type=text]:focus, select:focus { outline: none; border-color: #60a5fa; }
+  input#ticker { text-transform: uppercase; font-weight: 600; letter-spacing: .04em; width: 130px; }
+  button.load {
+    background: #2563eb; border: none; color: #fff; font-weight: 600;
+    padding: 10px 22px; border-radius: 8px; cursor: pointer; font-size: 0.95rem;
+    transition: background .15s;
+  }
+  button.load:hover { background: #1d4ed8; }
+  button.load:disabled { background: #334155; cursor: default; }
+  .chk { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; color: #cbd5e1; padding-bottom: 9px; }
+  .chk input { width: 15px; height: 15px; accent-color: #2563eb; }
+
+  #status { font-size: 0.85rem; margin-bottom: 18px; min-height: 1.2em; }
+  #status.loading { color: #fbbf24; }
+  #status.error   { color: #f87171; }
+  #status.ok      { color: #4ade80; }
+
+  .summary {
+    display: none; flex-wrap: wrap; gap: 28px; align-items: baseline;
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 16px 22px; margin-bottom: 16px;
+  }
+  .summary .sym { font-size: 1.5rem; font-weight: 700; color: #f8fafc; }
+  .summary .px  { font-size: 1.5rem; font-weight: 700; }
+  .summary .chg { font-size: 1rem; font-weight: 600; }
+  .summary .meta { font-size: 0.78rem; color: #94a3b8; }
+  .summary .meta b { color: #cbd5e1; font-weight: 600; }
+  .up { color: #4ade80; } .down { color: #f87171; }
+
+  .expbar {
+    display: none; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 14px; font-size: 0.92rem; color: #cbd5e1;
+  }
+  .expbar .pill {
+    background: #0b3a67; border: 1px solid #1e5fa8; color: #bfdbfe;
+    padding: 5px 12px; border-radius: 999px; font-weight: 600;
+  }
+
+  .tablewrap { overflow-x: auto; border-radius: 12px; border: 1px solid #334155; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.83rem; font-variant-numeric: tabular-nums; }
+  thead th { position: sticky; top: 0; background: #111c30; z-index: 1; }
+  th, td { padding: 7px 9px; text-align: right; white-space: nowrap; }
+  .grouphead th {
+    text-align: center; font-size: 0.78rem; letter-spacing: .08em; text-transform: uppercase;
+    padding: 9px; border-bottom: 1px solid #334155;
+  }
+  .grouphead .calls { color: #4ade80; background: #0d2a1a; }
+  .grouphead .puts  { color: #f87171; background: #2a0d12; }
+  .grouphead .mid   { background: #111c30; }
+  .colhead th { color: #94a3b8; font-weight: 600; font-size: 0.72rem; border-bottom: 1px solid #334155; background: #111c30; }
+  tbody tr { border-bottom: 1px solid #1e293b; }
+  tbody tr:hover { background: #1e293b; }
+  td.strike {
+    text-align: center; font-weight: 700; color: #f1f5f9; background: #131f33;
+    border-left: 1px solid #334155; border-right: 1px solid #334155;
+  }
+  td.itm { background: rgba(34,197,94,0.09); }
+  tr.atm { background: rgba(96,165,250,0.12) !important; }
+  tr.atm td.strike { background: #1d4ed8; color: #fff; }
+  .muted { color: #64748b; }
+  td.last { color: #e2e8f0; }
+  .footnote { color: #64748b; font-size: 0.78rem; margin-top: 16px; line-height: 1.5; }
+  .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:0.78rem; color:#94a3b8; margin: 12px 2px 0; }
+  .legend span { display:flex; align-items:center; gap:6px; }
+  .sw { width:13px; height:13px; border-radius:3px; display:inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">&larr; All tools</a>
+  <h1>Options Chain</h1>
+  <p class="subtitle">Live-ish option quotes for the nearest expiration of any ticker. Delayed data from CBOE.</p>
+
+  <div class="controls">
+    <div class="field">
+      <label for="ticker">Ticker</label>
+      <input type="text" id="ticker" value="SPY" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="field">
+      <label for="expsel">Expiration</label>
+      <select id="expsel" disabled><option>—</option></select>
+    </div>
+    <button class="load" id="loadBtn">Load</button>
+    <label class="chk"><input type="checkbox" id="allStrikes" /> Show all strikes</label>
+  </div>
+
+  <div id="status"></div>
+
+  <div class="summary" id="summary">
+    <div><span class="sym" id="sSym"></span></div>
+    <div><span class="px" id="sPx"></span> <span class="chg" id="sChg"></span></div>
+    <div class="meta" id="sMeta"></div>
+  </div>
+
+  <div class="expbar" id="expbar"></div>
+
+  <div class="tablewrap" id="tablewrap" style="display:none">
+    <table id="chain">
+      <thead>
+        <tr class="grouphead">
+          <th class="calls" colspan="6">Calls</th>
+          <th class="mid">Strike</th>
+          <th class="puts" colspan="6">Puts</th>
+        </tr>
+        <tr class="colhead">
+          <th>Bid</th><th>Ask</th><th>Last</th><th>Chg%</th><th>Vol</th><th>OI</th>
+          <th></th>
+          <th>OI</th><th>Vol</th><th>Chg%</th><th>Last</th><th>Bid</th><th>Ask</th>
+        </tr>
+      </thead>
+      <tbody id="chainBody"></tbody>
+    </table>
+  </div>
+
+  <div class="legend" id="legend" style="display:none">
+    <span><i class="sw" style="background:rgba(34,197,94,0.5)"></i> In&#8209;the&#8209;money</span>
+    <span><i class="sw" style="background:#1d4ed8"></i> At&#8209;the&#8209;money strike</span>
+    <span>IV = implied volatility &middot; OI = open interest</span>
+  </div>
+
+  <p class="footnote" id="footnote"></p>
+</div>
+
+<script>
+"use strict";
+
+var CBOE = "https://cdn.cboe.com/api/global/delayed_quotes/options/";
+/* CORS proxies tried in order. CBOE sends no CORS header, so a proxy is required. */
+var PROXIES = [
+  function(u){ return "https://cors.zme.ink/" + u; },
+  function(u){ return "https://api.allorigins.win/raw?url=" + encodeURIComponent(u); },
+  function(u){ return "https://thingproxy.freeboard.io/fetch/" + u; }
+];
+
+var elStatus = document.getElementById("status");
+var elBtn    = document.getElementById("loadBtn");
+var elTicker = document.getElementById("ticker");
+var elExpSel = document.getElementById("expsel");
+var elAll    = document.getElementById("allStrikes");
+
+var current = null;  /* { price, change, changePct, lastTime, iv30, sym, byExp:{exp:[opts]}, exps:[] } */
+
+function setStatus(state, msg){ elStatus.className = state; elStatus.textContent = msg; }
+
+/* ---- option-symbol parsing (OCC): ROOT + YYMMDD + C/P + strike*1000(8 digits) ---- */
+function parseSym(s){
+  return {
+    exp:    s.slice(-15, -9),               /* YYMMDD */
+    type:   s.slice(-9, -8),                /* C | P  */
+    strike: parseInt(s.slice(-8), 10) / 1000
+  };
+}
+function todayYYMMDD(){
+  var d = new Date();
+  var p = function(n){ return (n<10?"0":"") + n; };
+  return p(d.getFullYear()%100) + p(d.getMonth()+1) + p(d.getDate());
+}
+function expToDate(e){ return new Date(2000 + +e.slice(0,2), +e.slice(2,4)-1, +e.slice(4,6)); }
+function fmtExp(e){
+  return expToDate(e).toLocaleDateString(undefined, {weekday:"short", year:"numeric", month:"short", day:"numeric"});
+}
+function dte(e){
+  var ms = expToDate(e).setHours(0,0,0,0) - new Date().setHours(0,0,0,0);
+  return Math.round(ms / 86400000);
+}
+
+/* ---- formatting ---- */
+function num(v, d){ return (v==null||isNaN(v)) ? "—" : Number(v).toFixed(d==null?2:d); }
+function intc(v){ return (!v) ? "—" : Math.round(v).toLocaleString(); }
+function pct(v){ return (v==null||isNaN(v)) ? "—" : (v*100).toFixed(1) + "%"; }
+function price(v){ return (v==null||isNaN(v)||v===0) ? "—" : Number(v).toFixed(2); }
+
+/* ---- fetch with timeout so a dead proxy fails fast ---- */
+function fetchText(u, ms){
+  var ctl = new AbortController();
+  var t = setTimeout(function(){ ctl.abort(); }, ms || 12000);
+  return fetch(u, {signal: ctl.signal}).then(function(r){
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.text();
+  }).finally(function(){ clearTimeout(t); });
+}
+
+/* ---- fetch with proxy fallbacks ---- */
+function fetchJson(url){
+  var attempts = PROXIES.map(function(p){ return p(url); });
+  var i = 0;
+  function tryNext(){
+    if (i >= attempts.length) return Promise.reject(new Error("all proxies failed"));
+    return fetchText(attempts[i++], 15000).then(function(t){
+      return JSON.parse(t);                  /* throws if proxy returned HTML/error */
+    }).catch(function(){ return tryNext(); });
+  }
+  return tryNext();
+}
+
+var INDEXES = {SPX:1,XSP:1,VIX:1,NDX:1,RUT:1,DJX:1,OEX:1,XEO:1,VVIX:1};
+function loadSymbol(sym){
+  /* equities/ETFs use SYM.json; indices (SPX, VIX, NDX, RUT, ...) use _SYM.json */
+  var variants = INDEXES[sym]
+    ? ["_" + sym + ".json", sym + ".json"]
+    : [sym + ".json", "_" + sym + ".json"];
+  var i = 0;
+  function tryNext(){
+    if (i >= variants.length) return Promise.reject(new Error("no data for " + sym));
+    return fetchJson(CBOE + variants[i++]).then(function(j){
+      if (j && j.data && j.data.options && j.data.options.length) return j;
+      return tryNext();
+    }).catch(function(){ return tryNext(); });
+  }
+  return tryNext();
+}
+
+function ingest(json, sym){
+  var d = json.data;
+  var byExp = {};
+  d.options.forEach(function(o){
+    var p = parseSym(o.option);
+    o._strike = p.strike; o._type = p.type;
+    (byExp[p.exp] = byExp[p.exp] || []).push(o);
+  });
+  var today = todayYYMMDD();
+  var all = Object.keys(byExp).sort();
+  var future = all.filter(function(e){ return e >= today; });
+  current = {
+    sym: d.symbol || sym,
+    price: d.current_price,
+    change: d.price_change,
+    changePct: d.price_change_percent,
+    lastTime: d.last_trade_time,
+    iv30: d.iv30,
+    byExp: byExp,
+    exps: (future.length ? future : all)
+  };
+}
+
+function renderSummary(){
+  var c = current;
+  document.getElementById("summary").style.display = "flex";
+  document.getElementById("sSym").textContent = c.sym;
+  document.getElementById("sPx").textContent = "$" + num(c.price, 2);
+  var up = (c.change||0) >= 0;
+  var chg = document.getElementById("sChg");
+  chg.className = "chg " + (up?"up":"down");
+  chg.textContent = (up?"+":"") + num(c.change,2) + " (" + (up?"+":"") + num(c.changePct,2) + "%)";
+  document.getElementById("sMeta").innerHTML =
+    "30&#8209;day IV <b>" + num(c.iv30,1) + "%</b> &nbsp;&middot;&nbsp; last trade <b>" +
+    (c.lastTime ? c.lastTime.replace("T"," ") : "—") + "</b>";
+}
+
+function fillExpSelect(){
+  elExpSel.innerHTML = "";
+  current.exps.forEach(function(e){
+    var d = dte(e);
+    var o = document.createElement("option");
+    o.value = e;
+    o.textContent = fmtExp(e) + "  (" + (d<=0?"0":d) + "d)";
+    elExpSel.appendChild(o);
+  });
+  elExpSel.disabled = false;
+  elExpSel.value = current.exps[0];
+}
+
+function renderChain(){
+  var exp = elExpSel.value;
+  var rows = current.byExp[exp] || [];
+  var price = current.price;
+
+  /* group by strike */
+  var byStrike = {};
+  rows.forEach(function(o){
+    var k = o._strike.toFixed(3);
+    byStrike[k] = byStrike[k] || {strike:o._strike, C:null, P:null};
+    byStrike[k][o._type] = o;
+  });
+  var strikes = Object.keys(byStrike).map(function(k){ return byStrike[k]; })
+                .sort(function(a,b){ return a.strike - b.strike; });
+
+  /* find ATM index */
+  var atm = 0, best = Infinity;
+  strikes.forEach(function(s,i){ var diff = Math.abs(s.strike-price); if (diff<best){best=diff;atm=i;} });
+
+  /* optional window around ATM */
+  var view = strikes;
+  if (!elAll.checked){
+    var W = 20;
+    view = strikes.slice(Math.max(0, atm-W), atm+W+1);
+  }
+
+  var body = document.getElementById("chainBody");
+  body.innerHTML = "";
+  view.forEach(function(s){
+    var c = s.C, p = s.P;
+    var callItm = s.strike < price;   /* calls ITM below spot */
+    var putItm  = s.strike > price;   /* puts  ITM above spot */
+    var isAtm = (s === strikes[atm]);
+    var ci = callItm ? " itm" : "", pi = putItm ? " itm" : "";
+    var tr = document.createElement("tr");
+    if (isAtm) tr.className = "atm";
+    tr.innerHTML =
+      "<td class='c"+ci+"'>" + price_(c,'bid') + "</td>" +
+      "<td class='c"+ci+"'>" + price_(c,'ask') + "</td>" +
+      "<td class='c last"+ci+"'>" + price_(c,'last_trade_price') + "</td>" +
+      "<td class='c"+ci+"'>" + chgp(c) + "</td>" +
+      "<td class='c"+ci+"'>" + intc(c&&c.volume) + "</td>" +
+      "<td class='c"+ci+"'>" + intc(c&&c.open_interest) + "</td>" +
+      "<td class='strike'>" + s.strike.toFixed(s.strike%1?2:0) + "</td>" +
+      "<td class='p"+pi+"'>" + intc(p&&p.open_interest) + "</td>" +
+      "<td class='p"+pi+"'>" + intc(p&&p.volume) + "</td>" +
+      "<td class='p"+pi+"'>" + chgp(p) + "</td>" +
+      "<td class='p last"+pi+"'>" + price_(p,'last_trade_price') + "</td>" +
+      "<td class='p"+pi+"'>" + price_(p,'bid') + "</td>" +
+      "<td class='p"+pi+"'>" + price_(p,'ask') + "</td>";
+    body.appendChild(tr);
+  });
+
+  /* expiration banner */
+  var d = dte(exp);
+  document.getElementById("expbar").style.display = "flex";
+  document.getElementById("expbar").innerHTML =
+    "<span class='pill'>" + fmtExp(exp) + "</span>" +
+    "<span>" + (d<=0 ? "expires today (0DTE)" : d + " day" + (d===1?"":"s") + " to expiry") + "</span>" +
+    "<span class='muted'>&middot; " + strikes.length + " strikes" +
+    (elAll.checked ? "" : " (showing " + view.length + " near the money)") + "</span>";
+
+  document.getElementById("tablewrap").style.display = "block";
+  document.getElementById("legend").style.display = "flex";
+}
+function price_(o, f){ return o ? price(o[f]) : "<span class='muted'>—</span>"; }
+function chgp(o){
+  if (!o || o.percent_change==null || isNaN(o.percent_change)) return "<span class='muted'>—</span>";
+  var v = o.percent_change, up = v>=0;
+  return "<span class='" + (up?"up":"down") + "'>" + (up?"+":"") + v.toFixed(1) + "</span>";
+}
+
+function load(){
+  var sym = elTicker.value.trim().toUpperCase().replace(/[^A-Z0-9.]/g,"");
+  if (!sym){ setStatus("error","Enter a ticker symbol."); return; }
+  elTicker.value = sym;
+  elBtn.disabled = true;
+  setStatus("loading","Loading " + sym + " options… (downloading full chain, may take a few seconds)");
+  document.getElementById("summary").style.display = "none";
+  document.getElementById("tablewrap").style.display = "none";
+  document.getElementById("expbar").style.display = "none";
+  document.getElementById("legend").style.display = "none";
+
+  loadSymbol(sym).then(function(json){
+    ingest(json, sym);
+    renderSummary();
+    fillExpSelect();
+    renderChain();
+    setStatus("ok","Loaded " + current.sym + " — " + current.exps.length + " expirations available.");
+    document.getElementById("footnote").innerHTML =
+      "Quotes are delayed (typically ~15 min during market hours; last session's close otherwise) and sourced from " +
+      "CBOE's public delayed-quote feed via a CORS proxy. For informational use only — not investment advice.";
+  }).catch(function(err){
+    setStatus("error","Couldn't load " + sym + ". The proxy may be down or the symbol has no listed options. Try again, or try another ticker.");
+  }).then(function(){ elBtn.disabled = false; });
+}
+
+elBtn.addEventListener("click", load);
+elTicker.addEventListener("keydown", function(e){ if (e.key==="Enter") load(); });
+elExpSel.addEventListener("change", function(){ if (current) renderChain(); });
+elAll.addEventListener("change", function(){ if (current) renderChain(); });
+
+/* auto-load default ticker */
+load();
+</script>
+</body>
+</html>
