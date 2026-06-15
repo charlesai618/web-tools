@@ -81,11 +81,12 @@
   table.strangle tr.ghead .gpos { color: #94a3b8; }
   table.strangle tr.ghead .gscen { color: #bfdbfe; border-left: 1px solid #334155; }
   table.strangle th.scen-h { border-left: 1px solid #243047; }
-  table.strangle td.scen { padding: 6px 10px; border-left: 1px solid #1a2740; }
-  table.strangle td.gain-pos { color: #4ade80; }
-  table.strangle td.gain-neg { color: #f87171; }
+  table.strangle td.scen { padding: 6px 10px; border-left: 1px solid #1a2740; color: #e6edf3; }
   .sub2 { display: block; font-size: 0.68rem; font-weight: 600; }
   .strangle-note { font-size: 0.72rem; color: #64748b; margin: 10px 2px 0; }
+  .width-ctl { margin-left: 14px; font-weight: 400; font-size: 0.78rem; color: #94a3b8; }
+  .width-ctl input { width: 70px; margin-left: 6px; background: #0f172a; border: 1px solid #334155; color: #f1f5f9; border-radius: 6px; padding: 4px 8px; font-size: 0.82rem; }
+  .width-ctl input:focus { outline: none; border-color: #60a5fa; }
 
   .tablewrap { overflow-x: auto; border-radius: 12px; border: 1px solid #334155; }
   table { border-collapse: collapse; width: 100%; font-size: 0.83rem; font-variant-numeric: tabular-nums; }
@@ -149,6 +150,13 @@
   <div class="strangle-wrap" id="strangleWrap" style="display:none">
     <div class="strangle-title">Straddle &amp; strangle breakevens
       <span class="strangle-sub">long call above + long put below spot, paired N strikes out (±0 = ATM straddle)</span>
+      <span class="width-ctl">Widths each side:
+        <input type="number" id="widthInput" list="widthPresets" value="10" min="1" max="200" />
+        <datalist id="widthPresets">
+          <option value="5"></option><option value="10"></option><option value="15"></option>
+          <option value="20"></option><option value="30"></option><option value="50"></option><option value="100"></option>
+        </datalist>
+      </span>
     </div>
     <div class="tablewrap">
       <table class="strangle">
@@ -404,6 +412,7 @@ function renderChain(){
   var atm = 0, best = Infinity;
   strikes.forEach(function(s,i){ var diff = Math.abs(s.strike-price); if (diff<best){best=diff;atm=i;} });
 
+  current._sStrikes = strikes; current._sAtm = atm;
   renderStrangles(strikes, atm, price);
 
   /* optional window around ATM */
@@ -509,6 +518,15 @@ function ensureScenHeaders(){
   });
 }
 
+/* heatmap colour scaling with magnitude: red→full at -100%, green→full at +300% */
+function gainColor(pct, pnl){
+  var t, r, g, b;
+  if (pnl >= 0){ t = Math.min(pct/300, 1); r = 34; g = 197; b = 94; }
+  else { t = Math.min(Math.abs(pct)/100, 1); r = 239; g = 68; b = 68; }
+  var a = 0.08 + t * 0.47;
+  return "rgba(" + r + "," + g + "," + b + "," + a.toFixed(3) + ")";
+}
+
 /* table of the ATM straddle (±0) and strangles stepping outward from it.
    Width k pairs the call k strikes above spot with the put k strikes below. */
 function renderStrangles(strikes, atm, S){
@@ -516,7 +534,8 @@ function renderStrangles(strikes, atm, S){
   var body = document.getElementById("strangleBody");
   ensureScenHeaders();
   body.innerHTML = "";
-  var N = 10, rows = 0;
+  var N = Math.max(1, parseInt(document.getElementById("widthInput").value, 10) || 10);
+  var rows = 0;
   for (var k = 0; k <= N; k++){
     var cs = strikes[atm - k], ps = strikes[atm + k];   /* descending list: -k is higher, +k lower */
     if (!cs || !ps) break;                               /* ran out of strikes on one side */
@@ -543,7 +562,7 @@ function renderStrangles(strikes, atm, S){
       var payoff = Math.max(sT - callK, 0) + Math.max(putK - sT, 0);
       var pnl = payoff - debit;
       var pct = pnl / debit * 100;
-      html += "<td class='scen " + (pnl>=0 ? "gain-pos" : "gain-neg") + "'>" +
+      html += "<td class='scen' style='background:" + gainColor(pct, pnl) + "'>" +
               (pct>=0 ? "+" : "") + Math.round(pct) + "%" +
               "<span class='sub2'>" + (pnl>=0 ? "+$" : "-$") + Math.abs(pnl).toFixed(2) + "</span></td>";
     }
@@ -594,6 +613,9 @@ elBtn.addEventListener("click", load);
 elTicker.addEventListener("keydown", function(e){ if (e.key==="Enter") load(); });
 elExpSel.addEventListener("change", function(){ if (current) renderChain(); });
 elAll.addEventListener("change", function(){ if (current) renderChain(); });
+document.getElementById("widthInput").addEventListener("change", function(){
+  if (current && current._sStrikes) renderStrangles(current._sStrikes, current._sAtm, current.price);
+});
 
 /* auto-load default ticker */
 load();
