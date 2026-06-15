@@ -639,6 +639,7 @@ function renderStrangles(strikes, atm, S){
 
 /* ─────────────── strategy payoff builder ─────────────── */
 var legs = [];   /* {type:'C'|'P', strike, qty(signed), price} for the selected expiration */
+var chartCtx = null;  /* mapping params of the last drawn payoff chart, for hover */
 
 var clickSide = 1;   /* +1 = buy/long, -1 = sell/short — set by the toggle, flipped by shift-click */
 
@@ -709,13 +710,12 @@ function renderStrategy(){
   if (callQ!==0){ var vN=payoffAt(sk[sk.length-1]), xN=sk[sk.length-1]-vN/callQ; if (xN>sk[sk.length-1]) bes.push(xN); } /* above highest strike */
   bes.sort(function(a,b){return a-b;});
 
-  /* x-window: tight around the strikes/breakevens/spot so flat arms don't waste space */
+  /* x-window: hug the outermost turning point / breakeven / spot, with only a
+     short extension beyond — no long flat line where the payoff no longer turns */
   var interest = sk.concat(bes).concat([S]);
   var lo2 = Math.min.apply(null, interest), hi2 = Math.max.apply(null, interest);
-  var minW = S * 0.10;
-  if (hi2-lo2 < minW){ var c=(lo2+hi2)/2; lo2=c-minW/2; hi2=c+minW/2; }
-  var margin = (hi2-lo2) * 0.12;
-  var xMin = Math.max(0, lo2-margin), xMax = hi2+margin;
+  var ext = Math.max((hi2-lo2)*0.16, S*0.004);
+  var xMin = Math.max(0, lo2-ext), xMax = hi2+ext;
 
   /* vertices = window edges + the strikes inside it (the payoff's turning points) */
   var verts = [xMin];
@@ -730,6 +730,7 @@ function renderStrategy(){
     "<br><span style='color:#64748b'>At expiration; $ totals assume 100 shares per contract. Premium = bid/ask mid when added.</span>";
 
   document.getElementById("payoffChart").innerHTML = buildPayoffSVG(pts, bes, S, xMin, xMax);
+  attachPayoffHover();
 }
 
 function buildPayoffSVG(pts, bes, S, xMin, xMax){
@@ -741,6 +742,7 @@ function buildPayoffSVG(pts, bes, S, xMin, xMax){
   function mx(x){ return ML + (x-xMin)/(xMax-xMin)*PW; }
   function my(y){ return MT + (yMax-y)/(yMax-yMin)*PH; }
   var baseY = my(0);
+  chartCtx = {xMin:xMin, xMax:xMax, yMin:yMin, yMax:yMax, ML:ML, MT:MT, PW:PW, PH:PH, W:W, H:H, S:S, baseY:baseY};
   var poly = "M"+mx(pts[0].x).toFixed(1)+","+baseY.toFixed(1);
   pts.forEach(function(p){ poly += " L"+mx(p.x).toFixed(1)+","+my(p.pl).toFixed(1); });
   poly += " L"+mx(pts[pts.length-1].x).toFixed(1)+","+baseY.toFixed(1)+" Z";
@@ -756,20 +758,23 @@ function buildPayoffSVG(pts, bes, S, xMin, xMax){
   s += "<line x1='"+ML+"' y1='"+baseY.toFixed(1)+"' x2='"+(ML+PW)+"' y2='"+baseY.toFixed(1)+"' stroke='#64748b' stroke-dasharray='4 3'/>";
   s += "<line x1='"+mx(S).toFixed(1)+"' y1='"+MT+"' x2='"+mx(S).toFixed(1)+"' y2='"+(MT+PH)+"' stroke='#60a5fa' stroke-dasharray='3 3' opacity='0.8'/>";
   s += "<text x='"+mx(S).toFixed(1)+"' y='"+(MT+11)+"' fill='#60a5fa' font-size='10' text-anchor='middle'>spot "+S.toFixed(2)+"</text>";
+  /* breakevens: price + % move vs spot, stacked just above the zero line */
   bes.forEach(function(b){
-    s += "<circle cx='"+mx(b).toFixed(1)+"' cy='"+baseY.toFixed(1)+"' r='3.5' fill='#e2e8f0'/>";
-    s += "<text x='"+mx(b).toFixed(1)+"' y='"+(baseY-7).toFixed(1)+"' fill='#e2e8f0' font-size='10' text-anchor='middle'>"+b.toFixed(2)+"</text>";
+    var bx = mx(b), pc = (b-S)/S*100;
+    s += "<circle cx='"+bx.toFixed(1)+"' cy='"+baseY.toFixed(1)+"' r='3.5' fill='#e2e8f0'/>";
+    s += "<text x='"+bx.toFixed(1)+"' y='"+(baseY-17).toFixed(1)+"' fill='#e2e8f0' font-size='10' text-anchor='middle'>"+b.toFixed(2)+"</text>";
+    s += "<text x='"+bx.toFixed(1)+"' y='"+(baseY-7).toFixed(1)+"' fill='#94a3b8' font-size='9' text-anchor='middle'>"+(pc>=0?"+":"")+pc.toFixed(2)+"%</text>";
   });
   s += "<path d='"+line+"' fill='none' stroke='#f1f5f9' stroke-width='2'/>";
-  /* turning points: a marker + its P/L value at each kink (strike) */
+  /* turning points: marker + P/L value and price, placed away from the zero line */
   pts.forEach(function(p){
     if (!p.turn) return;
-    var px = mx(p.x), py = my(p.pl);
-    var ly = p.pl>=0 ? py-7 : py+14;
-    if (ly < MT+10) ly = py+14;
-    if (ly > MT+PH-2) ly = py-7;
+    var px = mx(p.x), py = my(p.pl), below = p.pl < 0;
+    var yPL = below ? Math.min(py+13, MT+PH-13) : Math.max(py-15, MT+13);
+    var yK  = below ? Math.min(py+23, MT+PH-3)  : Math.max(py-5,  MT+23);
     s += "<circle cx='"+px.toFixed(1)+"' cy='"+py.toFixed(1)+"' r='3' fill='#fbbf24'/>";
-    s += "<text x='"+px.toFixed(1)+"' y='"+ly.toFixed(1)+"' fill='#fbbf24' font-size='10' font-weight='600' text-anchor='middle'>"+money(p.pl)+"</text>";
+    s += "<text x='"+px.toFixed(1)+"' y='"+yPL.toFixed(1)+"' fill='#fbbf24' font-size='10' font-weight='600' text-anchor='middle'>"+money(p.pl)+"</text>";
+    s += "<text x='"+px.toFixed(1)+"' y='"+yK.toFixed(1)+"' fill='#fcd34d' font-size='9' text-anchor='middle'>@"+kfmt(p.x)+"</text>";
   });
   s += "<text x='"+(ML-8)+"' y='"+(MT+9)+"' fill='#94a3b8' font-size='10' text-anchor='end'>"+money(yMax)+"</text>";
   s += "<text x='"+(ML-8)+"' y='"+(baseY+3).toFixed(1)+"' fill='#94a3b8' font-size='10' text-anchor='end'>$0</text>";
@@ -777,8 +782,45 @@ function buildPayoffSVG(pts, bes, S, xMin, xMax){
   s += "<text x='"+ML+"' y='"+(MT+PH+15)+"' fill='#94a3b8' font-size='10' text-anchor='start'>"+xMin.toFixed(0)+"</text>";
   s += "<text x='"+(ML+PW)+"' y='"+(MT+PH+15)+"' fill='#94a3b8' font-size='10' text-anchor='end'>"+xMax.toFixed(0)+"</text>";
   s += "<text x='"+(ML+PW/2)+"' y='"+(H-4)+"' fill='#64748b' font-size='10' text-anchor='middle'>underlying price at expiration  ·  P/L in $ (×100 per contract)</text>";
+  /* hover crosshair + tooltip (updated live by attachPayoffHover) */
+  s += "<g id='hoverG' style='display:none' pointer-events='none'>" +
+       "<line id='hvLine' y1='"+MT+"' y2='"+(MT+PH)+"' stroke='#94a3b8' stroke-dasharray='2 2'/>" +
+       "<circle id='hvDot' r='4' fill='#fff' stroke='#0f172a' stroke-width='1.5'/>" +
+       "<g id='hvTip'><rect width='128' height='34' rx='4' fill='#0b1220' stroke='#475569'/>" +
+       "<text id='hvT1' x='8' y='14' font-size='10' fill='#e2e8f0'></text>" +
+       "<text id='hvT2' x='8' y='27' font-size='10' font-weight='600'></text></g></g>";
+  s += "<rect id='hvArea' x='"+ML+"' y='"+MT+"' width='"+PW+"' height='"+PH+"' fill='transparent' style='cursor:crosshair'/>";
   s += "</svg>";
   return s;
+}
+
+function attachPayoffHover(){
+  var svg = document.querySelector("#payoffChart svg");
+  if (!svg || !chartCtx) return;
+  var c = chartCtx;
+  var area = svg.querySelector("#hvArea"), g = svg.querySelector("#hoverG");
+  var line = svg.querySelector("#hvLine"), dot = svg.querySelector("#hvDot");
+  var tip = svg.querySelector("#hvTip"), t1 = svg.querySelector("#hvT1"), t2 = svg.querySelector("#hvT2");
+  function mx(x){ return c.ML + (x-c.xMin)/(c.xMax-c.xMin)*c.PW; }
+  function my(y){ return c.MT + (c.yMax-y)/(c.yMax-c.yMin)*c.PH; }
+  area.addEventListener("mousemove", function(e){
+    var r = svg.getBoundingClientRect();
+    var sx = (e.clientX - r.left) / r.width * c.W;
+    var price = c.xMin + (sx - c.ML)/c.PW*(c.xMax - c.xMin);
+    price = Math.min(c.xMax, Math.max(c.xMin, price));
+    var pl = payoffAt(price) * 100;
+    var X = mx(price), Y = my(pl), pc = (price - c.S)/c.S*100;
+    line.setAttribute("x1", X.toFixed(1)); line.setAttribute("x2", X.toFixed(1));
+    dot.setAttribute("cx", X.toFixed(1)); dot.setAttribute("cy", Y.toFixed(1));
+    t1.textContent = "$" + price.toFixed(2) + "  (" + (pc>=0?"+":"") + pc.toFixed(2) + "%)";
+    t2.textContent = (pl>=0?"+":"") + money(pl);
+    t2.setAttribute("fill", pl>=0 ? "#4ade80" : "#f87171");
+    var tx = (X + 8 + 128 > c.ML + c.PW) ? X - 8 - 128 : X + 8;
+    var ty = Math.min(Math.max(Y - 38, c.MT + 2), c.MT + c.PH - 36);
+    tip.setAttribute("transform", "translate(" + tx.toFixed(1) + "," + ty.toFixed(1) + ")");
+    g.style.display = "";
+  });
+  area.addEventListener("mouseleave", function(){ g.style.display = "none"; });
 }
 
 document.getElementById("chainBody").addEventListener("click", function(e){
