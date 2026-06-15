@@ -88,6 +88,11 @@
   #chainBody td.c, #chainBody td.p { cursor: pointer; }
   #chainBody td.c:hover, #chainBody td.p:hover { outline: 1px solid #60a5fa; outline-offset: -1px; }
 
+  .side-toggle { display: inline-flex; align-items: center; gap: 6px; }
+  .side-btn { background: #0f172a; border: 1px solid #334155; color: #94a3b8; padding: 3px 10px; border-radius: 6px; cursor: pointer; font-size: 0.76rem; font-weight: 600; }
+  #sideBuy.active { background: #15803d; border-color: #22c55e; color: #fff; }
+  #sideSell.active { background: #b91c1c; border-color: #ef4444; color: #fff; }
+
   .builder { margin-top: 22px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 22px; }
   .builder-title { font-size: 1rem; font-weight: 600; color: #f1f5f9; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .builder-sub { font-weight: 400; font-size: 0.78rem; color: #94a3b8; }
@@ -110,9 +115,14 @@
   .width-ctl input { width: 70px; margin-left: 6px; background: #0f172a; border: 1px solid #334155; color: #f1f5f9; border-radius: 6px; padding: 4px 8px; font-size: 0.82rem; }
   .width-ctl input:focus { outline: none; border-color: #60a5fa; }
 
-  .tablewrap { overflow-x: auto; border-radius: 12px; border: 1px solid #334155; }
+  /* bounded scroll pane: both scrollbars sit at the edges of the visible box,
+     so they're reachable without scrolling to the table's true bottom/far-right */
+  .tablewrap { overflow: auto; max-height: 80vh; border-radius: 12px; border: 1px solid #334155; }
   table { border-collapse: collapse; width: 100%; font-size: 0.83rem; font-variant-numeric: tabular-nums; }
-  thead th { position: sticky; top: 0; background: #111c30; z-index: 1; }
+  thead th { position: sticky; top: 0; background: #111c30; z-index: 2; }
+  /* second header row sticks just below the first (group) row */
+  #chain .colhead th { top: 35px; }
+  table.strangle #strangleHead th { top: 32px; }
   th, td { padding: 7px 9px; text-align: right; white-space: nowrap; }
   .grouphead th {
     text-align: center; font-size: 0.78rem; letter-spacing: .08em; text-transform: uppercase;
@@ -221,7 +231,10 @@
     <span><i class="sw" style="background:#1d4ed8"></i> At&#8209;the&#8209;money strike</span>
     <span>IV = implied volatility &middot; OI = open interest</span>
     <span>small &Delta; under Vol/OI = change vs the previously loaded session</span>
-    <span style="color:#60a5fa">click a call or put above to add it to the strategy builder ↓</span>
+    <span class="side-toggle">Click a call/put to add &mdash;
+      <button id="sideBuy" class="side-btn active">Buy +1</button><button id="sideSell" class="side-btn">Sell &minus;1</button>
+      <span style="color:#64748b">(shift-click = opposite)</span>
+    </span>
   </div>
 
   <div class="builder" id="builder" style="display:none">
@@ -627,7 +640,10 @@ function renderStrangles(strikes, atm, S){
 /* ─────────────── strategy payoff builder ─────────────── */
 var legs = [];   /* {type:'C'|'P', strike, qty(signed), price} for the selected expiration */
 
-function addLeg(type, strike){
+var clickSide = 1;   /* +1 = buy/long, -1 = sell/short — set by the toggle, flipped by shift-click */
+
+function addLeg(type, strike, dir){
+  dir = dir || 1;
   var rows = current.byExp[elExpSel.value] || [];
   var o = null;
   for (var i=0;i<rows.length;i++){ if (rows[i]._strike===strike && rows[i]._type===type){ o=rows[i]; break; } }
@@ -635,7 +651,8 @@ function addLeg(type, strike){
   if (px==null) return;                              /* no quote → can't price the leg */
   var ex = null;
   for (var j=0;j<legs.length;j++){ if (legs[j].type===type && legs[j].strike===strike){ ex=legs[j]; break; } }
-  if (ex) ex.qty += 1; else legs.push({type:type, strike:strike, qty:1, price:px});
+  if (ex){ ex.qty += dir; if (ex.qty===0) legs.splice(legs.indexOf(ex),1); }
+  else legs.push({type:type, strike:strike, qty:dir, price:px});
   renderStrategy();
 }
 
@@ -749,8 +766,15 @@ document.getElementById("chainBody").addEventListener("click", function(e){
   var td = e.target.closest("td"); if (!td || !current) return;
   var type = td.classList.contains("c") ? "C" : td.classList.contains("p") ? "P" : null;
   if (!type) return;
-  addLeg(type, parseFloat(td.closest("tr").dataset.strike));
+  addLeg(type, parseFloat(td.closest("tr").dataset.strike), e.shiftKey ? -clickSide : clickSide);
 });
+function setSide(side){
+  clickSide = side;
+  document.getElementById("sideBuy").classList.toggle("active", side===1);
+  document.getElementById("sideSell").classList.toggle("active", side===-1);
+}
+document.getElementById("sideBuy").addEventListener("click", function(){ setSide(1); });
+document.getElementById("sideSell").addEventListener("click", function(){ setSide(-1); });
 document.getElementById("legsBody").addEventListener("change", function(e){
   if (!e.target.classList.contains("qty")) return;
   var i = +e.target.dataset.i, v = parseInt(e.target.value,10);
