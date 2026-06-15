@@ -166,7 +166,10 @@
       <select id="expsel" disabled><option>—</option></select>
     </div>
     <button class="load" id="loadBtn">Load</button>
-    <label class="chk"><input type="checkbox" id="allStrikes" /> Show all strikes</label>
+    <div class="field">
+      <label for="strikeCount">Strikes (centered)</label>
+      <input type="number" id="strikeCount" value="25" min="1" max="999" />
+    </div>
   </div>
 
   <div id="status"></div>
@@ -275,7 +278,7 @@ var elStatus = document.getElementById("status");
 var elBtn    = document.getElementById("loadBtn");
 var elTicker = document.getElementById("ticker");
 var elExpSel = document.getElementById("expsel");
-var elAll    = document.getElementById("allStrikes");
+var elStrikeCount = document.getElementById("strikeCount");
 
 var current = null;  /* { price, change, changePct, lastTime, iv30, sym, byExp:{exp:[opts]}, exps:[] } */
 
@@ -471,12 +474,10 @@ function renderChain(){
   current._sStrikes = strikes; current._sAtm = atm;
   renderStrangles(strikes, atm, price);
 
-  /* optional window around ATM */
-  var view = strikes;
-  if (!elAll.checked){
-    var W = 20;
-    view = strikes.slice(Math.max(0, atm-W), atm+W+1);
-  }
+  /* show a user-set number of strikes, centered on the ATM strike */
+  var count = Math.max(1, parseInt(elStrikeCount.value, 10) || 25);
+  var half = Math.floor(count / 2);
+  var view = strikes.slice(Math.max(0, atm-half), atm+half+1);
 
   var body = document.getElementById("chainBody");
   body.innerHTML = "";
@@ -514,8 +515,7 @@ function renderChain(){
   document.getElementById("expbar").innerHTML =
     "<span class='pill'>" + fmtExp(exp) + "</span>" +
     "<span>" + (d<=0 ? "expires today (0DTE)" : d + " day" + (d===1?"":"s") + " to expiry") + "</span>" +
-    "<span class='muted'>&middot; " + strikes.length + " strikes" +
-    (elAll.checked ? "" : " (showing " + view.length + " near the money)") + "</span>" +
+    "<span class='muted'>&middot; showing " + view.length + " of " + strikes.length + " strikes (centered at spot)</span>" +
     "<span class='muted'>&middot; " + (current.baseline
         ? "Vol/OI &Delta; vs " + current.baseline.date +
           (current.baselineSrc==="shared" ? " (shared)" : " (this browser)")
@@ -698,21 +698,30 @@ function renderStrategy(){
   var maxProfit = callQ>0 ? "Unlimited" : money(maxV);
   var maxLoss   = callQ<0 ? "Unlimited" : money(minV);
 
-  /* chart vertices = strikes within a window around spot */
-  var lo = Math.min.apply(null, ks.concat([S])), hi = Math.max.apply(null, ks.concat([S]));
-  var pad = Math.max(hi-lo, S*0.15);
-  var xMin = Math.max(0, lo-pad), xMax = hi+pad;
-  var verts = [xMin];
-  ks.slice().sort(function(a,b){return a-b;}).forEach(function(k){ if (k>xMin && k<xMax && verts.indexOf(k)<0) verts.push(k); });
-  verts.push(xMax); verts.sort(function(a,b){return a-b;});
-  var pts = verts.map(function(x){ return {x:x, pl:payoffAt(x)*100}; });
-
-  /* breakevens: zero crossings */
+  /* breakevens (price): zero crossings of the payoff, including the outer linear arms */
+  var sk = ks.slice().sort(function(a,b){return a-b;}).filter(function(v,i,a){return i===0||v!==a[i-1];});
   var bes = [];
-  for (var i=1;i<pts.length;i++){
-    var a=pts[i-1], b=pts[i];
-    if ((a.pl<0&&b.pl>0)||(a.pl>0&&b.pl<0)){ bes.push(a.x + (0-a.pl)/(b.pl-a.pl)*(b.x-a.x)); }
+  for (var i=1;i<sk.length;i++){
+    var a=payoffAt(sk[i-1]), b=payoffAt(sk[i]);
+    if ((a<0&&b>0)||(a>0&&b<0)) bes.push(sk[i-1] + (0-a)/(b-a)*(sk[i]-sk[i-1]));
   }
+  if (putQ!==0){ var v0=payoffAt(sk[0]), x0=sk[0]-v0/(-putQ); if (x0<sk[0] && x0>=0) bes.push(x0); }                 /* below lowest strike */
+  if (callQ!==0){ var vN=payoffAt(sk[sk.length-1]), xN=sk[sk.length-1]-vN/callQ; if (xN>sk[sk.length-1]) bes.push(xN); } /* above highest strike */
+  bes.sort(function(a,b){return a-b;});
+
+  /* x-window: tight around the strikes/breakevens/spot so flat arms don't waste space */
+  var interest = sk.concat(bes).concat([S]);
+  var lo2 = Math.min.apply(null, interest), hi2 = Math.max.apply(null, interest);
+  var minW = S * 0.10;
+  if (hi2-lo2 < minW){ var c=(lo2+hi2)/2; lo2=c-minW/2; hi2=c+minW/2; }
+  var margin = (hi2-lo2) * 0.12;
+  var xMin = Math.max(0, lo2-margin), xMax = hi2+margin;
+
+  /* vertices = window edges + the strikes inside it (the payoff's turning points) */
+  var verts = [xMin];
+  sk.forEach(function(k){ if (k>xMin && k<xMax) verts.push(k); });
+  verts.push(xMax); verts.sort(function(a,b){return a-b;});
+  var pts = verts.map(function(x){ return {x:x, pl:payoffAt(x)*100, turn:(x>xMin && x<xMax)}; });
 
   document.getElementById("builderSummary").innerHTML =
     (netD>=0 ? "Net debit <b>"+money(netD)+"</b>" : "Net credit <b>"+money(-netD)+"</b>") +
@@ -752,6 +761,16 @@ function buildPayoffSVG(pts, bes, S, xMin, xMax){
     s += "<text x='"+mx(b).toFixed(1)+"' y='"+(baseY-7).toFixed(1)+"' fill='#e2e8f0' font-size='10' text-anchor='middle'>"+b.toFixed(2)+"</text>";
   });
   s += "<path d='"+line+"' fill='none' stroke='#f1f5f9' stroke-width='2'/>";
+  /* turning points: a marker + its P/L value at each kink (strike) */
+  pts.forEach(function(p){
+    if (!p.turn) return;
+    var px = mx(p.x), py = my(p.pl);
+    var ly = p.pl>=0 ? py-7 : py+14;
+    if (ly < MT+10) ly = py+14;
+    if (ly > MT+PH-2) ly = py-7;
+    s += "<circle cx='"+px.toFixed(1)+"' cy='"+py.toFixed(1)+"' r='3' fill='#fbbf24'/>";
+    s += "<text x='"+px.toFixed(1)+"' y='"+ly.toFixed(1)+"' fill='#fbbf24' font-size='10' font-weight='600' text-anchor='middle'>"+money(p.pl)+"</text>";
+  });
   s += "<text x='"+(ML-8)+"' y='"+(MT+9)+"' fill='#94a3b8' font-size='10' text-anchor='end'>"+money(yMax)+"</text>";
   s += "<text x='"+(ML-8)+"' y='"+(baseY+3).toFixed(1)+"' fill='#94a3b8' font-size='10' text-anchor='end'>$0</text>";
   s += "<text x='"+(ML-8)+"' y='"+(MT+PH).toFixed(1)+"' fill='#94a3b8' font-size='10' text-anchor='end'>"+money(yMin)+"</text>";
@@ -824,7 +843,7 @@ function load(){
 elBtn.addEventListener("click", load);
 elTicker.addEventListener("keydown", function(e){ if (e.key==="Enter") load(); });
 elExpSel.addEventListener("change", function(){ if (current){ legs = []; renderChain(); renderStrategy(); } });
-elAll.addEventListener("change", function(){ if (current) renderChain(); });
+elStrikeCount.addEventListener("change", function(){ if (current) renderChain(); });
 document.getElementById("widthInput").addEventListener("change", function(){
   if (current && current._sStrikes) renderStrangles(current._sStrikes, current._sAtm, current.price);
 });
