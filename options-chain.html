@@ -150,6 +150,32 @@
   .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:0.78rem; color:#94a3b8; margin: 12px 2px 0; }
   .legend span { display:flex; align-items:center; gap:6px; }
   .sw { width:13px; height:13px; border-radius:3px; display:inline-block; }
+  .load.secondary { background: #334155; }
+  .load.secondary:hover { background: #475569; }
+  .print-header { display: none; margin-bottom: 14px; }
+  .print-header .ph-title { font-size: 1.4rem; font-weight: 700; color: #f8fafc; }
+  .print-header .ph-sub { font-size: 0.85rem; color: #94a3b8; margin-top: 3px; }
+
+  @media print {
+    @page { size: landscape; margin: 9mm; }
+    /* preserve the dark theme & heatmap colours in the PDF without needing the
+       browser's "Background graphics" toggle */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { padding: 12px 4px 0 !important; }
+    a.back, .controls, #status, #savePdfBtn, .clear-btn, .side-toggle,
+    .width-ctl, #hvArea, .builder-empty, h1, p.subtitle { display: none !important; }
+    .print-header { display: block !important; }
+    /* expand scroll panes so the full tables print */
+    .tablewrap { max-height: none !important; overflow: visible !important; }
+    /* drop the wide scenario columns so the strangle table fits the page */
+    table.strangle .gscen, table.strangle .scen-h, table.strangle td.scen { display: none !important; }
+    #chain { font-size: 0.6rem; }
+    #chain th, #chain td { padding: 3px 5px !important; }
+    table.strangle { font-size: 0.64rem; }
+    body:not(.has-strategy) .builder { display: none !important; }
+    tr { break-inside: avoid; }
+    .summary, .expbar, .strangle-wrap, .builder { break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -157,6 +183,8 @@
   <a class="back" href="index.html">&larr; All tools</a>
   <h1>Options Chain</h1>
   <p class="subtitle">Live-ish option quotes for the nearest expiration of any ticker. Delayed data from CBOE.</p>
+
+  <div class="print-header" id="printHeader"></div>
 
   <div class="controls">
     <div class="field">
@@ -172,6 +200,7 @@
       <label for="strikeCount">Strikes (centered)</label>
       <input type="number" id="strikeCount" value="25" min="1" max="999" />
     </div>
+    <button class="load secondary" id="savePdfBtn" title="Opens the print dialog — pick &ldquo;Save as PDF&rdquo; as the destination, then attach it to an email">⤓ Save as PDF</button>
   </div>
 
   <div id="status"></div>
@@ -984,6 +1013,30 @@ document.getElementById("widthInput").addEventListener("change", function(){
 document.getElementById("spreadCount").addEventListener("change", function(){
   if (current && current._sStrikes) renderSpreads(current._sStrikes, current._sAtm, current.price);
 });
+
+/* ── Save the current view as a PDF (print → "Save as PDF") ── */
+function fillPrintHeader(){
+  if (!current) return;
+  var d = new Date(), p = function(n){ return (n<10?"0":"")+n; };
+  var ts = d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes());
+  var exp = elExpSel.value ? fmtExp(elExpSel.value) : "";
+  document.getElementById("printHeader").innerHTML =
+    "<div class='ph-title'>Options Chain — " + current.sym + "</div>" +
+    "<div class='ph-sub'>Spot $" + num(current.price,2) + " &middot; Expiration " + exp +
+    " &middot; generated " + ts + " &middot; delayed CBOE quotes, informational only</div>";
+}
+window.addEventListener("beforeprint", function(){
+  fillPrintHeader();
+  document.body.classList.toggle("has-strategy", legs.length > 0);
+  window.__priorTitle = document.title;
+  var d = new Date(), p = function(n){ return (n<10?"0":"")+n; };
+  var day = d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
+  if (current) document.title = "OptionsChain_" + current.sym + "_" + day;
+});
+window.addEventListener("afterprint", function(){
+  if (window.__priorTitle != null) document.title = window.__priorTitle;
+});
+document.getElementById("savePdfBtn").addEventListener("click", function(){ window.print(); });
 
 /* auto-load default ticker */
 load();
