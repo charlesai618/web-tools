@@ -201,6 +201,7 @@
       <input type="number" id="strikeCount" value="25" min="1" max="999" />
     </div>
     <button class="load secondary" id="savePdfBtn" title="Opens the print dialog — pick &ldquo;Save as PDF&rdquo; as the destination, then attach it to an email">⤓ Save as PDF</button>
+    <button class="load secondary" id="saveHtmlBtn" title="Downloads a self-contained HTML file with the full chain embedded — opens and stays interactive even offline">⤓ Save offline HTML</button>
   </div>
 
   <div id="status"></div>
@@ -984,9 +985,27 @@ function load(){
   document.getElementById("builder").style.display = "none";
   legs = [];
 
+  /* offline snapshot: this file has the chain embedded — render it, no network */
+  if (window.__EMBEDDED__ && window.__EMBEDDED__.sym === sym){
+    var emb = window.__EMBEDDED__;
+    try {
+      ingest(emb.json, sym, emb.shared || null);
+      current._raw = emb.json; current._shared = emb.shared || null;
+      renderSummary(); fillExpSelect(); renderChain(); renderStrategy();
+      setStatus("ok","Offline snapshot of " + current.sym + " (saved " + (emb.savedAt||"?") +
+        ") — " + current.exps.length + " expirations, no network used.");
+      document.getElementById("footnote").innerHTML =
+        "Offline snapshot — the full option chain is embedded in this HTML file, so it works with no network. " +
+        "Quotes were delayed at save time and are now frozen. For informational use only — not investment advice.";
+    } catch(e){ setStatus("error","Embedded data could not be read: " + e.message); }
+    elBtn.disabled = false;
+    return;
+  }
+
   /* live chain (via proxy) + the shared committed baseline (same-origin) in parallel */
   Promise.all([ loadSymbol(sym), fetchSharedBaseline(sym) ]).then(function(res){
     ingest(res[0], sym, res[1]);
+    current._raw = res[0]; current._shared = res[1];   /* kept for the offline-HTML save */
     renderSummary();
     fillExpSelect();
     renderChain();
@@ -1038,7 +1057,38 @@ window.addEventListener("afterprint", function(){
 });
 document.getElementById("savePdfBtn").addEventListener("click", function(){ window.print(); });
 
-/* auto-load default ticker */
+/* ── Save a self-contained offline copy (full chain embedded, no network) ── */
+function saveOfflineHtml(){
+  if (!current || !current._raw){ setStatus("error","Load a ticker first."); return; }
+  var btn = document.getElementById("saveHtmlBtn");
+  var label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Building…";
+  /* grab this page's pristine template, then inject the data before </head> */
+  fetch(location.href).then(function(r){ return r.text(); }).then(function(tpl){
+    var emb = {
+      sym: current.sym,
+      savedAt: new Date().toString(),
+      json: current._raw,
+      shared: current._shared || null
+    };
+    var blob1 = JSON.stringify(emb).replace(/<\/script/gi, "<\\/script");
+    var inject = "<script>window.__EMBEDDED__ = " + blob1 + ";<\/script>";
+    var out = tpl.replace(/<\/head>/i, inject + "\n</head>");
+    var d = new Date(), p = function(n){ return (n<10?"0":"")+n; };
+    var name = "OptionsChain_" + current.sym + "_offline_" + d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()) + ".html";
+    var url = URL.createObjectURL(new Blob([out], {type:"text/html"}));
+    var a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 8000);
+    setStatus("ok","Saved offline file (" + (out.length/1048576).toFixed(1) + " MB) — open it any time, even offline.");
+  }).catch(function(e){
+    setStatus("error","Couldn't build offline file: " + e.message);
+  }).then(function(){ btn.disabled = false; btn.textContent = label; });
+}
+document.getElementById("saveHtmlBtn").addEventListener("click", saveOfflineHtml);
+
+/* auto-load: an offline snapshot loads its embedded ticker; otherwise the default */
+if (window.__EMBEDDED__ && window.__EMBEDDED__.sym){ elTicker.value = window.__EMBEDDED__.sym; }
 load();
 </script>
 </body>
