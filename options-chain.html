@@ -225,7 +225,7 @@
       <table class="strangle">
         <thead><tr>
           <th>Long call</th><th>Short call</th><th>Long $</th><th>Short $</th><th>Debit</th>
-          <th>Breakeven</th><th>Max profit</th><th>Max loss</th><th>Reward : risk</th>
+          <th>Breakeven</th><th>Max loss</th><th>Max profit</th><th>Reward : risk</th>
         </tr></thead>
         <tbody id="callSpreadBody"></tbody>
       </table>
@@ -235,7 +235,7 @@
       <table class="strangle">
         <thead><tr>
           <th>Long put</th><th>Short put</th><th>Long $</th><th>Short $</th><th>Debit</th>
-          <th>Breakeven</th><th>Max profit</th><th>Max loss</th><th>Reward : risk</th>
+          <th>Breakeven</th><th>Max loss</th><th>Max profit</th><th>Reward : risk</th>
         </tr></thead>
         <tbody id="putSpreadBody"></tbody>
       </table>
@@ -678,6 +678,7 @@ function renderSpreads(strikes, atm, S){
   cBody.innerHTML = ""; pBody.innerHTML = "";
   var any = 0;
 
+  function lvl(price){ var pc=(price-S)/S*100; return "<span class='sub2' style='color:#94a3b8'>@" + kfmt(price) + " " + (pc>=0?"+":"") + pc.toFixed(2) + "%</span>"; }
   function row(longK, shortK, lp, sp, isCall, first){
     var width = Math.abs(shortK - longK);
     var debit = lp - sp;
@@ -685,6 +686,7 @@ function renderSpreads(strikes, atm, S){
     var bePct = (be - S) / S * 100;
     var maxP = width - debit, maxL = debit;
     var rr = (maxL>0 && maxP>0) ? (maxP/maxL).toFixed(2) + " : 1" : "—";
+    /* max loss when price is past the long strike; max profit when past the short strike */
     var tr = document.createElement("tr");
     if (first) tr.className = "atm";
     tr.innerHTML =
@@ -694,20 +696,23 @@ function renderSpreads(strikes, atm, S){
       "<td>$" + sp.toFixed(2) + "</td>" +
       "<td>$" + debit.toFixed(2) + "</td>" +
       "<td>$" + be.toFixed(2) + "<span class='sub2' style='color:" + (bePct>=0?"#4ade80":"#f87171") + "'>" + (bePct>=0?"+":"") + bePct.toFixed(2) + "%</span></td>" +
-      "<td style='color:#4ade80'>$" + maxP.toFixed(2) + "</td>" +
-      "<td style='color:#f87171'>$" + maxL.toFixed(2) + "</td>" +
+      "<td style='color:#f87171'>$" + maxL.toFixed(2) + lvl(longK) + "</td>" +
+      "<td style='color:#4ade80'>$" + maxP.toFixed(2) + lvl(shortK) + "</td>" +
       "<td>" + rr + "</td>";
     return tr;
   }
 
-  /* bull call spreads: long strikes[atm-k] call, short the next strike up */
+  /* bull call spreads: long strikes[atm-k] call, short the next strike up.
+     Built ATM→up, then appended top-down so smaller strikes sit at the bottom. */
+  var callRows = [];
   for (var k=0;k<N;k++){
     var lo = strikes[atm-k], hi = strikes[atm-k-1];
     if (!lo || !hi) break;
     var lp = legPrice(lo.C), sp = legPrice(hi.C);
     if (lp==null || sp==null) continue;
-    cBody.appendChild(row(lo.strike, hi.strike, lp, sp, true, k===0)); any++;
+    callRows.push(row(lo.strike, hi.strike, lp, sp, true, k===0)); any++;
   }
+  for (var ci=callRows.length-1; ci>=0; ci--) cBody.appendChild(callRows[ci]);
   /* bear put spreads: long strikes[atm+j] put, short the next strike down */
   for (var j=0;j<N;j++){
     var hiP = strikes[atm+j], loP = strikes[atm+j+1];
