@@ -84,6 +84,8 @@
   table.strangle td.scen { padding: 6px 10px; border-left: 1px solid #1a2740; color: #e6edf3; }
   .sub2 { display: block; font-size: 0.68rem; font-weight: 600; }
   .strangle-note { font-size: 0.72rem; color: #64748b; margin: 10px 2px 0; }
+  .spread-sub-title { font-size: 0.86rem; font-weight: 600; color: #cbd5e1; margin: 16px 2px 7px; }
+  .spread-sub-note { font-weight: 400; font-size: 0.74rem; color: #94a3b8; margin-left: 6px; }
 
   #chainBody td.c, #chainBody td.p { cursor: pointer; }
   #chainBody td.c:hover, #chainBody td.p:hover { outline: 1px solid #60a5fa; outline-offset: -1px; }
@@ -209,6 +211,36 @@
       </table>
     </div>
     <div class="strangle-note" id="strangleNote"></div>
+  </div>
+
+  <div class="strangle-wrap" id="spreadWrap" style="display:none">
+    <div class="strangle-title">Vertical debit spread breakevens
+      <span class="strangle-sub">$1-wide spreads — bull call spreads step up, bear put spreads step down from spot</span>
+      <span class="width-ctl">Rows each side:
+        <input type="number" id="spreadCount" list="widthPresets" value="15" min="1" max="200" />
+      </span>
+    </div>
+    <div class="spread-sub-title">Bull call spreads <span class="spread-sub-note">long lower-strike call + short the next strike up</span></div>
+    <div class="tablewrap">
+      <table class="strangle">
+        <thead><tr>
+          <th>Long call</th><th>Short call</th><th>Long $</th><th>Short $</th><th>Debit</th>
+          <th>Breakeven</th><th>Max profit</th><th>Max loss</th><th>Reward : risk</th>
+        </tr></thead>
+        <tbody id="callSpreadBody"></tbody>
+      </table>
+    </div>
+    <div class="spread-sub-title">Bear put spreads <span class="spread-sub-note">long higher-strike put + short the next strike down</span></div>
+    <div class="tablewrap">
+      <table class="strangle">
+        <thead><tr>
+          <th>Long put</th><th>Short put</th><th>Long $</th><th>Short $</th><th>Debit</th>
+          <th>Breakeven</th><th>Max profit</th><th>Max loss</th><th>Reward : risk</th>
+        </tr></thead>
+        <tbody id="putSpreadBody"></tbody>
+      </table>
+    </div>
+    <div class="strangle-note" id="spreadNote"></div>
   </div>
 
   <div class="tablewrap" id="tablewrap" style="display:none">
@@ -473,6 +505,7 @@ function renderChain(){
 
   current._sStrikes = strikes; current._sAtm = atm;
   renderStrangles(strikes, atm, price);
+  renderSpreads(strikes, atm, price);
 
   /* show a user-set number of strikes, centered on the ATM strike */
   var count = Math.max(1, parseInt(elStrikeCount.value, 10) || 25);
@@ -635,6 +668,59 @@ function renderStrangles(strikes, atm, S){
     "% gain = profit &divide; cost. A long straddle/strangle profits on equivalent down moves too (see the lower breakeven). " +
     "Cost uses bid/ask mid; excludes commissions.";
   wrap.style.display = rows ? "block" : "none";
+}
+
+/* $1-wide vertical debit spreads: bull call spreads stepping up, bear put spreads stepping down */
+function renderSpreads(strikes, atm, S){
+  var wrap = document.getElementById("spreadWrap");
+  var N = Math.max(1, parseInt(document.getElementById("spreadCount").value, 10) || 15);
+  var cBody = document.getElementById("callSpreadBody"), pBody = document.getElementById("putSpreadBody");
+  cBody.innerHTML = ""; pBody.innerHTML = "";
+  var any = 0;
+
+  function row(longK, shortK, lp, sp, isCall, first){
+    var width = Math.abs(shortK - longK);
+    var debit = lp - sp;
+    var be = isCall ? (longK + debit) : (longK - debit);
+    var bePct = (be - S) / S * 100;
+    var maxP = width - debit, maxL = debit;
+    var rr = (maxL>0 && maxP>0) ? (maxP/maxL).toFixed(2) + " : 1" : "—";
+    var tr = document.createElement("tr");
+    if (first) tr.className = "atm";
+    tr.innerHTML =
+      "<td class='combo'>" + kfmt(longK) + "</td>" +
+      "<td>" + kfmt(shortK) + "</td>" +
+      "<td>$" + lp.toFixed(2) + "</td>" +
+      "<td>$" + sp.toFixed(2) + "</td>" +
+      "<td>$" + debit.toFixed(2) + "</td>" +
+      "<td>$" + be.toFixed(2) + "<span class='sub2' style='color:" + (bePct>=0?"#4ade80":"#f87171") + "'>" + (bePct>=0?"+":"") + bePct.toFixed(2) + "%</span></td>" +
+      "<td style='color:#4ade80'>$" + maxP.toFixed(2) + "</td>" +
+      "<td style='color:#f87171'>$" + maxL.toFixed(2) + "</td>" +
+      "<td>" + rr + "</td>";
+    return tr;
+  }
+
+  /* bull call spreads: long strikes[atm-k] call, short the next strike up */
+  for (var k=0;k<N;k++){
+    var lo = strikes[atm-k], hi = strikes[atm-k-1];
+    if (!lo || !hi) break;
+    var lp = legPrice(lo.C), sp = legPrice(hi.C);
+    if (lp==null || sp==null) continue;
+    cBody.appendChild(row(lo.strike, hi.strike, lp, sp, true, k===0)); any++;
+  }
+  /* bear put spreads: long strikes[atm+j] put, short the next strike down */
+  for (var j=0;j<N;j++){
+    var hiP = strikes[atm+j], loP = strikes[atm+j+1];
+    if (!hiP || !loP) break;
+    var lpP = legPrice(hiP.P), spP = legPrice(loP.P);
+    if (lpP==null || spP==null) continue;
+    pBody.appendChild(row(hiP.strike, loP.strike, lpP, spP, false, j===0)); any++;
+  }
+
+  document.getElementById("spreadNote").innerHTML =
+    "Debit spreads, $1-wide. Cost &amp; P/L per share (&times;100 per contract). Max profit = width &minus; debit; " +
+    "max loss = debit; breakeven = long strike &plusmn; debit. Prices use bid/ask mid; excludes commissions.";
+  wrap.style.display = any ? "block" : "none";
 }
 
 /* ─────────────── strategy payoff builder ─────────────── */
@@ -859,6 +945,7 @@ function load(){
   document.getElementById("tablewrap").style.display = "none";
   document.getElementById("expbar").style.display = "none";
   document.getElementById("strangleWrap").style.display = "none";
+  document.getElementById("spreadWrap").style.display = "none";
   document.getElementById("legend").style.display = "none";
   document.getElementById("builder").style.display = "none";
   legs = [];
@@ -888,6 +975,9 @@ elExpSel.addEventListener("change", function(){ if (current){ legs = []; renderC
 elStrikeCount.addEventListener("change", function(){ if (current) renderChain(); });
 document.getElementById("widthInput").addEventListener("change", function(){
   if (current && current._sStrikes) renderStrangles(current._sStrikes, current._sAtm, current.price);
+});
+document.getElementById("spreadCount").addEventListener("change", function(){
+  if (current && current._sStrikes) renderSpreads(current._sStrikes, current._sAtm, current.price);
 });
 
 /* auto-load default ticker */
