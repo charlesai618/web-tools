@@ -152,6 +152,7 @@
   .sw { width:13px; height:13px; border-radius:3px; display:inline-block; }
   .load.secondary { background: #334155; }
   .load.secondary:hover { background: #475569; }
+  input#emailTo { width: 210px; }
   .print-header { display: none; margin-bottom: 14px; }
   .print-header .ph-title { font-size: 1.4rem; font-weight: 700; color: #f8fafc; }
   .print-header .ph-sub { font-size: 0.85rem; color: #94a3b8; margin-top: 3px; }
@@ -202,6 +203,11 @@
     </div>
     <button class="load secondary" id="savePdfBtn" title="Opens the print dialog — pick &ldquo;Save as PDF&rdquo; as the destination, then attach it to an email">⤓ Save as PDF</button>
     <button class="load secondary" id="saveHtmlBtn" title="Downloads a self-contained HTML file with the full chain embedded — opens and stays interactive even offline">⤓ Save offline HTML</button>
+    <div class="field">
+      <label for="emailTo">Email to</label>
+      <input type="text" id="emailTo" value="lixiang.lx618@gmail.com" autocomplete="off" spellcheck="false" />
+    </div>
+    <button class="load secondary" id="emailBtn" title="Produces the PDF + offline HTML and opens a pre-addressed email draft — then attach the two downloaded files">✉ Email PDF + HTML</button>
   </div>
 
   <div id="status"></div>
@@ -1086,6 +1092,42 @@ function saveOfflineHtml(){
   }).then(function(){ btn.disabled = false; btn.textContent = label; });
 }
 document.getElementById("saveHtmlBtn").addEventListener("click", saveOfflineHtml);
+
+/* ── Produce both files + open a pre-addressed email draft ──
+   (a web page can't attach files itself, so the two files download and the
+   recipient/subject/body are pre-filled — you just attach them) */
+function emailFiles(){
+  if (!current || !current._raw){ setStatus("error","Load a ticker first."); return; }
+  var to = (document.getElementById("emailTo").value || "").trim();
+  if (!to){ setStatus("error","Enter a recipient email."); return; }
+  var sym = current.sym, d = new Date(), p = function(n){ return (n<10?"0":"")+n; };
+  var dayD = d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate());
+  var dayC = d.getFullYear()+p(d.getMonth()+1)+p(d.getDate());
+  var htmlName = "OptionsChain_"+sym+"_offline_"+dayC+".html";
+  var pdfName  = "OptionsChain_"+sym+"_"+dayD+".pdf";
+  var exp = elExpSel.value ? fmtExp(elExpSel.value) : "";
+  var subject = "Options Chain — "+sym+" — "+dayD;
+  var body =
+    "Options chain snapshot for "+sym+" (spot $"+num(current.price,2)+", expiration "+exp+").\n\n"+
+    "Please attach the two files just saved to the Downloads folder:\n"+
+    "  • "+pdfName+"  (printable view)\n"+
+    "  • "+htmlName+"  (interactive, opens offline)\n\n"+
+    "Generated "+dayD+" — delayed CBOE quotes, informational only.";
+  /* open the compose window first, inside the click gesture, so it isn't blocked */
+  var gmail = "https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(to)+
+    "&su="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+  var win = window.open(gmail, "_blank", "noopener");
+  if (!win){
+    /* popup blocked — fall back to the default mail client via mailto */
+    var a = document.createElement("a");
+    a.href = "mailto:"+encodeURIComponent(to)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+    a.click();
+  }
+  saveOfflineHtml();                          /* downloads the offline HTML */
+  setStatus("ok","Opened an email draft to "+to+". The HTML is downloading; in the print dialog choose “Save as PDF”, then attach both files to the draft.");
+  window.print();                             /* PDF via the print dialog */
+}
+document.getElementById("emailBtn").addEventListener("click", emailFiles);
 
 /* auto-load: an offline snapshot loads its embedded ticker; otherwise the default */
 if (window.__EMBEDDED__ && window.__EMBEDDED__.sym){ elTicker.value = window.__EMBEDDED__.sym; }
