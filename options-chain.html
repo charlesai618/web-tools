@@ -368,6 +368,32 @@ function dte(e){
   return Math.round(ms / 86400000);
 }
 
+/* True only during the US regular cash session: weekday, 09:30–16:00 ET.
+   Outside it (pre-market, post-market, overnight, weekends) we pin the spot to
+   the most recent regular-session close so the price — and the center strike —
+   don't drift to overnight/pre/post-market prints. Uses the IANA TZ so it
+   tracks DST automatically. Market holidays aren't special-cased, but on a
+   holiday there are no trades so current_price already equals the prior close. */
+function isRegularSessionET(){
+  try {
+    var parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", weekday: "short",
+      hour: "2-digit", minute: "2-digit", hour12: false
+    }).formatToParts(new Date());
+    var wd, hh = 0, mm = 0;
+    parts.forEach(function(p){
+      if (p.type === "weekday") wd = p.value;
+      else if (p.type === "hour") hh = parseInt(p.value, 10) % 24;  /* some engines emit "24" at midnight */
+      else if (p.type === "minute") mm = parseInt(p.value, 10);
+    });
+    if (wd === "Sat" || wd === "Sun") return false;
+    var mins = hh * 60 + mm;
+    return mins >= 570 && mins < 960;          /* 09:30 ≤ now < 16:00 ET */
+  } catch(e){
+    return true;   /* if TZ math is unavailable, behave as before (use the live price) */
+  }
+}
+
 /* ---- formatting ---- */
 function num(v, d){ return (v==null||isNaN(v)) ? "—" : Number(v).toFixed(d==null?2:d); }
 function intc(v){ return (!v) ? "—" : Math.round(v).toLocaleString(); }
@@ -414,7 +440,7 @@ function loadSymbol(sym){
   return tryNext();
 }
 
-function ingest(json, sym, shared){
+function ingest(json, sym, shared, live){
   var d = json.data;
   var byExp = {};
   d.options.forEach(function(o){
@@ -454,8 +480,22 @@ function ingest(json, sym, shared){
     exps: (future.length ? future : all),
     sessionDate: sessionDate,
     baseline: baseline,
-    baselineSrc: baselineSrc
+    baselineSrc: baselineSrc,
+    atClose: false
   };
+
+  /* Outside the regular session, show the most recent regular-session close
+     instead of the live (overnight/pre/post-market) print. CBOE's `close` is
+     the last completed session's official close, so the displayed price — and
+     every spot-derived view (center strike, strangles, spreads, payoff S) —
+     stays put across refreshes until the next session opens. Live fetches only;
+     a frozen offline snapshot keeps the exact price captured at save time. */
+  if (live && !isRegularSessionET() && d.close > 0){
+    current.price = d.close;
+    current.change = d.close - d.prev_day_close;
+    current.changePct = d.prev_day_close ? (current.change / d.prev_day_close * 100) : 0;
+    current.atClose = true;
+  }
 }
 
 /* shared baseline = the snapshot committed to options-data/<SYM>.json (same-origin) */
@@ -497,7 +537,9 @@ function renderSummary(){
   chg.className = "chg " + (up?"up":"down");
   chg.textContent = (up?"+":"") + num(c.change,2) + " (" + (up?"+":"") + num(c.changePct,2) + "%)";
   document.getElementById("sMeta").innerHTML =
-    "30&#8209;day IV <b>" + num(c.iv30,1) + "%</b> &nbsp;&middot;&nbsp; last trade <b>" +
+    "30&#8209;day IV <b>" + num(c.iv30,1) + "%</b>" +
+    (c.atClose ? " &nbsp;&middot;&nbsp; <b style='color:#fbbf24'>at last close</b> (market closed)" : "") +
+    " &nbsp;&middot;&nbsp; last trade <b>" +
     (c.lastTime ? c.lastTime.replace("T"," ") : "—") + "</b>";
 }
 
@@ -1004,7 +1046,7 @@ function load(){
 
   /* live chain (via proxy) + the shared committed baseline (same-origin) in parallel */
   Promise.all([ loadSymbol(sym), fetchSharedBaseline(sym) ]).then(function(res){
-    ingest(res[0], sym, res[1]);
+    ingest(res[0], sym, res[1], true);
     current._raw = res[0]; current._shared = res[1];   /* kept for the offline-HTML save */
     renderSummary();
     fillExpSelect();
