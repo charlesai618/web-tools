@@ -329,6 +329,10 @@
 "use strict";
 
 var CBOE = "https://cdn.cboe.com/api/global/delayed_quotes/options/";
+/* daily OHLC history — fetched only outside the session to recover the last
+   close's day-over-day change, which the options feed loses in the pre-market
+   window (it rolls prev_day_close up to equal close). */
+var HIST = "https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/";
 /* CORS proxies tried in order. CBOE sends no CORS header, so a proxy is required. */
 var PROXIES = [
   function(u){ return "https://cors.zme.ink/" + u; },
@@ -440,7 +444,34 @@ function loadSymbol(sym){
   return tryNext();
 }
 
-function ingest(json, sym, shared, live){
+/* daily OHLC bars (ascending) for a symbol, or null if unavailable */
+function fetchHistory(sym){
+  var variants = INDEXES[sym]
+    ? ["_" + sym + ".json", sym + ".json"]
+    : [sym + ".json", "_" + sym + ".json"];
+  var i = 0;
+  function tryNext(){
+    if (i >= variants.length) return Promise.resolve(null);
+    return fetchJson(HIST + variants[i++]).then(function(j){
+      var bars = j && j.data;
+      return (bars && bars.length) ? bars : tryNext();
+    }).catch(function(){ return tryNext(); });
+  }
+  return tryNext();
+}
+
+/* close of the regular session immediately before `lastClose`, from the daily
+   series. Normally history's last bar IS lastClose, so we return the prior bar;
+   if history hasn't caught up yet, its last bar already is that prior session. */
+function priorCloseFromHistory(bars, lastClose){
+  if (!bars || !bars.length) return null;
+  var n = bars.length, lastBar = bars[n-1];
+  if (lastBar && Math.abs(lastBar.close - lastClose) < 0.005)
+    return n >= 2 ? bars[n-2].close : null;
+  return lastBar ? lastBar.close : null;
+}
+
+function ingest(json, sym, shared, live, hist){
   var d = json.data;
   var byExp = {};
   d.options.forEach(function(o){
@@ -492,9 +523,19 @@ function ingest(json, sym, shared, live){
      a frozen offline snapshot keeps the exact price captured at save time. */
   if (live && !isRegularSessionET() && d.close > 0){
     current.price = d.close;
-    current.change = d.close - d.prev_day_close;
-    current.changePct = d.prev_day_close ? (current.change / d.prev_day_close * 100) : 0;
     current.atClose = true;
+    /* change = last close vs the close before it. After the close the options feed
+       still carries a distinct prev_day_close; in the pre-market window it has rolled
+       up to equal close, so fall back to the daily history for the prior close. */
+    var priorClose = (d.prev_day_close > 0 && Math.abs(d.prev_day_close - d.close) > 1e-6)
+      ? d.prev_day_close
+      : priorCloseFromHistory(hist, d.close);
+    if (priorClose){
+      current.change = d.close - priorClose;
+      current.changePct = current.change / priorClose * 100;
+    } else {
+      current.change = 0; current.changePct = 0;
+    }
   }
 }
 
@@ -1044,9 +1085,11 @@ function load(){
     return;
   }
 
-  /* live chain (via proxy) + the shared committed baseline (same-origin) in parallel */
-  Promise.all([ loadSymbol(sym), fetchSharedBaseline(sym) ]).then(function(res){
-    ingest(res[0], sym, res[1], true);
+  /* live chain (via proxy) + the shared committed baseline (same-origin) in parallel;
+     outside the session also pull daily history for the last close's change */
+  var histP = isRegularSessionET() ? Promise.resolve(null) : fetchHistory(sym);
+  Promise.all([ loadSymbol(sym), fetchSharedBaseline(sym), histP ]).then(function(res){
+    ingest(res[0], sym, res[1], true, res[2]);
     current._raw = res[0]; current._shared = res[1];   /* kept for the offline-HTML save */
     renderSummary();
     fillExpSelect();
