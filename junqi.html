@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>军棋 · 暗翻棋（人机对战）</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 16px;
+    max-width: 1100px; margin: 0 auto 14px;
+  }
+  header h1 { font-size: 1.4rem; color: #f8fafc; }
+  header a { color: #60a5fa; text-decoration: none; font-size: .9rem; }
+  header a:hover { text-decoration: underline; }
+
+  .layout {
+    display: flex; gap: 20px; justify-content: center; align-items: flex-start;
+    max-width: 1100px; margin: 0 auto;
+  }
+  .board-wrap { flex: 0 0 auto; }
+  #board {
+    position: relative;
+    height: min(88vh, 980px);
+    aspect-ratio: 480 / 1015;
+    background: linear-gradient(180deg, #1a2436, #16202f);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #lines { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+  .piece {
+    position: absolute; width: 15.4%; height: 4.35%;
+    transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 7px;
+    font-weight: 700;
+    font-family: "KaiTi", "STKaiti", "Microsoft YaHei", serif;
+    font-size: 1em;
+    letter-spacing: .06em;
+    box-shadow: 0 2px 6px rgba(0,0,0,.55);
+    transition: left .3s ease, top .3s ease, opacity .3s;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .piece.down {
+    background: linear-gradient(145deg, #3b4a61, #253345);
+    border: 2px solid #4b5d78;
+    color: #5d7292;
+    font-size: .8em;
+  }
+  .piece.red  { background: linear-gradient(150deg, #ffe9e0, #f5cdbd); border: 2px solid #b91c1c; color: #a31212; }
+  .piece.blue { background: linear-gradient(150deg, #e2edff, #c3d9f7); border: 2px solid #1d4ed8; color: #1237a8; }
+  .piece.flagp { box-shadow: 0 0 10px 2px rgba(250,204,21,.55); }
+  .piece.selected { outline: 3px solid #fbbf24; z-index: 4; }
+  .piece.dead { opacity: 0; }
+  .piece.flip { animation: flipIn .3s ease; }
+  @keyframes flipIn {
+    from { transform: translate(-50%,-50%) rotateY(90deg); }
+    to   { transform: translate(-50%,-50%) rotateY(0deg); }
+  }
+
+  .hint {
+    position: absolute; width: 15.4%; height: 4.35%;
+    transform: translate(-50%, -50%);
+    border: 2.5px dashed #34d399; border-radius: 8px;
+    z-index: 3; pointer-events: none;
+    animation: pulse 1.1s infinite;
+  }
+  .hint.cap { border-style: solid; border-color: #f87171; }
+  @keyframes pulse { 0%,100% { opacity: .95; } 50% { opacity: .45; } }
+
+  .side { width: 300px; display: flex; flex-direction: column; gap: 12px; }
+  .card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .card h3 { font-size: .95rem; color: #cbd5e1; margin-bottom: 8px; }
+  .srow { display: flex; justify-content: space-between; font-size: .9rem; padding: 3px 0; color: #94a3b8; }
+  .srow b { color: #f1f5f9; font-weight: 600; }
+  .t-red  { color: #f87171; font-weight: 700; }
+  .t-blue { color: #60a5fa; font-weight: 700; }
+
+  #log {
+    max-height: 200px; overflow-y: auto; font-size: .82rem; line-height: 1.55;
+    color: #94a3b8;
+  }
+  #log div { padding: 2px 0; border-bottom: 1px dashed #2b3a50; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; min-height: 22px; }
+  .chip {
+    font-size: .72rem; padding: 1px 6px; border-radius: 5px; font-weight: 600;
+    font-family: "KaiTi","STKaiti","Microsoft YaHei",serif;
+  }
+  .chip.red  { background: #3b1516; color: #fca5a5; border: 1px solid #7f1d1d; }
+  .chip.blue { background: #12203f; color: #93c5fd; border: 1px solid #1e40af; }
+
+  button.primary {
+    width: 100%; padding: 10px; border: none; border-radius: 10px;
+    background: #2563eb; color: #fff; font-size: .95rem; font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #1d4ed8; }
+
+  details.card summary { cursor: pointer; font-size: .92rem; color: #cbd5e1; font-weight: 600; }
+  details.card ul { margin: 8px 0 0 18px; font-size: .82rem; color: #94a3b8; line-height: 1.7; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%);
+    background: #f8fafc; color: #0f172a; padding: 9px 18px; border-radius: 10px;
+    font-size: .9rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50;
+    max-width: 90vw; text-align: center;
+  }
+  #toast.show { opacity: 1; }
+
+  #overlay {
+    position: fixed; inset: 0; background: rgba(2,6,23,.72);
+    display: none; align-items: center; justify-content: center; z-index: 60;
+  }
+  #overlay.show { display: flex; }
+  #overlay .panel {
+    background: #1e293b; border: 1px solid #475569; border-radius: 16px;
+    padding: 34px 44px; text-align: center; max-width: 90vw;
+  }
+  #overlay .panel h2 { font-size: 1.6rem; margin-bottom: 8px; color: #f8fafc; }
+  #overlay .panel p { color: #94a3b8; margin-bottom: 20px; }
+
+  @media (max-width: 860px) {
+    .layout { flex-direction: column; align-items: center; }
+    #board { height: auto; width: min(94vw, 460px); }
+    .side { width: min(94vw, 460px); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>军棋 · 暗翻棋</h1>
+  <a href="index.html">← 返回首页</a>
+</header>
+
+<div class="layout">
+  <div class="board-wrap">
+    <div id="board"><svg id="lines" viewBox="0 0 480 1015" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  </div>
+
+  <aside class="side">
+    <div class="card">
+      <h3>对局状态</h3>
+      <div class="srow"><span>你执</span><b id="stHuman">待定（请先翻子）</b></div>
+      <div class="srow"><span>当前回合</span><b id="stTurn">你</b></div>
+      <div class="srow"><span>红方地雷剩余</span><b id="stRedMine">3</b></div>
+      <div class="srow"><span>蓝方地雷剩余</span><b id="stBlueMine">3</b></div>
+      <div class="srow"><span>无吃子步数</span><b id="stCounter">0 / 40</b></div>
+    </div>
+
+    <div class="card">
+      <h3>阵亡棋子</h3>
+      <div class="srow"><span>红方</span></div>
+      <div class="chips" id="deadRed"></div>
+      <div class="srow"><span>蓝方</span></div>
+      <div class="chips" id="deadBlue"></div>
+    </div>
+
+    <div class="card">
+      <h3>战报</h3>
+      <div id="log"></div>
+    </div>
+
+    <details class="card">
+      <summary>规则说明</summary>
+      <ul>
+        <li>50 枚棋子背面朝上随机摆放，行营留空。</li>
+        <li>你先手翻子：<b>翻出的颜色归电脑</b>，另一色归你。</li>
+        <li>每回合可「翻开一子」或「移动一枚己方已翻开的棋子」。</li>
+        <li>未翻开的棋子不能被攻击，会挡路。</li>
+        <li>大子吃小子，同级同归于尽；<b>禁止送吃</b>（小子不能主动碰大子）。</li>
+        <li>工兵可挖地雷；炸弹与任何棋子同归于尽；地雷、军旗不能移动。</li>
+        <li>铁路上可直线远行，工兵在铁路上可拐弯；行营内的棋子不可被攻击。</li>
+        <li><b>胜利</b>：先用工兵挖完（或炸弹炸完）对方 3 颗地雷，再用<b>己方最小的棋子或炸弹</b>夺取对方军旗。</li>
+        <li><b>和棋</b>：一方棋子被吃光、无棋可走，或连续 40 步无吃子。</li>
+      </ul>
+    </details>
+
+    <button class="primary" id="newGameBtn">重新开局</button>
+  </aside>
+</div>
+
+<div id="toast"></div>
+<div id="overlay">
+  <div class="panel">
+    <h2 id="ovTitle"></h2>
+    <p id="ovReason"></p>
+    <button class="primary" id="ovBtn">再来一局</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= 棋盘几何 ================= */
+const ROWS = 12, COLS = 5, VW = 480, VH = 1015;
+const X = c => 50 + c * 95;
+const Y = r => (r <= 5 ? 40 + 80 * r : 90 + 80 * r);
+const K = (r, c) => r + ',' + c;
+const RC = k => k.split(',').map(Number);
+const CAMPS = new Set(['2,1','2,3','3,2','4,1','4,3','7,1','7,3','8,2','9,1','9,3']);
+const NODES = [];
+for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) NODES.push(K(r, c));
+
+const adj = {}, railAdj = {};
+NODES.forEach(k => { adj[k] = []; railAdj[k] = []; });
+const edgeSet = new Set(), railEdges = new Set();
+function addAdj(a, b) {
+  const e = a < b ? a + '|' + b : b + '|' + a;
+  if (edgeSet.has(e)) return;
+  edgeSet.add(e); adj[a].push(b); adj[b].push(a);
+}
+function addRail(a, b) {
+  railAdj[a].push(b); railAdj[b].push(a);
+  railEdges.add(a + '|' + b); railEdges.add(b + '|' + a);
+}
+// 公路：横向全连，纵向除山界外全连（山界只有 0/2/4 三个通道）
+for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+  if (c < COLS - 1) addAdj(K(r, c), K(r, c + 1));
+  if (r < ROWS - 1 && (r !== 5 || c === 0 || c === 2 || c === 4)) addAdj(K(r, c), K(r + 1, c));
+}
+// 行营的斜线公路
+CAMPS.forEach(k => {
+  const [r, c] = RC(k);
+  [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr, dc]) => {
+    const rr = r + dr, cc = c + dc;
+    if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) addAdj(k, K(rr, cc));
+  });
+});
+// 铁路：第 1/5/6/10 行横线；第 0/4 列纵线（1~10 行）；中路通道 (5,2)-(6,2)
+[1, 5, 6, 10].forEach(r => { for (let c = 0; c < 4; c++) addRail(K(r, c), K(r, c + 1)); });
+[0, 4].forEach(c => { for (let r = 1; r < 10; r++) addRail(K(r, c), K(r + 1, c)); });
+addRail('5,2', '6,2');
+const railNodes = new Set();
+railEdges.forEach(e => railNodes.add(e.split('|')[0]));
+
+/* ================= 棋子定义 ================= */
+const DEFS = [
+  ['司令',9,1],['军长',8,1],['师长',7,2],['旅长',6,2],['团长',5,2],['营长',4,2],
+  ['连长',3,3],['排长',2,3],['工兵',1,3],['地雷',0,3],['炸弹',0,2],['军旗',0,1]
+];
+function makeSet(side) {
+  const arr = [];
+  DEFS.forEach(([kind, rank, n]) => {
+    for (let i = 0; i < n; i++) arr.push({
+      side, kind, rank,
+      special: kind === '地雷' ? 'mine' : kind === '炸弹' ? 'bomb' : kind === '军旗' ? 'flag' : null,
+      revealed: false, alive: true, pos: null, el: null, lastFrom: null
+    });
+  });
+  return arr;
+}
+
+/* ================= 状态 ================= */
+const DRAW_LIMIT = 40;
+let board, pieces, turn, phase, humanSide, aiSide, selected, curMoves, noProgress, over, aiTimer;
+
+const $ = id => document.getElementById(id);
+const boardEl = $('board');
+const oppOf = s => s === 'red' ? 'blue' : 'red';
+const sideNm = s => s === 'red' ? '红' : '蓝';
+const nm = p => `<span class="t-${p.side}">${sideNm(p.side)}·${p.kind}</span>`;
+
+function minesLeft(side) { return pieces.filter(x => x.side === side && x.special === 'mine' && x.alive).length; }
+function minRank(side) {
+  const rs = pieces.filter(x => x.side === side && x.alive && x.rank > 0).map(x => x.rank);
+  return rs.length ? Math.min(...rs) : 99;
+}
+
+/* ================= 走法与吃子规则 ================= */
+function canEnter(bd, p, k) {
+  const t = bd[k];
+  if (!t) return true;
+  if (t.side === p.side) return false;
+  if (!t.revealed) return false;              // 未翻开的棋子不能被攻击
+  if (CAMPS.has(k)) return false;             // 行营保护
+  if (t.special === 'flag')                   // 夺旗：需先清雷，且用己方最小子或炸弹
+    return minesLeft(t.side) === 0 && (p.special === 'bomb' || p.rank === minRank(p.side));
+  if (t.special === 'mine') return p.kind === '工兵' || p.special === 'bomb';
+  if (p.special === 'bomb' || t.special === 'bomb') return true;
+  return p.rank >= t.rank;                    // 禁止送吃
+}
+
+function genMoves(bd, k) {
+  const p = bd[k];
+  if (!p || p.special === 'mine' || p.special === 'flag') return [];
+  const res = new Set();
+  adj[k].forEach(n => { if (canEnter(bd, p, n)) res.add(n); });
+  if (railNodes.has(k)) {
+    if (p.kind === '工兵') {                  // 工兵：铁路上任意拐弯（BFS）
+      const vis = new Set([k]), q = [k];
+      while (q.length) {
+        const cur = q.shift();
+        railAdj[cur].forEach(n => {
+          if (vis.has(n)) return;
+          vis.add(n);
+          if (!bd[n]) { res.add(n); q.push(n); }
+          else if (canEnter(bd, p, n)) res.add(n);
+        });
+      }
+    } else {                                  // 其他棋子：铁路直线滑行
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr, dc]) => {
+        let [r, c] = RC(k);
+        for (;;) {
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+          const nk = K(nr, nc);
+          if (!railEdges.has(K(r, c) + '|' + nk)) break;
+          if (bd[nk]) { if (canEnter(bd, p, nk)) res.add(nk); break; }
+          res.add(nk); r = nr; c = nc;
+        }
+      });
+    }
+  }
+  return [...res];
+}
+
+/* ================= 对局流程 ================= */
+function newGame() {
+  clearTimeout(aiTimer);
+  board = {}; NODES.forEach(k => board[k] = null);
+  pieces = [...makeSet('red'), ...makeSet('blue')];
+  const cells = NODES.filter(k => !CAMPS.has(k));
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  pieces.forEach((p, i) => { p.pos = cells[i]; board[cells[i]] = p; });
+  turn = 'human'; phase = 'first'; humanSide = null; aiSide = null;
+  selected = null; curMoves = []; noProgress = 0; over = false;
+  renderPieces(); clearHints();
+  $('log').innerHTML = ''; $('deadRed').innerHTML = ''; $('deadBlue').innerHTML = '';
+  $('overlay').classList.remove('show');
+  log('新对局开始。请点击任意棋子翻开 —— <b>翻出的颜色归电脑</b>，另一种颜色归你。');
+  updateStatus();
+}
+
+function flipPiece(k, byHuman) {
+  const p = board[k];
+  p.revealed = true; noProgress = 0;
+  p.el.classList.remove('down');
+  p.el.classList.add(p.side, 'flip');
+  if (p.special === 'flag') p.el.classList.add('flagp');
+  p.el.textContent = p.kind;
+  setTimeout(() => p.el && p.el.classList.remove('flip'), 350);
+  log(`${byHuman ? '你' : '电脑'}翻开了 ${nm(p)}`);
+  if (phase === 'first') {
+    aiSide = p.side; humanSide = oppOf(p.side); phase = 'play';
+    log(`首翻为${sideNm(p.side)}色 → 电脑执<b>${sideNm(aiSide)}</b>，你执<b>${sideNm(humanSide)}</b>`);
+    toast(`你执 ${sideNm(humanSide)} 方！`);
+  }
+}
+
+function kill(x) {
+  x.alive = false; x.pos = null;
+  if (x.el) { const el = x.el; el.classList.add('dead'); setTimeout(() => el.remove(), 320); x.el = null; }
+  const chip = document.createElement('span');
+  chip.className = 'chip ' + x.side; chip.textContent = x.kind;
+  $(x.side === 'red' ? 'deadRed' : 'deadBlue').appendChild(chip);
+}
+
+function doMove(from, to) {
+  const p = board[from], t = board[to];
+  board[from] = null; p.lastFrom = from;
+  let captured = false;
+  if (!t) {
+    board[to] = p; p.pos = to; setPos(p);
+    if (turn === 'ai') log(`电脑：${nm(p)} 移动`);
+  } else {
+    captured = true;
+    if (t.special === 'flag') {
+      kill(t); board[to] = p; p.pos = to; setPos(p);
+      log(`${nm(p)} 夺得 ${nm(t)}！`);
+      updateStatus();
+      endGame(p.side);
+      return;
+    }
+    if (p.special === 'bomb' || t.special === 'bomb') {
+      kill(p); kill(t); board[to] = null;
+      log(`${nm(p)} 与 ${nm(t)} 同归于尽`);
+    } else if (t.special === 'mine') {
+      kill(t); board[to] = p; p.pos = to; setPos(p);
+      log(`${nm(p)} 挖掉了 ${nm(t)}！`);
+    } else if (p.rank > t.rank) {
+      kill(t); board[to] = p; p.pos = to; setPos(p);
+      log(`${nm(p)} 吃掉了 ${nm(t)}`);
+    } else {
+      kill(p); kill(t); board[to] = null;
+      log(`${nm(p)} 与 ${nm(t)} 同归于尽`);
+    }
+    if (t.special === 'mine' && minesLeft(t.side) === 0)
+      log(`⚠️ ${sideNm(t.side)}方地雷已全部清空，其军旗可被夺取！`);
+  }
+  noProgress = captured ? 0 : noProgress + 1;
+  endTurn();
+}
+
+function hasAnyAction(player) {
+  if (NODES.some(k => board[k] && !board[k].revealed)) return true;
+  if (phase === 'first') return true;
+  const side = player === 'human' ? humanSide : aiSide;
+  return pieces.some(p => p.alive && p.revealed && p.side === side && p.pos && genMoves(board, p.pos).length > 0);
+}
+
+function endTurn() {
+  if (over) return;
+  updateStatus();
+  if (noProgress >= DRAW_LIMIT) { drawGame(`连续 ${DRAW_LIMIT} 步无吃子`); return; }
+  turn = turn === 'human' ? 'ai' : 'human';
+  updateStatus();
+  if (!hasAnyAction(turn)) {
+    drawGame(turn === 'human' ? '你已无棋可走（棋子被吃光）' : '电脑已无棋可走（棋子被吃光）');
+    return;
+  }
+  if (turn === 'ai') aiTimer = setTimeout(aiTurn, 700);
+}
+
+function endGame(winnerSide) {
+  over = true; clearTimeout(aiTimer);
+  const youWin = winnerSide === humanSide;
+  showOverlay(youWin ? '🎉 你获胜！' : '💻 电脑获胜',
+    `${sideNm(winnerSide)}方成功夺得对方军旗`);
+}
+function drawGame(reason) {
+  over = true; clearTimeout(aiTimer);
+  log(`🤝 和棋：${reason}`);
+  showOverlay('🤝 和棋', reason);
+}
+function showOverlay(title, reason) {
+  $('ovTitle').textContent = title;
+  $('ovReason').textContent = reason;
+  $('overlay').classList.add('show');
+}
+
+/* ================= 人类交互 ================= */
+function handleNode(k) {
+  if (over) return;
+  if (turn !== 'human') { toast('等待电脑走棋…'); return; }
+  const p = board[k];
+  if (p && !p.revealed) { clearSel(); flipPiece(k, true); endTurn(); return; }
+  if (p && humanSide && p.side === humanSide) {
+    if (selected === k) { clearSel(); return; }
+    if (p.special === 'mine' || p.special === 'flag') { toast(p.kind + ' 不能移动'); clearSel(); return; }
+    selected = k; curMoves = genMoves(board, k); renderHints();
+    if (!curMoves.length) toast('这枚棋子暂时无路可走');
+    return;
+  }
+  if (selected) {
+    if (curMoves.includes(k)) { const from = selected; clearSel(); doMove(from, k); return; }
+    if (p) { toast(explainIllegal(board[selected], k)); return; }
+    clearSel(); return;
+  }
+  if (p) toast('这是对方的棋子');
+}
+
+function explainIllegal(p, k) {
+  const t = board[k];
+  if (!t) return '走不到那里';
+  if (!t.revealed) return '不能吃未翻开的棋子';
+  if (CAMPS.has(k)) return '行营里的棋子受保护，不能被攻击';
+  if (t.special === 'flag') {
+    const n = minesLeft(t.side);
+    if (n > 0) return `需先清除对方全部地雷（还剩 ${n} 颗）才能夺旗`;
+    return '夺旗只能用己方最小的棋子或炸弹';
+  }
+  if (t.special === 'mine') return '只有工兵能挖雷（炸弹可与雷同归于尽）';
+  if (t.rank > p.rank && p.special !== 'bomb') return '禁止送吃：小子不能主动碰大子';
+  return '走不到那里';
+}
+
+/* ================= 电脑 AI ================= */
+function pv(p) {
+  if (p.special === 'flag') return 2000;
+  if (p.special === 'mine') return 80;
+  if (p.special === 'bomb') return 62;
+  if (p.kind === '工兵') return minesLeft(oppOf(p.side)) > 0 ? 48 : 20;
+  return { 9:100, 8:85, 7:70, 6:56, 5:45, 4:36, 3:28, 2:22 }[p.rank];
+}
+function distMap(target) {
+  const d = { [target]: 0 }, q = [target];
+  while (q.length) {
+    const cur = q.shift();
+    adj[cur].forEach(n => { if (d[n] === undefined) { d[n] = d[cur] + 1; q.push(n); } });
+  }
+  return d;
+}
+// 在棋盘 bd 上，能吃掉位于 k 的棋子 p 的敌方棋子
+function attackersOf(bd, k, p) {
+  const res = [];
+  pieces.forEach(e => {
+    if (!e.alive || !e.revealed || e.side === p.side || !e.pos) return;
+    if (e.special === 'mine' || e.special === 'flag') return;
+    if (bd[e.pos] !== e) return;
+    const kills = e.special === 'bomb' || e.rank >= p.rank || p.special === 'bomb';
+    if (!kills) return;
+    if (genMoves(bd, e.pos).includes(k)) res.push(e);
+  });
+  return res;
+}
+function aiFlagExposed() {
+  const f = pieces.find(x => x.side === aiSide && x.special === 'flag');
+  return f && f.alive && f.revealed && minesLeft(aiSide) === 0;
+}
+
+function scoreFlip(k) {
+  const fd = NODES.filter(n => board[n] && !board[n].revealed).length;
+  let s = 12 + 50 * (fd / 50);
+  const hasMovable = pieces.some(p => p.alive && p.revealed && p.side === aiSide && p.pos && genMoves(board, p.pos).length);
+  if (!hasMovable) s += 200;
+  adj[k].forEach(n => {
+    const q = board[n];
+    if (q && q.revealed) {
+      if (q.side !== aiSide && (q.rank >= 6 || q.special === 'bomb')) s -= 7;
+      if (q.side === aiSide && q.rank >= 6) s += 4;
+    }
+  });
+  return s + Math.random() * 6;
+}
+
+function scoreMove(a) {
+  const p = board[a.from], t = board[a.to];
+  let s = 0, survives = true;
+  if (t) {
+    if (t.special === 'flag') return 1e9;
+    if (t.special === 'mine') {
+      s += 260;
+      if (p.special === 'bomb') { survives = false; s -= pv(p) * 0.4; }
+      if (minesLeft(t.side) === 1) s += 120;
+    } else if (p.special === 'bomb') {
+      survives = false; s += pv(t) - 58;
+      if (t.rank >= 8) s += 30;
+    } else if (t.special === 'bomb') {
+      survives = false; s += pv(t) - pv(p);
+    } else if (p.rank > t.rank) {
+      s += pv(t);
+    } else {
+      survives = false; s += pv(t) - pv(p) * 0.9;
+    }
+    if (aiFlagExposed() && (t.special === 'bomb' || t.rank === minRank(humanSide))) s += 60;
+    // 目标是夺旗获胜而非全歼：吃光对方最后一个可动子会导致和棋，重罚
+    const movable = x => x.alive && (x.rank > 0 || x.special === 'bomb');
+    if (movable(t) && !pieces.some(x => x !== t && x.side === t.side && movable(x))) s -= 800;
+    // 同理：拼掉己方最后一个可动子也会葬送胜机
+    if (!survives && movable(p) && !pieces.some(x => x !== p && x.side === p.side && movable(x))) s -= 800;
+  }
+  if (survives) {
+    const bd = Object.assign({}, board);
+    bd[a.from] = null; bd[a.to] = p;
+    const atks = attackersOf(bd, a.to, p);
+    if (atks.length) {
+      let worst = 0;
+      atks.forEach(e => {
+        let r;
+        if (e.special === 'bomb') r = pv(p) - pv(e) * 0.5;
+        else if (e.rank > p.rank) r = pv(p);
+        else r = Math.max(0, pv(p) - pv(e)) + 5;
+        if (r > worst) worst = r;
+      });
+      s -= worst * 0.85;
+    } else {
+      const nowAtks = attackersOf(board, a.from, p).filter(e => e.special === 'bomb' || e.rank > p.rank);
+      if (nowAtks.length) s += pv(p) * 0.55;
+    }
+    const enemy = oppOf(aiSide);
+    // 冲向敌方军旗（雷已清空、且自己是最小子或炸弹）
+    const flag = pieces.find(x => x.side === enemy && x.special === 'flag' && x.alive && x.revealed && x.pos);
+    if (flag && minesLeft(enemy) === 0 && (p.special === 'bomb' || p.rank === minRank(aiSide))) {
+      const dm = distMap(flag.pos);
+      s += ((dm[a.from] ?? 99) - (dm[a.to] ?? 99)) * 12 + 6;
+    }
+    // 工兵扑向已翻开的敌雷
+    if (p.kind === '工兵') {
+      const ms = pieces.filter(x => x.side === enemy && x.special === 'mine' && x.alive && x.revealed && x.pos);
+      if (ms.length) {
+        let g = -99;
+        ms.forEach(m => {
+          const dm = distMap(m.pos);
+          g = Math.max(g, (dm[a.from] ?? 99) - (dm[a.to] ?? 99));
+        });
+        s += g * 8;
+      }
+    }
+    // 追猎比自己小的已翻开敌子
+    if (p.special !== 'bomb' && p.rank > 1) {
+      const prey = pieces.filter(x => x.side === enemy && x.alive && x.revealed && x.pos &&
+        !CAMPS.has(x.pos) && x.rank > 0 && x.rank < p.rank);
+      if (prey.length) {
+        let g = -99;
+        prey.forEach(x => {
+          const dm = distMap(x.pos);
+          g = Math.max(g, (dm[a.from] ?? 99) - (dm[a.to] ?? 99));
+        });
+        s += g * 1.5;
+      }
+    }
+    if (a.to === p.lastFrom) s -= 14;   // 抑制来回摇摆
+  }
+  return s + Math.random() * 4;
+}
+
+function aiTurn() {
+  if (over || turn !== 'ai') return;
+  const acts = [];
+  NODES.forEach(k => { const p = board[k]; if (p && !p.revealed) acts.push({ type: 'flip', k }); });
+  pieces.forEach(p => {
+    if (p.alive && p.revealed && p.side === aiSide && p.pos)
+      genMoves(board, p.pos).forEach(to => acts.push({ type: 'move', from: p.pos, to }));
+  });
+  if (!acts.length) { drawGame('电脑无棋可走'); return; }
+  let best = null, bs = -1e18;
+  acts.forEach(a => {
+    const s = a.type === 'flip' ? scoreFlip(a.k) : scoreMove(a);
+    if (s > bs) { bs = s; best = a; }
+  });
+  if (best.type === 'flip') { flipPiece(best.k, false); endTurn(); }
+  else doMove(best.from, best.to);
+}
+
+/* ================= 渲染 ================= */
+function setPos(p) {
+  const [r, c] = RC(p.pos);
+  p.el.style.left = (X(c) / VW * 100) + '%';
+  p.el.style.top = (Y(r) / VH * 100) + '%';
+}
+function renderPieces() {
+  boardEl.querySelectorAll('.piece,.hint').forEach(el => el.remove());
+  pieces.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'piece down';
+    el.textContent = '✦';
+    p.el = el; setPos(p);
+    boardEl.appendChild(el);
+  });
+}
+function renderHints() {
+  clearHintEls();
+  if (selected) {
+    board[selected].el.classList.add('selected');
+    curMoves.forEach(k => {
+      const h = document.createElement('div');
+      h.className = 'hint' + (board[k] ? ' cap' : '');
+      const [r, c] = RC(k);
+      h.style.left = (X(c) / VW * 100) + '%';
+      h.style.top = (Y(r) / VH * 100) + '%';
+      boardEl.appendChild(h);
+    });
+  }
+}
+function clearHintEls() {
+  boardEl.querySelectorAll('.hint').forEach(el => el.remove());
+  boardEl.querySelectorAll('.piece.selected').forEach(el => el.classList.remove('selected'));
+}
+function clearSel() { selected = null; curMoves = []; clearHintEls(); }
+function clearHints() { clearSel(); }
+
+function updateStatus() {
+  const h = $('stHuman');
+  if (humanSide) {
+    h.innerHTML = `<span class="t-${humanSide}">${sideNm(humanSide)}方</span>（电脑执${sideNm(aiSide)}）`;
+  } else h.textContent = '待定（请先翻子）';
+  $('stTurn').textContent = over ? '对局结束' : (turn === 'human' ? '你' : '电脑思考中…');
+  $('stRedMine').textContent = pieces ? minesLeft('red') + ' / 3' : '3';
+  $('stBlueMine').textContent = pieces ? minesLeft('blue') + ' / 3' : '3';
+  $('stCounter').textContent = noProgress + ' / ' + DRAW_LIMIT;
+}
+
+function log(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  const el = $('log');
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 60) el.removeChild(el.lastChild);
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ---- 画棋盘线 ---- */
+(function drawBoard() {
+  const svg = $('lines');
+  let out = '';
+  const seen = new Set();
+  // 公路
+  edgeSet.forEach(e => {
+    const [a, b] = e.split('|');
+    if (railEdges.has(a + '|' + b)) return;
+    const [r1, c1] = RC(a), [r2, c2] = RC(b);
+    out += `<line x1="${X(c1)}" y1="${Y(r1)}" x2="${X(c2)}" y2="${Y(r2)}" stroke="#4a5b74" stroke-width="2"/>`;
+  });
+  // 铁路（粗线 + 枕木虚线）
+  railEdges.forEach(e => {
+    const [a, b] = e.split('|');
+    const key2 = a < b ? a + '|' + b : b + '|' + a;
+    if (seen.has(key2)) return;
+    seen.add(key2);
+    const [r1, c1] = RC(a), [r2, c2] = RC(b);
+    out += `<line x1="${X(c1)}" y1="${Y(r1)}" x2="${X(c2)}" y2="${Y(r2)}" stroke="#7e8fa3" stroke-width="6"/>`;
+    out += `<line x1="${X(c1)}" y1="${Y(r1)}" x2="${X(c2)}" y2="${Y(r2)}" stroke="#94a3b8" stroke-width="6"/>`;
+    out += `<line x1="${X(c1)}" y1="${Y(r1)}" x2="${X(c2)}" y2="${Y(r2)}" stroke="#16202f" stroke-width="2.5" stroke-dasharray="5 6"/>`;
+  });
+  // 行营
+  CAMPS.forEach(k => {
+    const [r, c] = RC(k);
+    out += `<circle cx="${X(c)}" cy="${Y(r)}" r="26" fill="#1c2a3d" stroke="#5a6b85" stroke-width="1.6" stroke-dasharray="4 4"/>`;
+    out += `<text x="${X(c)}" y="${Y(r) + 4}" font-size="11" fill="#4a5b74" text-anchor="middle">行营</text>`;
+  });
+  // 山界
+  [1, 3].forEach(c => {
+    out += `<rect x="${X(c) - 38}" y="472" width="76" height="66" rx="10" fill="#2a3850" stroke="#3d4d68"/>`;
+    out += `<text x="${X(c)}" y="510" font-size="16" fill="#5a6b85" text-anchor="middle">山 界</text>`;
+  });
+  svg.innerHTML = out;
+})();
+
+/* ---- 事件 ---- */
+boardEl.addEventListener('click', e => {
+  const rect = boardEl.getBoundingClientRect();
+  const vx = (e.clientX - rect.left) / rect.width * VW;
+  const vy = (e.clientY - rect.top) / rect.height * VH;
+  let bestK = null, bd = 1e9;
+  NODES.forEach(k => {
+    const [r, c] = RC(k);
+    const d = Math.abs(vx - X(c)) + Math.abs(vy - Y(r));
+    if (d < bd) { bd = d; bestK = k; }
+  });
+  if (bestK) {
+    const [r, c] = RC(bestK);
+    if (Math.abs(vx - X(c)) <= 46 && Math.abs(vy - Y(r)) <= 39) handleNode(bestK);
+  }
+});
+$('newGameBtn').addEventListener('click', newGame);
+$('ovBtn').addEventListener('click', newGame);
+
+new ResizeObserver(() => {
+  boardEl.style.fontSize = (boardEl.clientWidth * 0.043) + 'px';
+}).observe(boardEl);
+
+newGame();
+</script>
+</body>
+</html>
