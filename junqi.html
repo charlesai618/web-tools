@@ -123,17 +123,25 @@
   }
   #toast.show { opacity: 1; }
 
-  #overlay {
+  #overlay, #startOverlay {
     position: fixed; inset: 0; background: rgba(2,6,23,.72);
     display: none; align-items: center; justify-content: center; z-index: 60;
   }
-  #overlay.show { display: flex; }
-  #overlay .panel {
+  #overlay.show, #startOverlay.show { display: flex; }
+  #overlay .panel, #startOverlay .panel {
     background: #1e293b; border: 1px solid #475569; border-radius: 16px;
     padding: 34px 44px; text-align: center; max-width: 90vw;
   }
-  #overlay .panel h2 { font-size: 1.6rem; margin-bottom: 8px; color: #f8fafc; }
-  #overlay .panel p { color: #94a3b8; margin-bottom: 20px; }
+  #overlay .panel h2, #startOverlay .panel h2 { font-size: 1.6rem; margin-bottom: 8px; color: #f8fafc; }
+  #overlay .panel p, #startOverlay .panel p { color: #94a3b8; margin-bottom: 20px; }
+  button.primary.alt { background: #475569; }
+  button.primary.alt:hover { background: #334155; }
+  .audioRow { display: flex; gap: 10px; }
+  .audioRow button {
+    flex: 1; padding: 8px; border: none; border-radius: 8px;
+    background: #334155; color: #94a3b8; font-size: .85rem; cursor: pointer;
+  }
+  .audioRow button.on { background: #2563eb; color: #fff; }
 
   @media (max-width: 860px) {
     .layout { flex-direction: column; align-items: center; }
@@ -180,7 +188,7 @@
       <summary>规则说明</summary>
       <ul>
         <li>50 枚棋子背面朝上随机摆放，行营留空。</li>
-        <li>你先手翻子：<b>翻出的颜色归电脑</b>，另一色归你。</li>
+        <li>开局可选先手或后手；<b>先手翻出的棋子颜色归对方</b>。</li>
         <li>每回合可「翻开一子」或「移动一枚己方已翻开的棋子」。</li>
         <li>未翻开的棋子不能被攻击，会挡路。</li>
         <li>大子吃小子，同级同归于尽；<b>禁止送吃</b>（小子不能主动碰大子）。</li>
@@ -191,11 +199,28 @@
       </ul>
     </details>
 
+    <div class="card">
+      <div class="audioRow">
+        <button id="bgmBtn">🎵 音乐：开</button>
+        <button id="sfxBtn">🔊 音效：开</button>
+      </div>
+    </div>
+
     <button class="primary" id="newGameBtn">重新开局</button>
   </aside>
 </div>
 
 <div id="toast"></div>
+<div id="startOverlay">
+  <div class="panel">
+    <h2>⚔️ 军棋 · 暗翻棋</h2>
+    <p>请选择先后手 —— 先手翻开的棋子，其颜色归<b>对方</b>所有</p>
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <button class="primary" id="btnFirst" style="width:auto; padding:10px 28px;">我先手</button>
+      <button class="primary alt" id="btnSecond" style="width:auto; padding:10px 28px;">电脑先手</button>
+    </div>
+  </div>
+</div>
 <div id="overlay">
   <div class="panel">
     <h2 id="ovTitle"></h2>
@@ -267,7 +292,7 @@ function makeSet(side) {
 
 /* ================= 状态 ================= */
 const DRAW_LIMIT = 40;
-let board, pieces, turn, phase, humanSide, aiSide, selected, curMoves, noProgress, over, aiTimer;
+let board, pieces, turn, phase, humanSide, aiSide, selected, curMoves, noProgress, over, aiTimer, choosing = false;
 
 const $ = id => document.getElementById(id);
 const boardEl = $('board');
@@ -329,6 +354,92 @@ function genMoves(bd, k) {
   return [...res];
 }
 
+/* ================= 音频（Web Audio 合成） ================= */
+let audioCtx = null, bgmTimer = null, bgmPlaying = false;
+let sfxOn = localStorage.getItem('junqi_sfx') !== '0';
+let bgmOn = localStorage.getItem('junqi_bgm') !== '0';
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function sTone(freq, dur, type = 'sine', vol = 0.15, delay = 0, endFreq) {
+  if (!sfxOn) return;
+  const ctx = ac(), t = ctx.currentTime + delay;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function sNoise(dur, vol, cutoff, delay = 0) {
+  if (!sfxOn) return;
+  const ctx = ac(), t = ctx.currentTime + delay;
+  const n = Math.floor(ctx.sampleRate * dur);
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff;
+  const g = ctx.createGain(); g.gain.value = vol;
+  src.connect(f); f.connect(g); g.connect(ctx.destination);
+  src.start(t);
+}
+const SFX = {
+  flip()    { sNoise(0.06, 0.22, 3000); sTone(660, 0.09, 'triangle', 0.12, 0.02, 880); },
+  move()    { sTone(300, 0.06, 'sine', 0.1); sNoise(0.03, 0.1, 2000); },
+  select()  { sTone(880, 0.05, 'sine', 0.07); },
+  capture() { sTone(520, 0.16, 'square', 0.09, 0, 180); sNoise(0.12, 0.22, 1200, 0.02); },
+  boom()    { sNoise(0.5, 0.45, 500); sTone(150, 0.5, 'sine', 0.28, 0, 40); },
+  dig()     { sTone(1400, 0.04, 'square', 0.08); sTone(1100, 0.04, 'square', 0.08, 0.09); sTone(90, 0.25, 'sine', 0.22, 0.18, 50); },
+  alert()   { [660, 880, 660, 880].forEach((f, i) => sTone(f, 0.12, 'triangle', 0.1, i * 0.14)); },
+  illegal() { sTone(140, 0.18, 'sawtooth', 0.08); },
+  win()     { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => sTone(f, 0.24, 'triangle', 0.13, i * 0.16)); },
+  lose()    { [440, 392, 330, 262].forEach((f, i) => sTone(f, 0.3, 'triangle', 0.11, i * 0.22)); },
+  draw()    { [392, 392, 330].forEach((f, i) => sTone(f, 0.26, 'triangle', 0.1, i * 0.24)); },
+};
+// 背景音乐：简易进行曲循环（五声音阶原创旋律）
+const NOTE = { G2:98.00, C3:130.81, G3:196.00, C4:261.63, D4:293.66, E4:329.63, G4:392.00, A4:440.00, C5:523.25, D5:587.33 };
+const TEMPO = 0.30;
+const MELODY = [
+  ['G4',1],['G4',.5],['G4',.5],['E4',1],['G4',1],
+  ['C5',1.5],['G4',.5],['E4',1],['G4',1],
+  ['A4',1],['A4',.5],['A4',.5],['G4',1],['E4',1],
+  ['D4',1.5],['E4',.5],['D4',1],[0,1],
+  ['E4',1],['G4',.5],['G4',.5],['A4',1],['C5',1],
+  ['D5',1.5],['C5',.5],['A4',1],['G4',1],
+  ['E4',1],['G4',1],['D4',.5],['E4',.5],['D4',1],
+  ['C4',2],[0,2],
+];
+function bgmNote(freq, t, dur, type, vol) {
+  const ctx = ac();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.02);
+  g.gain.setValueAtTime(vol, Math.max(t + 0.03, t + dur - 0.08));
+  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function scheduleBgm(t0) {
+  if (!bgmPlaying) return;
+  const ctx = ac();
+  let t = t0;
+  MELODY.forEach(([n, b]) => {
+    if (n) bgmNote(NOTE[n], t, b * TEMPO * 0.92, 'triangle', 0.05);
+    t += b * TEMPO;
+  });
+  const beats = Math.floor((t - t0) / TEMPO);
+  for (let i = 0; i < beats; i++)
+    bgmNote(i % 2 ? NOTE.G2 : NOTE.C3, t0 + i * TEMPO, TEMPO * 0.4, 'sine', 0.055);
+  bgmTimer = setTimeout(() => scheduleBgm(t), Math.max(100, (t - ctx.currentTime - 0.25) * 1000));
+}
+function startBgm() { stopBgm(); bgmPlaying = true; scheduleBgm(ac().currentTime + 0.15); }
+function stopBgm() { bgmPlaying = false; clearTimeout(bgmTimer); }
+
 /* ================= 对局流程 ================= */
 function newGame() {
   clearTimeout(aiTimer);
@@ -345,7 +456,25 @@ function newGame() {
   renderPieces(); clearHints();
   $('log').innerHTML = ''; $('deadRed').innerHTML = ''; $('deadBlue').innerHTML = '';
   $('overlay').classList.remove('show');
-  log('新对局开始。请点击任意棋子翻开 —— <b>翻出的颜色归电脑</b>，另一种颜色归你。');
+  choosing = true;
+  $('startOverlay').classList.add('show');
+  log('新对局开始。请选择先后手 —— 先手翻出的棋子颜色归对方。');
+  updateStatus();
+}
+
+function startPlay(humanFirst) {
+  choosing = false;
+  $('startOverlay').classList.remove('show');
+  if (bgmOn) startBgm();
+  if (humanFirst) {
+    turn = 'human';
+    log('你选择<b>先手</b>：请点击任意棋子翻开。');
+    toast('你先手：请翻开任意一子');
+  } else {
+    turn = 'ai';
+    log('你选择<b>后手</b>：电脑先翻子。');
+    aiTimer = setTimeout(aiTurn, 600);
+  }
   updateStatus();
 }
 
@@ -357,10 +486,13 @@ function flipPiece(k, byHuman) {
   if (p.special === 'flag') p.el.classList.add('flagp');
   p.el.textContent = p.kind;
   setTimeout(() => p.el && p.el.classList.remove('flip'), 350);
+  SFX.flip();
   log(`${byHuman ? '你' : '电脑'}翻开了 ${nm(p)}`);
   if (phase === 'first') {
-    aiSide = p.side; humanSide = oppOf(p.side); phase = 'play';
-    log(`首翻为${sideNm(p.side)}色 → 电脑执<b>${sideNm(aiSide)}</b>，你执<b>${sideNm(humanSide)}</b>`);
+    if (byHuman) { aiSide = p.side; humanSide = oppOf(p.side); }
+    else { humanSide = p.side; aiSide = oppOf(p.side); }
+    phase = 'play';
+    log(`首翻为${sideNm(p.side)}色，归对方所有 → 你执<b>${sideNm(humanSide)}</b>，电脑执<b>${sideNm(aiSide)}</b>`);
     toast(`你执 ${sideNm(humanSide)} 方！`);
   }
 }
@@ -379,11 +511,13 @@ function doMove(from, to) {
   let captured = false;
   if (!t) {
     board[to] = p; p.pos = to; setPos(p);
+    SFX.move();
     if (turn === 'ai') log(`电脑：${nm(p)} 移动`);
   } else {
     captured = true;
     if (t.special === 'flag') {
       kill(t); board[to] = p; p.pos = to; setPos(p);
+      SFX.capture();
       log(`${nm(p)} 夺得 ${nm(t)}！`);
       updateStatus();
       endGame(p.side);
@@ -391,19 +525,25 @@ function doMove(from, to) {
     }
     if (p.special === 'bomb' || t.special === 'bomb') {
       kill(p); kill(t); board[to] = null;
+      SFX.boom();
       log(`${nm(p)} 与 ${nm(t)} 同归于尽`);
     } else if (t.special === 'mine') {
       kill(t); board[to] = p; p.pos = to; setPos(p);
+      SFX.dig();
       log(`${nm(p)} 挖掉了 ${nm(t)}！`);
     } else if (p.rank > t.rank) {
       kill(t); board[to] = p; p.pos = to; setPos(p);
+      SFX.capture();
       log(`${nm(p)} 吃掉了 ${nm(t)}`);
     } else {
       kill(p); kill(t); board[to] = null;
+      SFX.boom();
       log(`${nm(p)} 与 ${nm(t)} 同归于尽`);
     }
-    if (t.special === 'mine' && minesLeft(t.side) === 0)
+    if (t.special === 'mine' && minesLeft(t.side) === 0) {
+      SFX.alert();
       log(`⚠️ ${sideNm(t.side)}方地雷已全部清空，其军旗可被夺取！`);
+    }
   }
   noProgress = captured ? 0 : noProgress + 1;
   endTurn();
@@ -432,11 +572,13 @@ function endTurn() {
 function endGame(winnerSide) {
   over = true; clearTimeout(aiTimer);
   const youWin = winnerSide === humanSide;
+  if (youWin) SFX.win(); else SFX.lose();
   showOverlay(youWin ? '🎉 你获胜！' : '💻 电脑获胜',
     `${sideNm(winnerSide)}方成功夺得对方军旗`);
 }
 function drawGame(reason) {
   over = true; clearTimeout(aiTimer);
+  SFX.draw();
   log(`🤝 和棋：${reason}`);
   showOverlay('🤝 和棋', reason);
 }
@@ -448,23 +590,24 @@ function showOverlay(title, reason) {
 
 /* ================= 人类交互 ================= */
 function handleNode(k) {
-  if (over) return;
+  if (over || choosing) return;
   if (turn !== 'human') { toast('等待电脑走棋…'); return; }
   const p = board[k];
   if (p && !p.revealed) { clearSel(); flipPiece(k, true); endTurn(); return; }
   if (p && humanSide && p.side === humanSide) {
     if (selected === k) { clearSel(); return; }
-    if (p.special === 'mine' || p.special === 'flag') { toast(p.kind + ' 不能移动'); clearSel(); return; }
+    if (p.special === 'mine' || p.special === 'flag') { SFX.illegal(); toast(p.kind + ' 不能移动'); clearSel(); return; }
     selected = k; curMoves = genMoves(board, k); renderHints();
+    SFX.select();
     if (!curMoves.length) toast('这枚棋子暂时无路可走');
     return;
   }
   if (selected) {
     if (curMoves.includes(k)) { const from = selected; clearSel(); doMove(from, k); return; }
-    if (p) { toast(explainIllegal(board[selected], k)); return; }
+    if (p) { SFX.illegal(); toast(explainIllegal(board[selected], k)); return; }
     clearSel(); return;
   }
-  if (p) toast('这是对方的棋子');
+  if (p) { SFX.illegal(); toast('这是对方的棋子'); }
 }
 
 function explainIllegal(p, k) {
@@ -672,7 +815,7 @@ function updateStatus() {
   if (humanSide) {
     h.innerHTML = `<span class="t-${humanSide}">${sideNm(humanSide)}方</span>（电脑执${sideNm(aiSide)}）`;
   } else h.textContent = '待定（请先翻子）';
-  $('stTurn').textContent = over ? '对局结束' : (turn === 'human' ? '你' : '电脑思考中…');
+  $('stTurn').textContent = over ? '对局结束' : choosing ? '待开局' : (turn === 'human' ? '你' : '电脑思考中…');
   $('stRedMine').textContent = pieces ? minesLeft('red') + ' / 3' : '3';
   $('stBlueMine').textContent = pieces ? minesLeft('blue') + ' / 3' : '3';
   $('stCounter').textContent = noProgress + ' / ' + DRAW_LIMIT;
@@ -749,6 +892,25 @@ boardEl.addEventListener('click', e => {
 });
 $('newGameBtn').addEventListener('click', newGame);
 $('ovBtn').addEventListener('click', newGame);
+$('btnFirst').addEventListener('click', () => startPlay(true));
+$('btnSecond').addEventListener('click', () => startPlay(false));
+
+function syncAudioBtns() {
+  const b = $('bgmBtn'), s = $('sfxBtn');
+  b.textContent = '🎵 音乐：' + (bgmOn ? '开' : '关'); b.classList.toggle('on', bgmOn);
+  s.textContent = '🔊 音效：' + (sfxOn ? '开' : '关'); s.classList.toggle('on', sfxOn);
+}
+$('bgmBtn').addEventListener('click', () => {
+  bgmOn = !bgmOn; localStorage.setItem('junqi_bgm', bgmOn ? '1' : '0');
+  if (bgmOn) startBgm(); else stopBgm();
+  syncAudioBtns();
+});
+$('sfxBtn').addEventListener('click', () => {
+  sfxOn = !sfxOn; localStorage.setItem('junqi_sfx', sfxOn ? '1' : '0');
+  if (sfxOn) SFX.select();
+  syncAudioBtns();
+});
+syncAudioBtns();
 
 new ResizeObserver(() => {
   boardEl.style.fontSize = (boardEl.clientWidth * 0.043) + 'px';
