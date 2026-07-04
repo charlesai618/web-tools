@@ -641,37 +641,74 @@ function distMap(target) {
   }
   return d;
 }
-// 在棋盘 bd 上，能吃掉位于 k 的棋子 p 的敌方棋子
-function attackersOf(bd, k, p) {
-  const res = [];
-  pieces.forEach(e => {
-    if (!e.alive || !e.revealed || e.side === p.side || !e.pos) return;
-    if (e.special === 'mine' || e.special === 'flag') return;
-    if (bd[e.pos] !== e) return;
-    const kills = e.special === 'bomb' || e.rank >= p.rank || p.special === 'bomb';
-    if (!kills) return;
-    if (genMoves(bd, e.pos).includes(k)) res.push(e);
-  });
-  return res;
+function multiDist(targets) {
+  const d = {}, q = [];
+  targets.forEach(t => { d[t] = 0; q.push(t); });
+  while (q.length) {
+    const cur = q.shift();
+    adj[cur].forEach(n => { if (d[n] === undefined) { d[n] = d[cur] + 1; q.push(n); } });
+  }
+  return d;
+}
+let dmCache = {}, fdDist = null;
+function getDM(k) { return dmCache[k] || (dmCache[k] = distMap(k)); }
+
+// 我方（AI）能否在 bd 上吃掉位于 k 的 victim（用于估算对手吃子后的反吃）
+function aiCanCaptureAt(bd, k, victim) {
+  return pieces.some(x => x.alive && x.revealed && x.side === aiSide && x.pos &&
+    bd[x.pos] === x && x.special !== 'mine' && x.special !== 'flag' &&
+    (x.special === 'bomb' || victim.special === 'bomb' || x.rank >= victim.rank) &&
+    genMoves(bd, x.pos).includes(k));
+}
+// 对手（人类）在棋盘 bd 上走一步能得到的最大收益
+function enemyBestGain(bd) {
+  let best = 0;
+  for (const e of pieces) {
+    if (!e.alive || !e.revealed || e.side !== humanSide || !e.pos) continue;
+    if (e.special === 'mine' || e.special === 'flag') continue;
+    if (bd[e.pos] !== e) continue;
+    for (const to of genMoves(bd, e.pos)) {
+      const t = bd[to];
+      if (!t) continue;
+      let g, eSurvives;
+      if (t.special === 'flag') { g = 5000; eSurvives = true; }
+      else if (t.special === 'mine') {
+        eSurvives = e.special !== 'bomb';
+        g = eSurvives ? 120 : 120 - pv(e) * 0.8;
+      }
+      else if (e.special === 'bomb' || t.special === 'bomb') { g = pv(t) - pv(e) * 0.85; eSurvives = false; }
+      else if (e.rank > t.rank) { g = pv(t); eSurvives = true; }
+      else { g = pv(t) - pv(e) * 0.9; eSurvives = false; }
+      // 反吃折减：对手吃完后若会被我方反吃，收益打折
+      if (eSurvives && g < 4000 && !CAMPS.has(to)) {
+        const bd2 = Object.assign({}, bd);
+        bd2[e.pos] = null; bd2[to] = e;
+        if (aiCanCaptureAt(bd2, to, e)) g -= pv(e) * 0.7;
+      }
+      if (g > best) best = g;
+    }
+  }
+  return best;
 }
 function aiFlagExposed() {
   const f = pieces.find(x => x.side === aiSide && x.special === 'flag');
   return f && f.alive && f.revealed && minesLeft(aiSide) === 0;
 }
 
-function scoreFlip(k) {
+function scoreFlip(k, baseThreat) {
   const fd = NODES.filter(n => board[n] && !board[n].revealed).length;
-  let s = 12 + 50 * (fd / 50);
-  const hasMovable = pieces.some(p => p.alive && p.revealed && p.side === aiSide && p.pos && genMoves(board, p.pos).length);
-  if (!hasMovable) s += 200;
+  let s = 4 + 26 * (fd / 50);
+  const movableCnt = pieces.filter(p => p.alive && p.revealed && p.side === aiSide && p.pos && genMoves(board, p.pos).length).length;
+  if (movableCnt === 0) s += 200;
+  else if (movableCnt < 3) s += 15;
   adj[k].forEach(n => {
     const q = board[n];
     if (q && q.revealed) {
-      if (q.side !== aiSide && (q.rank >= 6 || q.special === 'bomb')) s -= 7;
-      if (q.side === aiSide && q.rank >= 6) s += 4;
+      if (q.side !== aiSide && (q.rank >= 6 || q.special === 'bomb')) s -= 8;
+      if (q.side === aiSide && q.rank >= 6) s += 6;
     }
   });
-  return s + Math.random() * 6;
+  return s - baseThreat * 0.9 + Math.random() * 5;
 }
 
 function scoreMove(a) {
@@ -689,7 +726,7 @@ function scoreMove(a) {
     } else if (t.special === 'bomb') {
       survives = false; s += pv(t) - pv(p);
     } else if (p.rank > t.rank) {
-      s += pv(t);
+      s += pv(t) * 1.35 + 8;   // 主动吃子奖励
     } else {
       survives = false; s += pv(t) - pv(p) * 0.9;
     }
@@ -700,29 +737,30 @@ function scoreMove(a) {
     // 同理：拼掉己方最后一个可动子也会葬送胜机
     if (!survives && movable(p) && !pieces.some(x => x !== p && x.side === p.side && movable(x))) s -= 800;
   }
+  // 一步前瞻：模拟走完后，对手最佳回应的收益（涵盖送吃、挂子、护旗、避险）
+  const bd = Object.assign({}, board);
+  bd[a.from] = null; bd[a.to] = survives ? p : null;
+  s -= enemyBestGain(bd) * 0.9;
   if (survives) {
-    const bd = Object.assign({}, board);
-    bd[a.from] = null; bd[a.to] = p;
-    const atks = attackersOf(bd, a.to, p);
-    if (atks.length) {
-      let worst = 0;
-      atks.forEach(e => {
-        let r;
-        if (e.special === 'bomb') r = pv(p) - pv(e) * 0.5;
-        else if (e.rank > p.rank) r = pv(p);
-        else r = Math.max(0, pv(p) - pv(e)) + 5;
-        if (r > worst) worst = r;
-      });
-      s -= worst * 0.85;
-    } else {
-      const nowAtks = attackersOf(board, a.from, p).filter(e => e.special === 'bomb' || e.rank > p.rank);
-      if (nowAtks.length) s += pv(p) * 0.55;
-    }
+    if (CAMPS.has(a.to)) s += 10;   // 行营是安全据点
+    // 落点能威胁到的目标（下一步可吃）
+    let create = 0;
+    genMoves(bd, a.to).forEach(to2 => {
+      const t2 = bd[to2];
+      if (!t2 || t2.side === aiSide || !t2.revealed) return;
+      let g2 = 0;
+      if (t2.special === 'flag') g2 = 800;
+      else if (t2.special === 'mine') g2 = 130;
+      else if (p.special === 'bomb') g2 = pv(t2) - 50;
+      else if (t2.special !== 'bomb' && p.rank > t2.rank) g2 = pv(t2);
+      if (g2 > create) create = g2;
+    });
+    s += create * 0.3;
     const enemy = oppOf(aiSide);
     // 冲向敌方军旗（雷已清空、且自己是最小子或炸弹）
     const flag = pieces.find(x => x.side === enemy && x.special === 'flag' && x.alive && x.revealed && x.pos);
     if (flag && minesLeft(enemy) === 0 && (p.special === 'bomb' || p.rank === minRank(aiSide))) {
-      const dm = distMap(flag.pos);
+      const dm = getDM(flag.pos);
       s += ((dm[a.from] ?? 99) - (dm[a.to] ?? 99)) * 12 + 6;
     }
     // 工兵扑向已翻开的敌雷
@@ -731,7 +769,7 @@ function scoreMove(a) {
       if (ms.length) {
         let g = -99;
         ms.forEach(m => {
-          const dm = distMap(m.pos);
+          const dm = getDM(m.pos);
           g = Math.max(g, (dm[a.from] ?? 99) - (dm[a.to] ?? 99));
         });
         s += g * 8;
@@ -744,12 +782,14 @@ function scoreMove(a) {
       if (prey.length) {
         let g = -99;
         prey.forEach(x => {
-          const dm = distMap(x.pos);
+          const dm = getDM(x.pos);
           g = Math.max(g, (dm[a.from] ?? 99) - (dm[a.to] ?? 99));
         });
-        s += g * 1.5;
+        s += g * 5;
       }
     }
+    // 无事可做时向未翻开区域推进，保持活跃
+    if (fdDist) s += ((fdDist[a.from] ?? 99) - (fdDist[a.to] ?? 99)) * 1.2;
     if (a.to === p.lastFrom) s -= 14;   // 抑制来回摇摆
   }
   return s + Math.random() * 4;
@@ -757,6 +797,10 @@ function scoreMove(a) {
 
 function aiTurn() {
   if (over || turn !== 'ai') return;
+  dmCache = {};
+  const fds = NODES.filter(n => board[n] && !board[n].revealed);
+  fdDist = fds.length ? multiDist(fds) : null;
+  const baseThreat = (humanSide && phase === 'play') ? enemyBestGain(board) : 0;
   const acts = [];
   NODES.forEach(k => { const p = board[k]; if (p && !p.revealed) acts.push({ type: 'flip', k }); });
   pieces.forEach(p => {
@@ -766,7 +810,7 @@ function aiTurn() {
   if (!acts.length) { drawGame('电脑无棋可走'); return; }
   let best = null, bs = -1e18;
   acts.forEach(a => {
-    const s = a.type === 'flip' ? scoreFlip(a.k) : scoreMove(a);
+    const s = a.type === 'flip' ? scoreFlip(a.k, baseThreat) : scoreMove(a);
     if (s > bs) { bs = s; best = a; }
   });
   if (best.type === 'flip') { flipPiece(best.k, false); endTurn(); }
