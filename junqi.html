@@ -300,10 +300,15 @@ const oppOf = s => s === 'red' ? 'blue' : 'red';
 const sideNm = s => s === 'red' ? '红' : '蓝';
 const nm = p => `<span class="t-${p.side}">${sideNm(p.side)}·${p.kind}</span>`;
 
-function minesLeft(side) { return pieces.filter(x => x.side === side && x.special === 'mine' && x.alive).length; }
+function minesLeft(side) {
+  let n = 0;
+  for (const x of pieces) if (x.side === side && x.special === 'mine' && x.alive) n++;
+  return n;
+}
 function minRank(side) {
-  const rs = pieces.filter(x => x.side === side && x.alive && x.rank > 0).map(x => x.rank);
-  return rs.length ? Math.min(...rs) : 99;
+  let m = 99;
+  for (const x of pieces) if (x.side === side && x.alive && x.rank > 0 && x.rank < m) m = x.rank;
+  return m;
 }
 
 /* ================= 走法与吃子规则 ================= */
@@ -653,67 +658,51 @@ function multiDist(targets) {
 let dmCache = {}, fdDist = null, moveFieldCache = {};
 function getDM(k) { return dmCache[k] || (dmCache[k] = distMap(k)); }
 
-// 一步可达的空位集合（忽略吃子，只看走位；含铁路滑行/工兵铁路BFS）
-function stepReach(bd, k, isEng) {
-  const res = [];
-  adj[k].forEach(n => { if (!bd[n]) res.push(n); });
-  if (railNodes.has(k)) {
-    if (isEng) {
-      const vis = new Set([k]), q = [k];
-      while (q.length) {
-        const cur = q.shift();
-        railAdj[cur].forEach(n => {
-          if (vis.has(n)) return; vis.add(n);
-          if (!bd[n]) { res.push(n); q.push(n); }
-        });
-      }
-    } else {
-      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr, dc]) => {
-        let [r, c] = RC(k);
-        for (;;) {
-          const nr = r + dr, nc = c + dc;
-          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
-          const nk = K(nr, nc);
-          if (!railEdges.has(K(r, c) + '|' + nk)) break;
-          if (bd[nk]) break;
-          res.push(nk); r = nr; c = nc;
-        }
-      });
-    }
-  }
-  return res;
-}
-// 从目标点集反向 BFS 出"真实走棋步数"场：铁路一滑算一步（走位对称，反向即正向）
+// 从目标点集反向 BFS 出"真实走棋步数"场：铁路一滑算一步（走位对称，反向即正向）。
+// 占用格会被赋距离（站在那里的棋子读得到自己离目标多远），但不可穿越。
 function moveDistField(bd, targets, isEng) {
   const d = {}, q = [];
   targets.forEach(t => { d[t] = 0; q.push(t); });
   while (q.length) {
     const cur = q.shift();
-    stepReach(bd, cur, isEng).forEach(n => {
-      if (d[n] === undefined) { d[n] = d[cur] + 1; q.push(n); }
-    });
+    const step = [...adj[cur]];
+    if (railNodes.has(cur)) {
+      if (isEng) {
+        const vis = new Set([cur]), qq = [cur];
+        while (qq.length) {
+          const c2 = qq.shift();
+          railAdj[c2].forEach(n => {
+            if (vis.has(n)) return; vis.add(n);
+            step.push(n);
+            if (!bd[n]) qq.push(n);
+          });
+        }
+      } else {
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr, dc]) => {
+          let [r, c] = RC(cur);
+          for (;;) {
+            const nr = r + dr, nc = c + dc;
+            if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+            const nk = K(nr, nc);
+            if (!railEdges.has(K(r, c) + '|' + nk)) break;
+            step.push(nk);
+            if (bd[nk]) break;
+            r = nr; c = nc;
+          }
+        });
+      }
+    }
+    for (const n of step) {
+      if (d[n] !== undefined) continue;
+      d[n] = d[cur] + 1;
+      if (!bd[n]) q.push(n);
+    }
   }
   return d;
 }
 function getMoveField(targets, isEng) {
   const key = targets.join('|') + (isEng ? 'E' : 'N');
   return moveFieldCache[key] || (moveFieldCache[key] = moveDistField(board, targets, isEng));
-}
-
-// 占位感知的最短路：途经点必须为空（用于判断"真的走得过去吗"）
-function occDist(bd, from, to) {
-  if (from === to) return 0;
-  const d = { [from]: 0 }, q = [from];
-  while (q.length) {
-    const cur = q.shift();
-    for (const n of adj[cur]) {
-      if (d[n] !== undefined) continue;
-      if (n === to) return d[cur] + 1;
-      if (bd[n]) continue;
-      d[n] = d[cur] + 1; q.push(n);
-    }
-  }
-  return 99;
 }
 
 // 行营质量（从 mover 视角）：安全据点 + 出击跳板
@@ -734,102 +723,176 @@ function campQuality(bd, k, mover) {
   v += Math.min(fdCnt, 4) * 7;              // 邻近暗子是跳板价值，但边际递减
   return Math.min(v, 60);
 }
-// AI 占营价值 = 自身质量 + 拒止价值（对手正觊觎此营时，抢占等于夺走它的收益）
-function campValue(bd, k, p) {
-  const own = campQuality(bd, k, p);
-  let denial = 0;
-  adj[k].forEach(n => {
-    const q = bd[n];
-    if (q && q.revealed && q.side !== p.side && q.special !== 'mine' && q.special !== 'flag' &&
-        (q.rank > 0 || q.special === 'bomb'))
-      denial = Math.max(denial, campQuality(bd, k, q));
+/* ---------- 象棋引擎式搜索：迭代加深 α-β 负极大 + 吃子静态延伸 ---------- */
+const WIN = 100000, SEARCH_ABORT = { abort: true };
+const CAMP_LIST = [...CAMPS];
+let searchDeadline = 0, searchNodes = 0, fdRemain = 0, EV = null;
+let AI_TIME_BUDGET = 380;   // 每步思考时限（毫秒）
+
+// 走法对象：吃子结局在生成时即确定（军棋吃子无随机性）
+function moveObj(p, from, to) {
+  const t = board[to] || null;
+  let pDies = false, win = false;
+  if (t) {
+    if (t.special === 'flag') win = true;
+    else if (p.special === 'bomb' || t.special === 'bomb') pDies = true;
+    else if (t.special === 'mine') pDies = false;          // 能进来的只有工兵（炸弹已在上面）
+    else if (p.rank === t.rank) pDies = true;
+  }
+  return { p, from, to, t, pDies, win };
+}
+function genSideMoves(side) {
+  const list = [];
+  for (const x of pieces) {
+    if (!x.alive || !x.revealed || x.side !== side || !x.pos) continue;
+    if (x.special === 'mine' || x.special === 'flag') continue;
+    for (const to of genMoves(board, x.pos)) list.push(moveObj(x, x.pos, to));
+  }
+  list.sort((a, b) => (b.t ? pv(b.t) : 0) - (a.t ? pv(a.t) : 0));   // 先搜吃大子，利于剪枝
+  return list;
+}
+function makeMove(m) {
+  board[m.from] = null;
+  if (m.t) { m.t.alive = false; m.t.pos = null; }
+  if (m.pDies) { m.p.alive = false; m.p.pos = null; board[m.to] = null; }
+  else { board[m.to] = m.p; m.p.pos = m.to; }
+}
+function unmakeMove(m) {
+  if (m.pDies) m.p.alive = true;
+  m.p.pos = m.from; board[m.from] = m.p;
+  if (m.t) { m.t.alive = true; m.t.pos = m.to; board[m.to] = m.t; }
+  else if (!m.pDies) board[m.to] = null;
+}
+
+// 每回合预计算的静态距离场（雷和旗不会动，整个搜索期间有效；铁路一滑算一步）
+function prepEval() {
+  const huMines = [], aiMines = [];
+  let huFlagPos = null, aiFlagPos = null;
+  pieces.forEach(x => {
+    if (!x.alive || !x.revealed || !x.pos) return;
+    if (x.special === 'mine') (x.side === aiSide ? aiMines : huMines).push(x.pos);
+    else if (x.special === 'flag') { if (x.side === aiSide) aiFlagPos = x.pos; else huFlagPos = x.pos; }
   });
-  return own + denial * 0.35;
+  EV = {
+    engToHuMine:      huMines.length ? getMoveField(huMines, true) : null,
+    rushToHuFlag:     huFlagPos ? getMoveField([huFlagPos], minRank(aiSide) === 1) : null,
+    enemyEngToAiMine: aiMines.length ? getMoveField(aiMines, true) : null,
+    enemyRushToAiFlag: aiFlagPos ? getMoveField([aiFlagPos], minRank(humanSide) === 1) : null,
+  };
 }
 
-// 对手逼近我方军旗/地雷的威胁（提前拦截，而不是等到被吃才反应）
-function flagGuardPenalty(bd) {
-  let pen = 0;
-  const myFlag = pieces.find(x => x.side === aiSide && x.special === 'flag' && x.alive && x.revealed && x.pos && bd[x.pos] === x);
-  if (myFlag && minesLeft(aiSide) === 0) {
-    const mr = minRank(humanSide);
-    pieces.forEach(e => {
-      if (!e.alive || !e.revealed || e.side !== humanSide || !e.pos || bd[e.pos] !== e) return;
-      if (e.special === 'mine' || e.special === 'flag') return;
-      if (!(e.special === 'bomb' || e.rank === mr)) return;
-      const d = occDist(bd, e.pos, myFlag.pos);
-      if (d < 6) pen += (6 - d) * 14;
-    });
-  }
-  const myMines = pieces.filter(x => x.side === aiSide && x.special === 'mine' && x.alive && x.revealed && x.pos && bd[x.pos] === x);
-  if (myMines.length) {
-    pieces.forEach(e => {
-      if (!e.alive || !e.revealed || e.side !== humanSide || !e.pos || bd[e.pos] !== e) return;
-      if (e.kind !== '工兵' && e.special !== 'bomb') return;
-      myMines.forEach(m => {
-        const d = occDist(bd, e.pos, m.pos);
-        if (d < 5) pen += (5 - d) * 6;
-      });
-    });
-  }
-  return pen;
-}
-
-// 我方（AI）能否在 bd 上吃掉位于 k 的 victim（用于估算对手吃子后的反吃）
-function aiCanCaptureAt(bd, k, victim) {
-  return pieces.some(x => x.alive && x.revealed && x.side === aiSide && x.pos &&
-    bd[x.pos] === x && x.special !== 'mine' && x.special !== 'flag' &&
-    (x.special === 'bomb' || victim.special === 'bomb' || x.rank >= victim.rank) &&
-    genMoves(bd, x.pos).includes(k));
-}
-// 对手（人类）在棋盘 bd 上走一步能得到的最大收益
-function enemyBestGain(bd) {
-  let best = 0;
-  for (const e of pieces) {
-    if (!e.alive || !e.revealed || e.side !== humanSide || !e.pos) continue;
-    if (e.special === 'mine' || e.special === 'flag') continue;
-    if (bd[e.pos] !== e) continue;
-    for (const to of genMoves(bd, e.pos)) {
-      const t = bd[to];
-      if (!t) {
-        // 对手抢占空行营的阵地收益（拒止不及时就会丢主动权）
-        if (CAMPS.has(to)) {
-          const g2 = campQuality(bd, to, e) * 0.6;
-          if (g2 > best) best = g2;
-        }
-        continue;
-      }
-      let g, eSurvives;
-      if (t.special === 'flag') { g = 5000; eSurvives = true; }
-      else if (t.special === 'mine') {
-        eSurvives = e.special !== 'bomb';
-        g = eSurvives ? 120 : 120 - pv(e) * 0.8;
-      }
-      else if (e.special === 'bomb' || t.special === 'bomb') { g = pv(t) - pv(e) * 0.85; eSurvives = false; }
-      else if (e.rank > t.rank) { g = pv(t); eSurvives = true; }
-      else { g = pv(t) - pv(e) * 0.9; eSurvives = false; }
-      // 反吃折减：对手吃完后若会被我方反吃，收益打折
-      if (eSurvives && g < 4000 && !CAMPS.has(to)) {
-        const bd2 = Object.assign({}, bd);
-        bd2[e.pos] = null; bd2[to] = e;
-        if (aiCanCaptureAt(bd2, to, e)) g -= pv(e) * 0.7;
-      }
-      if (g > best) best = g;
+// 静态评估（AI 视角，正分利于 AI）：材料 + 胜利进度 + 双向威胁逼近 + 行营
+function evaluate() {
+  let aiMr = 99, huMr = 99;
+  for (const x of pieces)
+    if (x.alive && x.rank > 0 && x.rank < (x.side === aiSide ? aiMr : huMr)) {
+      if (x.side === aiSide) aiMr = x.rank; else huMr = x.rank;
     }
+  let s = 0, aiMov = 0, huMov = 0, aiMines = 0, huMines = 0;
+  let aiEngD = 99, huEngD = 99, aiRushD = 99, huRushD = 99;
+  for (const x of pieces) {
+    if (!x.alive) continue;
+    const mine = x.side === aiSide;
+    s += mine ? pv(x) : -pv(x);
+    if (x.special === 'mine') { if (mine) aiMines++; else huMines++; }
+    else if (x.rank > 0 || x.special === 'bomb') { if (mine) aiMov++; else huMov++; }
+    if (!x.pos || !x.revealed) continue;
+    if (mine) {
+      if (x.kind === '工兵' && EV.engToHuMine) {
+        const d = EV.engToHuMine[x.pos] ?? 99; if (d < aiEngD) aiEngD = d;
+      }
+      if (EV.rushToHuFlag && (x.special === 'bomb' || x.rank === aiMr)) {
+        const d = EV.rushToHuFlag[x.pos] ?? 99; if (d < aiRushD) aiRushD = d;
+      }
+    } else {
+      if ((x.kind === '工兵' || x.special === 'bomb') && EV.enemyEngToAiMine) {
+        const d = EV.enemyEngToAiMine[x.pos] ?? 99; if (d < huEngD) huEngD = d;
+      }
+      if (EV.enemyRushToAiFlag && (x.special === 'bomb' || x.rank === huMr)) {
+        const d = EV.enemyRushToAiFlag[x.pos] ?? 99; if (d < huRushD) huRushD = d;
+      }
+    }
+  }
+  // 无子可动且无暗子可翻 → 和棋：局面归零（领先方在搜索中会主动避开这种线路）
+  if (fdRemain === 0 && (aiMov === 0 || huMov === 0)) return 0;
+  // 挖雷进度（吃掉对方雷同时获得材料分+进度分）
+  s += (3 - huMines) * 170 - (3 - aiMines) * 160;
+  // 工兵逼近敌雷 / 敌工兵（炸弹）逼近我雷
+  if (aiEngD < 12) s += (12 - aiEngD) * 8;
+  if (huEngD < 12) s -= (12 - huEngD) * 9;
+  // 夺旗冲刺（对方雷清空后激活；搜索中挖掉最后一颗雷会立即点亮此项）
+  if (huMines === 0 && aiRushD < 14) s += (14 - aiRushD) * 13 + 30;
+  if (aiMines === 0 && huRushD < 14) s -= (14 - huRushD) * 15 + 30;
+  // 行营占领
+  for (const c of CAMP_LIST) {
+    const q = board[c];
+    if (q && q.revealed)
+      s += (q.side === aiSide ? 1 : -1) * campQuality(board, c, q) * 0.6;
+  }
+  return s;
+}
+
+// 负极大 α-β：side 为当前行棋方，返回该方视角分值
+function alphabeta(depth, alpha, beta, side, ply) {
+  if ((++searchNodes & 255) === 0 && performance.now() > searchDeadline) throw SEARCH_ABORT;
+  if (depth <= 0) return qsearch(alpha, beta, side, ply);
+  let best = -Infinity;
+  // 有暗子可翻时，"翻子"是保底安静着法（近似局面不变）——避免臆想对手被迫送子
+  if (fdRemain > 0) {
+    best = (side === aiSide ? 1 : -1) * evaluate();
+    if (best > alpha) alpha = best;
+    if (best >= beta) return best;
+  }
+  const moves = genSideMoves(side);
+  if (!moves.length) return best === -Infinity ? 0 : best;
+  for (const m of moves) {
+    let v;
+    if (m.win) v = WIN - ply;
+    else {
+      makeMove(m);
+      v = -alphabeta(depth - 1, -beta, -alpha, oppOf(side), ply + 1);
+      unmakeMove(m);
+    }
+    if (v > best) { best = v; if (v > alpha) alpha = v; }
+    if (alpha >= beta) break;
   }
   return best;
 }
-function aiFlagExposed() {
-  const f = pieces.find(x => x.side === aiSide && x.special === 'flag');
-  return f && f.alive && f.revealed && minesLeft(aiSide) === 0;
+// 静态延伸：只搜吃子直到局面安静，消除水平线效应
+function qsearch(alpha, beta, side, ply) {
+  if ((++searchNodes & 255) === 0 && performance.now() > searchDeadline) throw SEARCH_ABORT;
+  let best = (side === aiSide ? 1 : -1) * evaluate();
+  if (best >= beta || ply > 16) return best;
+  if (best > alpha) alpha = best;
+  for (const m of genSideMoves(side)) {
+    if (!m.t) continue;
+    let v;
+    if (m.win) v = WIN - ply;
+    else {
+      makeMove(m);
+      v = -qsearch(-beta, -alpha, oppOf(side), ply + 1);
+      unmakeMove(m);
+    }
+    if (v > best) { best = v; if (v > alpha) alpha = v; }
+    if (alpha >= beta) break;
+  }
+  return best;
 }
 
-function scoreFlip(k, baseThreat, baseGuard) {
-  const fd = NODES.filter(n => board[n] && !board[n].revealed).length;
-  let s = 3 + 22 * (fd / 50);
-  const movableCnt = pieces.filter(p => p.alive && p.revealed && p.side === aiSide && p.pos && genMoves(board, p.pos).length).length;
-  if (movableCnt === 0) s += 200;
-  else if (movableCnt < 3) s += 5;
+// 翻子的情报加成（叠加在"站桩"搜索基准值上，与走子的搜索分同尺度比较）
+function infoBonus(k) {
+  let s = 8 + 26 * (fdRemain / 50);
+  let movableCnt = 0, enemyMovableCnt = 0, infoMissing = false;
+  for (const x of pieces) {
+    if (!x.alive) continue;
+    if (x.side === aiSide && x.revealed && (x.rank > 0 || x.special === 'bomb')) movableCnt++;
+    if (x.side === humanSide) {
+      if (x.rank > 0 || x.special === 'bomb') enemyMovableCnt++;
+      if (!x.revealed && (x.special === 'mine' || x.special === 'flag')) infoMissing = true;
+    }
+  }
+  if (movableCnt === 0) s += 500;          // 没有可动子时翻子几乎是唯一选择
+  else if (movableCnt < 3) s += 12;
   adj[k].forEach(n => {
     const q = board[n];
     if (q && q.revealed) {
@@ -837,135 +900,89 @@ function scoreFlip(k, baseThreat, baseGuard) {
       if (q.side === aiSide && q.rank >= 6) s += 6;
     }
   });
-  // 翻子同样重置无吃子计数，僵局时也是破局手段
-  if (noProgress > 20) s += Math.min(noProgress - 20, 16) * 1.5;
-  // 对手残弱进入冲刺期：还没找到对方的雷/旗时，翻子就是最快的情报手段
-  if (humanSide) {
-    const enemyMovableCnt = pieces.filter(x => x.side === humanSide && x.alive && (x.rank > 0 || x.special === 'bomb')).length;
-    const infoMissing = pieces.some(x => x.side === humanSide && x.alive && !x.revealed && (x.special === 'mine' || x.special === 'flag'));
-    if (enemyMovableCnt <= 4 && infoMissing) s += 25;
-  }
-  return s - baseThreat * 0.9 - (baseGuard || 0) + Math.random() * 5;
-}
-
-function scoreMove(a) {
-  const p = board[a.from], t = board[a.to];
-  let s = 0, survives = true;
-  if (t) {
-    if (t.special === 'flag') return 1e9;
-    if (t.special === 'mine') {
-      s += 260;
-      if (p.special === 'bomb') { survives = false; s -= pv(p) * 0.4; }
-      if (minesLeft(t.side) === 1) s += 120;
-    } else if (p.special === 'bomb') {
-      survives = false; s += pv(t) - 58;
-      if (t.rank >= 8) s += 30;
-    } else if (t.special === 'bomb') {
-      survives = false; s += pv(t) - pv(p);
-    } else if (p.rank > t.rank) {
-      s += pv(t) * 1.35 + 8;   // 主动吃子奖励
-    } else {
-      survives = false; s += pv(t) - pv(p) * 0.9;
-    }
-    if (aiFlagExposed() && (t.special === 'bomb' || t.rank === minRank(humanSide))) s += 60;
-    // 对方工兵威胁我方已翻开的地雷，优先清除
-    if (t.kind === '工兵' && pieces.some(m => m.side === aiSide && m.special === 'mine' && m.alive && m.revealed)) s += 25;
-    // 僵局破除：无吃子计数攀升时，提高吃子（重置计数）的优先级，避免 40 步和棋
-    if (noProgress > 20) s += Math.min(noProgress - 20, 16) * 2;
-    // 目标是夺旗获胜而非全歼：吃光对方最后一个可动子会导致和棋，重罚
-    const movable = x => x.alive && (x.rank > 0 || x.special === 'bomb');
-    if (movable(t) && !pieces.some(x => x !== t && x.side === t.side && movable(x))) s -= 800;
-    // 同理：拼掉己方最后一个可动子也会葬送胜机
-    if (!survives && movable(p) && !pieces.some(x => x !== p && x.side === p.side && movable(x))) s -= 800;
-  }
-  // 一步前瞻：模拟走完后，对手最佳回应的收益（涵盖送吃、挂子、护旗、避险）
-  const bd = Object.assign({}, board);
-  bd[a.from] = null; bd[a.to] = survives ? p : null;
-  s -= enemyBestGain(bd) * 0.9;
-  // 对手逼近我军旗/地雷的路径威胁（拦截、堵路、抢先清除都会降低此罚分）
-  s -= flagGuardPenalty(bd);
-  if (survives) {
-    const enemy = oppOf(aiSide);
-    // 对手可动兵力残弱时全力冲刺胜利条件，抢在无子可动/40步和棋之前赢下来
-    const enemyMovableCnt = pieces.filter(x => x.side === enemy && x.alive && (x.rank > 0 || x.special === 'bomb')).length;
-    const rush = enemyMovableCnt <= 4 ? 2.5 : 1;
-    const flag = pieces.find(x => x.side === enemy && x.special === 'flag' && x.alive && x.revealed && x.pos);
-    const canRushFlag = flag && minesLeft(enemy) === 0 && (p.special === 'bomb' || p.rank === minRank(aiSide));
-    const enemyMinesRevealed = pieces.some(x => x.side === enemy && x.special === 'mine' && x.alive && x.revealed);
-    if (CAMPS.has(a.to)) {
-      let cv = campValue(bd, a.to, p);
-      // 身负胜利任务（挖雷/夺旗）的子不恋营
-      if ((p.kind === '工兵' && enemyMinesRevealed) || canRushFlag) cv *= 0.3;
-      s += cv;
-    }
-    // 落点能威胁到的目标（下一步可吃）
-    let create = 0;
-    genMoves(bd, a.to).forEach(to2 => {
-      const t2 = bd[to2];
-      if (!t2 || t2.side === aiSide || !t2.revealed) return;
-      let g2 = 0;
-      if (t2.special === 'flag') g2 = 800;
-      else if (t2.special === 'mine') g2 = 130;
-      else if (p.special === 'bomb') g2 = pv(t2) - 50;
-      else if (t2.special !== 'bomb' && p.rank > t2.rank) g2 = pv(t2);
-      if (g2 > create) create = g2;
-    });
-    s += create * 0.3;
-    // 冲向敌方军旗（雷已清空、且自己是最小子或炸弹）—— 用真实走法步数场，会利用铁路
-    if (canRushFlag) {
-      const F = getMoveField([flag.pos], p.kind === '工兵');
-      s += ((F[a.from] ?? 99) - (F[a.to] ?? 99)) * 30 * rush + 8;
-      if ((F[a.to] ?? 99) <= 1) s += 20;   // 临门一脚
-    }
-    // 工兵扑向已翻开的敌雷 —— 同样按真实走法步数（铁路一滑一步）
-    if (p.kind === '工兵' && enemyMinesRevealed) {
-      const ms = pieces.filter(x => x.side === enemy && x.special === 'mine' && x.alive && x.revealed && x.pos);
-      if (ms.length) {
-        const F = getMoveField(ms.map(m => m.pos), true);
-        s += ((F[a.from] ?? 99) - (F[a.to] ?? 99)) * 30 * rush;
-      }
-    }
-    // 追猎比自己小的已翻开敌子
-    if (p.special !== 'bomb' && p.rank > 1) {
-      const prey = pieces.filter(x => x.side === enemy && x.alive && x.revealed && x.pos &&
-        !CAMPS.has(x.pos) && x.rank > 0 && x.rank < p.rank);
-      if (prey.length) {
-        let g = -99;
-        prey.forEach(x => {
-          const dm = getDM(x.pos);
-          g = Math.max(g, (dm[a.from] ?? 99) - (dm[a.to] ?? 99));
-        });
-        s += g * 5;
-      }
-    }
-    // 无事可做时向未翻开区域推进，保持活跃
-    if (fdDist) s += ((fdDist[a.from] ?? 99) - (fdDist[a.to] ?? 99)) * 1.2;
-    if (a.to === p.lastFrom) s -= 22;   // 抑制来回摇摆
-  }
-  return s + Math.random() * 4;
+  if (noProgress > 20) s += Math.min(noProgress - 20, 16) * 2;   // 翻子重置无吃子计数
+  if (enemyMovableCnt <= 4 && infoMissing) s += 40;              // 冲刺期靠翻子找雷/旗
+  return s + Math.random() * 5;
 }
 
 function aiTurn() {
   if (over || turn !== 'ai') return;
+  const flips = NODES.filter(k => board[k] && !board[k].revealed);
+  // 开局首翻（颜色未定）：随机翻一子
+  if (phase === 'first' || !humanSide) {
+    if (!flips.length) { drawGame('电脑无棋可走'); return; }
+    flipPiece(flips[Math.floor(Math.random() * flips.length)], false); endTurn(); return;
+  }
   dmCache = {}; moveFieldCache = {};
-  const fds = NODES.filter(n => board[n] && !board[n].revealed);
-  fdDist = fds.length ? multiDist(fds) : null;
-  const baseThreat = (humanSide && phase === 'play') ? enemyBestGain(board) : 0;
-  const baseGuard = (humanSide && phase === 'play') ? flagGuardPenalty(board) : 0;
-  const acts = [];
-  NODES.forEach(k => { const p = board[k]; if (p && !p.revealed) acts.push({ type: 'flip', k }); });
-  pieces.forEach(p => {
-    if (p.alive && p.revealed && p.side === aiSide && p.pos)
-      genMoves(board, p.pos).forEach(to => acts.push({ type: 'move', from: p.pos, to }));
-  });
-  if (!acts.length) { drawGame('电脑无棋可走'); return; }
-  let best = null, bs = -1e18;
-  acts.forEach(a => {
-    const s = a.type === 'flip' ? scoreFlip(a.k, baseThreat, baseGuard) : scoreMove(a);
-    if (s > bs) { bs = s; best = a; }
-  });
-  if (best.type === 'flip') { flipPiece(best.k, false); endTurn(); }
-  else doMove(best.from, best.to);
+  fdRemain = flips.length;
+  fdDist = flips.length ? multiDist(flips) : null;
+  prepEval();
+  const rootMoves = genSideMoves(aiSide);
+  if (!rootMoves.length && !flips.length) { drawGame('电脑无棋可走'); return; }
+
+  // 快照：搜索直接在真实棋盘上走/撤，结束后无条件还原（覆盖超时中断的半撤销状态）
+  const snapPieces = pieces.map(x => [x, x.alive, x.pos]);
+  const snapBoard = Object.assign({}, board);
+  const restore = () => {
+    snapPieces.forEach(sp => { sp[0].alive = sp[1]; sp[0].pos = sp[2]; });
+    NODES.forEach(k => { board[k] = snapBoard[k] || null; });
+  };
+
+  const movable = x => x.alive && (x.rank > 0 || x.special === 'bomb');
+  // 根节点现实约束修正（搜索之外的规则性/活跃度因素）
+  const adjust = m => {
+    let b = 0;
+    if (m.t && movable(m.t) && !pieces.some(x => x !== m.t && x.side === m.t.side && movable(x))) b -= 800;
+    if (m.pDies && !pieces.some(x => x !== m.p && x.side === m.p.side && movable(x))) b -= 800;
+    if (m.to === m.p.lastFrom) b -= 18;
+    if (m.t && noProgress > 20) b += Math.min(noProgress - 20, 16) * 2;
+    if (!m.t && fdDist) b += ((fdDist[m.from] ?? 99) - (fdDist[m.to] ?? 99)) * 1.5;
+    if (!m.t && CAMPS.has(m.to)) b += 6;   // 先手占营的主动权价值（eval 里双方对称，这里补先手 tempo）
+    return b + Math.random() * 3;
+  };
+
+  // 迭代加深：限时内逐层加深，用最后完成的一层结果（开局浅、残局自然更深）
+  let bestMove = null, bestVal = -Infinity, passVal = null, depthReached = 0;
+  searchNodes = 0;
+  searchDeadline = performance.now() + AI_TIME_BUDGET;
+  try {
+    for (let depth = 2; depth <= 6; depth++) {
+      let dBest = null, dVal = -Infinity;
+      for (const m of rootMoves) {
+        let v;
+        if (m.win) v = WIN;
+        else {
+          makeMove(m);
+          // 根 α 窗口留 60 分余量，保证 adjust 修正不影响正确性
+          const beta = dVal === -Infinity ? Infinity : -(dVal - 60);
+          v = -alphabeta(depth - 1, -Infinity, beta === Infinity ? Infinity : beta, humanSide, 1);
+          unmakeMove(m);
+        }
+        v += adjust(m);
+        if (v > dVal) { dVal = v; dBest = m; }
+      }
+      // "站桩"基准：本回合不走子（翻子）时，让对手先行的搜索值
+      const dPass = flips.length ? -alphabeta(depth - 1, -Infinity, Infinity, humanSide, 1) : null;
+      bestMove = dBest; bestVal = dVal; passVal = dPass; depthReached = depth;
+    }
+  } catch (e) { if (e !== SEARCH_ABORT) { restore(); throw e; } }
+  restore();
+
+  // 翻子候选：站桩搜索值 + 情报加成，与走子同尺度竞争
+  let bestFlip = null, bestFlipVal = -Infinity;
+  if (flips.length) {
+    const base = passVal !== null ? passVal : evaluate() - 40;
+    for (const k of flips) {
+      const v = base + infoBonus(k);
+      if (v > bestFlipVal) { bestFlipVal = v; bestFlip = k; }
+    }
+  }
+  if (!bestMove && bestFlip === null) { drawGame('电脑无棋可走'); return; }
+  if (bestFlip !== null && (!bestMove || bestFlipVal > bestVal)) {
+    flipPiece(bestFlip, false); endTurn();
+  } else {
+    doMove(bestMove.from, bestMove.to);
+  }
 }
 
 /* ================= 渲染 ================= */
