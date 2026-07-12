@@ -889,7 +889,18 @@ function evaluate() {
         const d = EV.enemyEngToAiMine[x.pos] ?? 99; if (d < huEngD) huEngD = d;
       }
       if (EV.enemyRushToAiFlag && (x.special === 'bomb' || x.rank === huMr)) {
-        const d = EV.enemyRushToAiFlag[x.pos] ?? 99; if (d < huRushD) huRushD = d;
+        const d = EV.enemyRushToAiFlag[x.pos] ?? 99;
+        // 囚禁判定：钥匙子被我方更大的子贴身看守（且不是下一步就夺旗），威胁被中和
+        let jailed = false;
+        if (d > 1 && x.special !== 'bomb') {
+          for (const n of adj[x.pos]) {
+            const g = board[n];
+            if (g && g.revealed && g.side === aiSide &&
+                (g.special === 'bomb' || g.rank > x.rank)) { jailed = true; break; }
+          }
+        }
+        if (jailed) s += 20;                    // 囚禁资产：钥匙在手，旗威胁锁死
+        else if (d < huRushD) huRushD = d;
       }
     }
   }
@@ -1205,8 +1216,35 @@ function aiTurn() {
     }
     else if (m.t) {
       const flagP = pieces.find(x => x.side === aiSide && x.special === 'flag' && x.alive && x.revealed);
-      if (flagP && minesLeft(aiSide) === 0 &&
-          (m.t.special === 'bomb' || m.t.rank === minRank(humanSide))) b += 22;
+      if (flagP && minesLeft(aiSide) === 0) {
+        if (m.t.special === 'bomb') b += 22;   // 炸弹威胁旗：清除无promotion问题
+        else if (m.t.rank > 0 && m.t.rank === minRank(humanSide)) {
+          // 囚禁战术：对方最小子是夺旗的唯一钥匙。吃掉它=把钥匙交给下一任，
+          // 那个子可能不在控制范围内。看住不吃可锁死威胁、争取时间或和棋。
+          const peers = pieces.some(x => x !== m.t && x.alive && x.side === humanSide && x.rank === m.t.rank);
+          const aboutToGrab = EV.enemyRushToAiFlag && ((EV.enemyRushToAiFlag[m.to] ?? 99) <= 1);
+          if (peers) b += 15;                  // 同级钥匙不止一把：吃一个纯赚
+          else if (aboutToGrab) b += 30;       // 关门时刻：它下一步就夺旗，必须吃
+          else {
+            let nextRank = 99;
+            for (const x of pieces)
+              if (x.alive && x.side === humanSide && x.rank > m.t.rank && x.rank < nextRank) nextRank = x.rank;
+            if (nextRank === 99) b += 22;      // 没有下一任钥匙：吃掉永久解除威胁
+            else {
+              // 下一任钥匙是否失控（两步内无我方更大的子看得住它）
+              let uncontrolled = false;
+              for (const x of pieces) {
+                if (!x.alive || x.side !== humanSide || x.rank !== nextRank || !x.pos) continue;
+                const dmX = getDM(x.pos);
+                const guarded = pieces.some(g => g.alive && g.revealed && g.side === aiSide && g.pos &&
+                  (g.special === 'bomb' || g.rank > nextRank) && (dmX[g.pos] ?? 99) <= 2);
+                if (!guarded) { uncontrolled = true; break; }
+              }
+              b -= uncontrolled ? 55 : 12;
+            }
+          }
+        }
+      }
     }
     return b + Math.random() * 3;
   };
