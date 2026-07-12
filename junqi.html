@@ -745,8 +745,9 @@ function campQuality(bd, k, mover) {
 const WIN = 100000, SEARCH_ABORT = { abort: true };
 const CAMP_LIST = [...CAMPS];
 let searchDeadline = 0, searchNodes = 0, fdRemain = 0, EV = null;
-let AI_TIME_BUDGET = 1500;  // 每步思考时限（毫秒）
+let AI_TIME_BUDGET = 2000;  // 每步思考时限（毫秒）
 let tt = new Map();          // 置换表：同一局面不重复搜索
+let histTbl = new Map();     // 历史启发：曾引发剪枝的安静着法优先搜索
 function posKey(side) {
   const a = [side];
   for (const p of pieces) a.push(p.alive ? p.pos : 'x');
@@ -772,7 +773,9 @@ function genSideMoves(side) {
     if (x.special === 'mine' || x.special === 'flag') continue;
     for (const to of genMoves(board, x.pos)) list.push(moveObj(x, x.pos, to));
   }
-  list.sort((a, b) => (b.t ? pv(b.t) : 0) - (a.t ? pv(a.t) : 0));   // 先搜吃大子，利于剪枝
+  // 吃子按被吃方价值优先；安静着法按历史启发得分排序——好的排序是深度的燃料
+  for (const m of list) m.os = m.t ? 1e6 + pv(m.t) : (histTbl.get(m.from + '>' + m.to) || 0);
+  list.sort((a, b) => b.os - a.os);
   return list;
 }
 function makeMove(m) {
@@ -824,10 +827,13 @@ function prepEval() {
 }
 
 // 静态评估（AI 视角，正分利于 AI）：材料 + 胜利进度 + 双向威胁逼近 + 行营
+const RANK_PV = { 9:100, 8:85, 7:70, 6:56, 5:45, 4:36, 3:28, 2:22, 1:20 };
 function evaluate() {
-  let aiMr = 99, huMr = 99, aiTop = 0, huTop = 0;
+  let aiMr = 99, huMr = 99, aiTop = 0, huTop = 0, aiMines = 0, huMines = 0;
   for (const x of pieces) {
-    if (!x.alive || x.rank <= 0) continue;
+    if (!x.alive) continue;
+    if (x.special === 'mine') { if (x.side === aiSide) aiMines++; else huMines++; continue; }
+    if (x.rank <= 0) continue;
     if (x.side === aiSide) {
       if (x.rank < aiMr) aiMr = x.rank;
       if (x.rank > aiTop) aiTop = x.rank;
@@ -836,14 +842,27 @@ function evaluate() {
       if (x.rank > huTop) huTop = x.rank;
     }
   }
-  let s = 0, aiMov = 0, huMov = 0, aiMines = 0, huMines = 0;
+  let s = 0, aiMov = 0, huMov = 0;
   let aiEngD = 99, huEngD = 99, aiRushD = 99, huRushD = 99;
   for (const x of pieces) {
     if (!x.alive) continue;
     const mine = x.side === aiSide;
-    s += mine ? pv(x) : -pv(x);
-    if (x.special === 'mine') { if (mine) aiMines++; else huMines++; }
-    else if (x.rank > 0 || x.special === 'bomb') { if (mine) aiMov++; else huMov++; }
+    // 材料（炸弹/工兵价值就地内联，避免热路径上反复扫描全体棋子）
+    let v;
+    if (x.special === 'flag') v = 2000;
+    else if (x.special === 'mine') v = 80;
+    else if (x.special === 'bomb') {
+      const oppTop = mine ? huTop : aiTop, myTop = mine ? aiTop : huTop;
+      v = !oppTop ? (mine ? 40 : 30)
+        : Math.max(mine ? 40 : 30,
+            Math.round(RANK_PV[oppTop] * (oppTop >= myTop ? (mine ? 0.85 : 0.55) : (mine ? 0.6 : 0.4))));
+    }
+    else if (x.kind === '工兵') v = (mine ? huMines : aiMines) > 0 ? 48 : 20;
+    else v = RANK_PV[x.rank];
+    s += mine ? v : -v;
+    if (x.special !== 'mine' && x.special !== 'flag' && (x.rank > 0 || x.special === 'bomb')) {
+      if (mine) aiMov++; else huMov++;
+    }
     if (!x.pos || !x.revealed) continue;
     if (mine) {
       if (x.kind === '工兵' && EV.engToHuMine) {
@@ -928,16 +947,31 @@ function alphabeta(depth, alpha, beta, side, ply) {
     const i = moves.findIndex(m => m.from + '>' + m.to === ttBest);
     if (i > 0) moves.unshift(moves.splice(i, 1)[0]);
   }
+  let mi = 0;
   for (const m of moves) {
     let v;
     if (m.win) v = WIN - ply;
     else {
       makeMove(m);
-      v = -alphabeta(depth - 1, -beta, -alpha, oppOf(side), ply + 1);
+      // 迟序降深（LMR）：排序靠后的安静着法先用窄窗浅搜试探，超出 α 才全深复搜
+      if (depth >= 3 && mi >= 4 && !m.t) {
+        v = -alphabeta(depth - 2, -alpha - 1, -alpha, oppOf(side), ply + 1);
+        if (v > alpha) v = -alphabeta(depth - 1, -beta, -alpha, oppOf(side), ply + 1);
+      } else {
+        v = -alphabeta(depth - 1, -beta, -alpha, oppOf(side), ply + 1);
+      }
       unmakeMove(m);
     }
+    mi++;
     if (v > best) { best = v; bestM = m; if (v > alpha) alpha = v; }
-    if (alpha >= beta) break;
+    if (alpha >= beta) {
+      // 历史启发记功：引发截断的安静着法今后优先搜索
+      if (!m.t) {
+        const hk = m.from + '>' + m.to;
+        histTbl.set(hk, (histTbl.get(hk) || 0) + depth * depth);
+      }
+      break;
+    }
   }
   if (Math.abs(best) < WIN - 200 && tt.size < 300000)
     tt.set(key, { depth, value: best, flag: best <= alpha0 ? 2 : best >= beta ? 1 : 0,
@@ -1135,9 +1169,18 @@ function aiTurn() {
     // 挖雷/炸雷的时效性：雷不会跑，但搜索会因此无限拖延——现在动手优于变数丛生的以后
     if (m.t && m.t.special === 'mine') b += 20;
     // 及时清除威胁我方雷/旗的子：搜索里"以后再吃"常与"现在吃"等价，
-    // 但拖延会引入翻子等不可控变数，平局时倾向立即动手
-    if (m.t && (m.t.kind === '工兵' || m.t.special === 'bomb') &&
+    // 但拖延会引入翻子等不可控变数，平局时倾向立即动手（炸弹清障另议）
+    if (m.t && (m.t.kind === '工兵' || m.t.special === 'bomb') && m.p.special !== 'bomb' &&
         pieces.some(x => x.side === aiSide && x.special === 'mine' && x.alive && x.revealed)) b += 22;
+    // 炸弹炸工兵是牛刀杀鸡：留着换大子。只有雷区告急（工兵下一步就能挖雷）
+    // 且我方无人能拦时，才算迫不得已
+    if (m.p.special === 'bomb' && m.t && m.t.kind === '工兵') {
+      const othersCan = pieces.some(x => x.alive && x.revealed && x.side === aiSide &&
+        x !== m.p && x.special !== 'bomb' && x.special !== 'mine' && x.special !== 'flag' &&
+        x.pos && genMoves(board, x.pos).includes(m.to));
+      const engAboutToDig = EV.enemyEngToAiMine && ((EV.enemyEngToAiMine[m.to] ?? 99) <= 1);
+      if (!(engAboutToDig && !othersCan)) b -= 50;
+    }
     else if (m.t) {
       const flagP = pieces.find(x => x.side === aiSide && x.special === 'flag' && x.alive && x.revealed);
       if (flagP && minesLeft(aiSide) === 0 &&
@@ -1150,6 +1193,7 @@ function aiTurn() {
   let bestMove = null, bestVal = -Infinity, passVal = null, depthReached = 0;
   searchNodes = 0;
   tt = new Map();   // 翻开状态变了，上一回合的置换表作废
+  histTbl = new Map();
   const tStart = performance.now();
   searchDeadline = tStart + AI_TIME_BUDGET;
   try {
