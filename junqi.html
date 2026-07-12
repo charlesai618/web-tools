@@ -1115,6 +1115,20 @@ function aiTurn() {
     }
     return false;
   };
+  // 这步走完后，该子下一步能吃到的最有价值敌子（用于长捉判定）
+  const chaseTargetOf = m => {
+    makeMove(m);
+    let best = null, bv = 0;
+    for (const to2 of genMoves(board, m.to)) {
+      const t2 = board[to2];
+      if (t2 && t2.side !== aiSide && t2.revealed && t2.rank > 0) {
+        const v2 = pv(t2);
+        if (v2 > bv) { bv = v2; best = t2; }
+      }
+    }
+    unmakeMove(m);
+    return best;
+  };
   // 该子当前是否处于对方已翻开棋子的攻击范围内
   const threatenedNow = k => {
     for (const e of pieces) {
@@ -1141,6 +1155,14 @@ function aiTurn() {
     // 拆炸弹优先用小子；但对方炸弹已按低价计（材料上团长/旅长换炸弹是划算的），
     // 额外罚分只保留给师长以上——他们的压制权不该消耗在拆弹上
     if (m.t && m.t.special === 'bomb' && m.p.rank >= 7) b -= pv(m.p) - 40;
+    // 必被炸的子不必自己去撞：本就站在炸弹打击线上的大子，撞弹与等炸结局相同，
+    // 等对方来炸还白赚一手（对方也可能舍不得炸）
+    if (m.t && m.t.special === 'bomb' && m.p.rank >= 6 && bombStrikes(null, m.from)) b -= 25;
+    // 长捉禁手：同一个子反复追捉同一目标而无进展，属无效纠缠，递增惩罚
+    if (!m.t && m.p.rank > 0 && m.p.chase && m.p.chase.n >= 2) {
+      const tgt = chaseTargetOf(m);
+      if (tgt === m.p.chase.target) b -= 22 * Math.min(m.p.chase.n - 1, 3);
+    }
     // 大子勿停留在敌方已翻开炸弹的打击线上（行营内除外）——按走完后的棋盘动态判定
     if (m.p.rank >= 7 && !CAMPS.has(m.to) && !(m.t && m.t.special === 'bomb') &&
         bombStrikes(m.from, m.to)) b -= m.p.rank >= 8 ? 45 : 30;
@@ -1224,8 +1246,15 @@ function aiTurn() {
   const se = $('stSearch');
   if (se) se.textContent = `深度 ${depthReached} 层 · ${searchNodes.toLocaleString()} 节点 · ${Math.round(performance.now() - tStart)}ms`;
 
+  // 记录追捉状态（长捉禁手用）：安静着法若锁定了新目标则计数，吃子/无目标则清零
+  const recordChase = m => {
+    if (m.t) { m.p.chase = null; return; }
+    const tgt = chaseTargetOf(m);
+    if (tgt && m.p.chase && m.p.chase.target === tgt) m.p.chase.n++;
+    else m.p.chase = tgt ? { target: tgt, n: 1 } : null;
+  };
   // 已找到必胜线路：直接执行，不给翻子拖延的机会（拖一手可能放走胜利）
-  if (bestMove && bestVal >= WIN - 1000) { doMove(bestMove.from, bestMove.to); return; }
+  if (bestMove && bestVal >= WIN - 1000) { recordChase(bestMove); doMove(bestMove.from, bestMove.to); return; }
   // 翻子候选：站桩搜索值 + 情报加成，与走子同尺度竞争
   let bestFlip = null, bestFlipVal = -Infinity;
   if (flips.length) {
@@ -1239,6 +1268,7 @@ function aiTurn() {
   if (bestFlip !== null && (!bestMove || bestFlipVal > bestVal)) {
     flipPiece(bestFlip, false); endTurn();
   } else {
+    recordChase(bestMove);
     doMove(bestMove.from, bestMove.to);
   }
 }
