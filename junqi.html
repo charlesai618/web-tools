@@ -861,12 +861,13 @@ function evaluate() {
   if (fdRemain === 0 && (aiMov === 0 || huMov === 0)) return 0;
   // 挖雷进度（吃掉对方雷同时获得材料分+进度分）
   s += (3 - huMines) * 170 - (3 - aiMines) * 160;
-  // 工兵逼近敌雷 / 敌工兵（炸弹）逼近我雷
-  if (aiEngD < 12) s += (12 - aiEngD) * 8;
-  if (huEngD < 12) s -= (12 - huEngD) * 9;
+  // 工兵逼近敌雷（进攻驱动）/ 敌工兵（炸弹）逼近我雷（警戒项——刻意调小：
+  // 挖雷的真实损失搜索树内看得见，此项过大会诱使 AI 用大子自杀式"清除威胁者"）
+  if (aiEngD < 12) s += (12 - aiEngD) * 6;
+  if (huEngD < 8) s -= (8 - huEngD) * 4;
   // 夺旗冲刺（对方雷清空后激活；搜索中挖掉最后一颗雷会立即点亮此项）
-  if (huMines === 0 && aiRushD < 14) s += (14 - aiRushD) * 13 + 30;
-  if (aiMines === 0 && huRushD < 14) s -= (14 - huRushD) * 15 + 30;
+  if (huMines === 0 && aiRushD < 14) s += (14 - aiRushD) * 12 + 25;
+  if (aiMines === 0 && huRushD < 12) s -= (12 - huRushD) * 10 + 20;
   // 行营占领（非对称"藐视因子"：更看重自己的据点，避免"反正对手也能进营"的消极对冲心态）
   for (const c of CAMP_LIST) {
     const q = board[c];
@@ -989,6 +990,17 @@ function infoBonus(k) {
   s -= flipRisk(k);                        // 期望送子损失
   if (noProgress > 20) s += Math.min(noProgress - 20, 16) * 2;   // 翻子重置无吃子计数
   if (enemyMovableCnt <= 4 && infoMissing) s += 40;              // 冲刺期靠翻子找雷/旗
+  // 暗子池余力差：己方司令/炸弹等主力还没翻出来时，翻子是唤醒主力的期望收益；
+  // 反之对方主力都藏在暗处而我方已尽数亮出，则翻子更可能资敌
+  let myHidden = 0, huHidden = 0, tot = 0;
+  for (const x of pieces) {
+    if (!x.alive || x.revealed) continue;
+    tot++;
+    if (x.rank > 0 || x.special === 'bomb') {
+      if (x.side === aiSide) myHidden += pv(x); else huHidden += pv(x);
+    }
+  }
+  if (tot) s += (myHidden - huHidden) / tot * 0.6;
   return s + Math.random() * 4;
 }
 
@@ -1023,6 +1035,15 @@ function aiTurn() {
   };
 
   const movable = x => x.alive && (x.rank > 0 || x.special === 'bomb');
+  // 该子当前是否处于对方已翻开棋子的攻击范围内
+  const threatenedNow = k => {
+    for (const e of pieces) {
+      if (!e.alive || !e.revealed || e.side === aiSide || !e.pos) continue;
+      if (e.special === 'mine' || e.special === 'flag') continue;
+      if (genMoves(board, e.pos).includes(k)) return true;
+    }
+    return false;
+  };
   // 根节点现实约束修正（搜索之外的规则性/活跃度因素）
   const adjust = m => {
     let b = 0;
@@ -1032,6 +1053,13 @@ function aiTurn() {
     if (m.t && noProgress > 20) b += Math.min(noProgress - 20, 16) * 2;
     if (!m.t && fdDist) b += ((fdDist[m.from] ?? 99) - (fdDist[m.to] ?? 99)) * 1.5;
     if (!m.t && CAMPS.has(m.to)) b += 14;  // 先手占营的主动权价值（eval 里双方对称，这里补先手 tempo）
+    // 无收益不腾营：白白让出安全据点等于送对方一个营位
+    if (!m.t && CAMPS.has(m.from) && !CAMPS.has(m.to)) b -= 12;
+    // 殉爆：炸弹已被对方盯上（横竖要没），主动炸向最大可及目标，绝不等对方用小子来拆
+    if (m.p.special === 'bomb' && m.t && m.t.special !== 'mine' && threatenedNow(m.from))
+      b += pv(m.t) * 0.45 + 12;
+    // 拆炸弹要用小子：撞炸弹是同归于尽，派大子去等于白送战力（司令撞弹尤其荒谬）
+    if (m.t && m.t.special === 'bomb' && m.p.rank >= 5) b -= pv(m.p) - 25;
     // 炸弹是否炸雷视局势而定：有工兵且工兵到得了这颗雷才罚，罚度随工兵路程衰减；
     // 工兵死光或被隔断时，炸雷是完全正当的手段
     if (m.p.special === 'bomb' && m.t && m.t.special === 'mine') {
@@ -1075,8 +1103,8 @@ function aiTurn() {
         if (m.win) v = WIN;
         else {
           makeMove(m);
-          // 根 α 窗口留 60 分余量，保证 adjust 修正不影响正确性
-          const beta = dVal === -Infinity ? Infinity : -(dVal - 60);
+          // 根 α 窗口留 110 分余量（adjust 各项加成可叠加），保证修正不影响选着正确性
+          const beta = dVal === -Infinity ? Infinity : -(dVal - 110);
           v = -alphabeta(depth - 1, -Infinity, beta === Infinity ? Infinity : beta, humanSide, 1);
           unmakeMove(m);
         }
