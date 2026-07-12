@@ -636,10 +636,18 @@ function pv(p) {
   if (p.special === 'flag') return 2000;
   if (p.special === 'mine') return 80;
   if (p.special === 'bomb') {
-    // 炸弹的核心价值是换掉对方大子；对方司令/军长（含未翻开的）仍在时更金贵，不可轻掷
+    // 炸弹价值随局势浮动："大子"是相对概念——对方现存最大子（含暗子）越强、
+    // 且我方没有同级以上的子能应对时，炸弹越金贵
     const opp = oppOf(p.side);
-    for (const x of pieces) if (x.alive && x.side === opp && x.rank >= 8) return 78;
-    return 45;
+    let oppMax = 0, myMax = 0;
+    for (const x of pieces) {
+      if (!x.alive || x.rank <= 0) continue;
+      if (x.side === opp) { if (x.rank > oppMax) oppMax = x.rank; }
+      else if (x.rank > myMax) myMax = x.rank;
+    }
+    if (!oppMax) return 40;
+    const topPv = { 9:100, 8:85, 7:70, 6:56, 5:45, 4:36, 3:28, 2:22, 1:20 }[oppMax];
+    return Math.max(40, Math.round(topPv * (oppMax >= myMax ? 0.85 : 0.6)));
   }
   if (p.kind === '工兵') return minesLeft(oppOf(p.side)) > 0 ? 48 : 20;
   return { 9:100, 8:85, 7:70, 6:56, 5:45, 4:36, 3:28, 2:22 }[p.rank];
@@ -790,7 +798,25 @@ function prepEval() {
     rushToHuFlag:     huFlagPos ? getMoveField([huFlagPos], minRank(aiSide) === 1) : null,
     enemyEngToAiMine: aiMines.length ? getMoveField(aiMines, true) : null,
     enemyRushToAiFlag: aiFlagPos ? getMoveField([aiFlagPos], minRank(humanSide) === 1) : null,
+    latent: null,
   };
+  // 潜伏威胁概率：暗子池分布已知——按等级算"随机翻开一个暗子恰好能吃掉我这个子"的概率
+  let totUnrev = 0, humBombs = 0;
+  const humRanks = [];
+  pieces.forEach(x => {
+    if (!x.alive || x.revealed) return;
+    totUnrev++;
+    if (x.side === humanSide) {
+      if (x.special === 'bomb') humBombs++;
+      else if (x.rank > 0) humRanks.push(x.rank);
+    }
+  });
+  if (totUnrev) {
+    const latent = {};
+    for (let r = 5; r <= 9; r++)
+      latent[r] = (humBombs + humRanks.filter(v => v > r).length) / totUnrev;
+    EV.latent = latent;
+  }
 }
 
 // 静态评估（AI 视角，正分利于 AI）：材料 + 胜利进度 + 双向威胁逼近 + 行营
@@ -815,6 +841,12 @@ function evaluate() {
       }
       if (EV.rushToHuFlag && (x.special === 'bomb' || x.rank === aiMr)) {
         const d = EV.rushToHuFlag[x.pos] ?? 99; if (d < aiRushD) aiRushD = d;
+      }
+      // 潜伏威胁：贵重子贴着未翻开的暗子，对手翻开就可能正是能吃它的子（炸弹/更大子）
+      if (EV.latent && x.rank >= 5) {
+        let fdAdj = 0;
+        for (const n of adj[x.pos]) { const q = board[n]; if (q && !q.revealed) fdAdj++; }
+        if (fdAdj) s -= Math.min(fdAdj, 3) * pv(x) * EV.latent[x.rank] * 1.2;
       }
     } else {
       if ((x.kind === '工兵' || x.special === 'bomb') && EV.enemyEngToAiMine) {
@@ -1000,9 +1032,21 @@ function aiTurn() {
     if (m.t && noProgress > 20) b += Math.min(noProgress - 20, 16) * 2;
     if (!m.t && fdDist) b += ((fdDist[m.from] ?? 99) - (fdDist[m.to] ?? 99)) * 1.5;
     if (!m.t && CAMPS.has(m.to)) b += 14;  // 先手占营的主动权价值（eval 里双方对称，这里补先手 tempo）
-    // 有工兵在，炸弹别浪费在雷上 —— 留着换对方的司令/军长
-    if (m.p.special === 'bomb' && m.t && m.t.special === 'mine' &&
-        pieces.some(x => x.alive && x.side === aiSide && x.kind === '工兵')) b -= 70;
+    // 炸弹是否炸雷视局势而定：有工兵且工兵到得了这颗雷才罚，罚度随工兵路程衰减；
+    // 工兵死光或被隔断时，炸雷是完全正当的手段
+    if (m.p.special === 'bomb' && m.t && m.t.special === 'mine') {
+      let engD = 99;
+      const F = getMoveField([m.to], true);
+      for (const x of pieces)
+        if (x.alive && x.side === aiSide && x.kind === '工兵' && x.pos) {
+          const dd = F[x.pos] ?? 99; if (dd < engD) engD = dd;
+        }
+      b -= engD <= 3 ? 70 : engD <= 7 ? 40 : engD < 99 ? 15 : 0;
+    }
+    // 猎物旁有空行营 = 它下一步就能溜进去，抓捕要趁现在（放虎归山即成保护子）
+    if (m.t && m.t.rank > 0 && adj[m.to].some(n => !board[n] && CAMPS.has(n))) b += 15;
+    // 挖雷/炸雷的时效性：雷不会跑，但搜索会因此无限拖延——现在动手优于变数丛生的以后
+    if (m.t && m.t.special === 'mine') b += 20;
     // 及时清除威胁我方雷/旗的子：搜索里"以后再吃"常与"现在吃"等价，
     // 但拖延会引入翻子等不可控变数，平局时倾向立即动手
     if (m.t && (m.t.kind === '工兵' || m.t.special === 'bomb') &&
