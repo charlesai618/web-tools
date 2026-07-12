@@ -884,6 +884,14 @@ function evaluate() {
           if (q && q.revealed && q.side !== aiSide && q.special === 'bomb') { s -= 18; break; }
         }
       }
+      // 行营里的敌方大子贴着我（受保护的攻击者）：无法反吃、只能逃，持续劣势
+      if (x.rank >= 4 && !CAMPS.has(x.pos)) {
+        for (const n of adj[x.pos]) {
+          const q = board[n];
+          if (q && q.revealed && q.side !== aiSide && CAMPS.has(n) &&
+              (q.special === 'bomb' || q.rank > x.rank)) { s -= pv(x) * 0.35; break; }
+        }
+      }
     } else {
       if ((x.kind === '工兵' || x.special === 'bomb') && EV.enemyEngToAiMine) {
         const d = EV.enemyEngToAiMine[x.pos] ?? 99; if (d < huEngD) huEngD = d;
@@ -901,6 +909,14 @@ function evaluate() {
         }
         if (jailed) s += 20;                    // 囚禁资产：钥匙在手，旗威胁锁死
         else if (d < huRushD) huRushD = d;
+      }
+      // 对称项：对方的子贴着我方营中大子——AI 也要会用"受保护的攻击者"牵制对手
+      if (x.rank >= 4 && !CAMPS.has(x.pos)) {
+        for (const n of adj[x.pos]) {
+          const q = board[n];
+          if (q && q.revealed && q.side === aiSide && CAMPS.has(n) &&
+              (q.special === 'bomb' || q.rank > x.rank)) { s += pv(x) * 0.25; break; }
+        }
       }
     }
   }
@@ -964,8 +980,9 @@ function alphabeta(depth, alpha, beta, side, ply) {
     if (m.win) v = WIN - ply;
     else {
       makeMove(m);
-      // 迟序降深（LMR）：排序靠后的安静着法先用窄窗浅搜试探，超出 α 才全深复搜
-      if (depth >= 3 && mi >= 4 && !m.t) {
+      // 迟序降深（LMR）：排序靠后的安静着法先用窄窗浅搜试探，超出 α 才全深复搜。
+      // 进营着法豁免降深——占营是受保护的攻击跳板，收益常在降深视野之外（战术盲区）
+      if (depth >= 3 && mi >= 4 && !m.t && !CAMPS.has(m.to)) {
         v = -alphabeta(depth - 2, -alpha - 1, -alpha, oppOf(side), ply + 1);
         if (v > alpha) v = -alphabeta(depth - 1, -beta, -alpha, oppOf(side), ply + 1);
       } else {
