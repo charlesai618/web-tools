@@ -169,6 +169,7 @@
       <div class="srow"><span>红方地雷剩余</span><b id="stRedMine">3</b></div>
       <div class="srow"><span>蓝方地雷剩余</span><b id="stBlueMine">3</b></div>
       <div class="srow"><span>无吃子步数</span><b id="stCounter">0 / 40</b></div>
+      <div class="srow"><span>AI 搜索</span><b id="stSearch">—</b></div>
     </div>
 
     <div class="card">
@@ -571,7 +572,7 @@ function endTurn() {
     drawGame(turn === 'human' ? '你已无棋可走（棋子被吃光）' : '电脑已无棋可走（棋子被吃光）');
     return;
   }
-  if (turn === 'ai') aiTimer = setTimeout(aiTurn, 700);
+  if (turn === 'ai') aiTimer = setTimeout(aiTurn, 600);
 }
 
 function endGame(winnerSide) {
@@ -727,7 +728,13 @@ function campQuality(bd, k, mover) {
 const WIN = 100000, SEARCH_ABORT = { abort: true };
 const CAMP_LIST = [...CAMPS];
 let searchDeadline = 0, searchNodes = 0, fdRemain = 0, EV = null;
-let AI_TIME_BUDGET = 380;   // 每步思考时限（毫秒）
+let AI_TIME_BUDGET = 1500;  // 每步思考时限（毫秒）
+let tt = new Map();          // 置换表：同一局面不重复搜索
+function posKey(side) {
+  const a = [side];
+  for (const p of pieces) a.push(p.alive ? p.pos : 'x');
+  return a.join('|');
+}
 
 // 走法对象：吃子结局在生成时即确定（军棋吃子无随机性）
 function moveObj(p, from, to) {
@@ -823,20 +830,31 @@ function evaluate() {
   // 夺旗冲刺（对方雷清空后激活；搜索中挖掉最后一颗雷会立即点亮此项）
   if (huMines === 0 && aiRushD < 14) s += (14 - aiRushD) * 13 + 30;
   if (aiMines === 0 && huRushD < 14) s -= (14 - huRushD) * 15 + 30;
-  // 行营占领
+  // 行营占领（非对称"藐视因子"：更看重自己的据点，避免"反正对手也能进营"的消极对冲心态）
   for (const c of CAMP_LIST) {
     const q = board[c];
     if (q && q.revealed)
-      s += (q.side === aiSide ? 1 : -1) * campQuality(board, c, q) * 0.6;
+      s += q.side === aiSide ? campQuality(board, c, q) * 0.9 : -campQuality(board, c, q) * 0.55;
   }
   return s;
 }
 
-// 负极大 α-β：side 为当前行棋方，返回该方视角分值
+// 负极大 α-β + 置换表：side 为当前行棋方，返回该方视角分值
 function alphabeta(depth, alpha, beta, side, ply) {
   if ((++searchNodes & 255) === 0 && performance.now() > searchDeadline) throw SEARCH_ABORT;
   if (depth <= 0) return qsearch(alpha, beta, side, ply);
-  let best = -Infinity;
+  const key = posKey(side), te = tt.get(key);
+  let ttBest = null;
+  if (te) {
+    ttBest = te.best;
+    if (te.depth >= depth && Math.abs(te.value) < WIN - 200) {
+      if (te.flag === 0) return te.value;                       // 精确值
+      if (te.flag === 1 && te.value >= beta) return te.value;   // 下界
+      if (te.flag === 2 && te.value <= alpha) return te.value;  // 上界
+    }
+  }
+  const alpha0 = alpha;
+  let best = -Infinity, bestM = null;
   // 有暗子可翻时，"翻子"是保底安静着法（近似局面不变）——避免臆想对手被迫送子
   if (fdRemain > 0) {
     best = (side === aiSide ? 1 : -1) * evaluate();
@@ -845,6 +863,11 @@ function alphabeta(depth, alpha, beta, side, ply) {
   }
   const moves = genSideMoves(side);
   if (!moves.length) return best === -Infinity ? 0 : best;
+  // 置换表最佳着法提前：迭代加深时上一层的主变着法先搜，剪枝率大增
+  if (ttBest) {
+    const i = moves.findIndex(m => m.from + '>' + m.to === ttBest);
+    if (i > 0) moves.unshift(moves.splice(i, 1)[0]);
+  }
   for (const m of moves) {
     let v;
     if (m.win) v = WIN - ply;
@@ -853,9 +876,12 @@ function alphabeta(depth, alpha, beta, side, ply) {
       v = -alphabeta(depth - 1, -beta, -alpha, oppOf(side), ply + 1);
       unmakeMove(m);
     }
-    if (v > best) { best = v; if (v > alpha) alpha = v; }
+    if (v > best) { best = v; bestM = m; if (v > alpha) alpha = v; }
     if (alpha >= beta) break;
   }
+  if (Math.abs(best) < WIN - 200 && tt.size < 300000)
+    tt.set(key, { depth, value: best, flag: best <= alpha0 ? 2 : best >= beta ? 1 : 0,
+                  best: bestM ? bestM.from + '>' + bestM.to : null });
   return best;
 }
 // 静态延伸：只搜吃子直到局面安静，消除水平线效应
@@ -879,9 +905,31 @@ function qsearch(alpha, beta, side, ply) {
   return best;
 }
 
+// 翻子风险：暗子池分布是已知的 —— 在敌方大子旁翻子，可能翻出己方小子白送，按期望损失计
+function flipRisk(k) {
+  let pool = 0;
+  const own = [];
+  for (const x of pieces) if (x.alive && !x.revealed) { pool++; if (x.side === aiSide) own.push(x); }
+  if (!pool) return 0;
+  let worst = 0;
+  adj[k].forEach(n => {
+    const e = board[n];
+    if (!e || !e.revealed || e.side === aiSide) return;
+    if (e.special === 'mine' || e.special === 'flag') return;
+    let loss = 0;
+    for (const x of own) {
+      if (e.special === 'bomb') { if (x.rank > 0 || x.special === 'bomb') loss += Math.max(0, pv(x) - 50); }
+      else if (x.rank > 0 && x.rank < e.rank) loss += pv(x);
+      else if (e.kind === '工兵' && x.special === 'mine') loss += pv(x);
+    }
+    loss /= pool;
+    if (loss > worst) worst = loss;
+  });
+  return worst;
+}
 // 翻子的情报加成（叠加在"站桩"搜索基准值上，与走子的搜索分同尺度比较）
 function infoBonus(k) {
-  let s = 8 + 26 * (fdRemain / 50);
+  let s = 5 + 20 * (fdRemain / 50);
   let movableCnt = 0, enemyMovableCnt = 0, infoMissing = false;
   for (const x of pieces) {
     if (!x.alive) continue;
@@ -892,17 +940,15 @@ function infoBonus(k) {
     }
   }
   if (movableCnt === 0) s += 500;          // 没有可动子时翻子几乎是唯一选择
-  else if (movableCnt < 3) s += 12;
+  else if (movableCnt < 3) s += 10;
   adj[k].forEach(n => {
     const q = board[n];
-    if (q && q.revealed) {
-      if (q.side !== aiSide && (q.rank >= 6 || q.special === 'bomb')) s -= 8;
-      if (q.side === aiSide && q.rank >= 6) s += 6;
-    }
+    if (q && q.revealed && q.side === aiSide && q.rank >= 6) s += 5;   // 我方大子旁翻子，翻出敌小子可立即吃
   });
+  s -= flipRisk(k);                        // 期望送子损失
   if (noProgress > 20) s += Math.min(noProgress - 20, 16) * 2;   // 翻子重置无吃子计数
   if (enemyMovableCnt <= 4 && infoMissing) s += 40;              // 冲刺期靠翻子找雷/旗
-  return s + Math.random() * 5;
+  return s + Math.random() * 4;
 }
 
 function aiTurn() {
@@ -937,16 +983,20 @@ function aiTurn() {
     if (m.to === m.p.lastFrom) b -= 18;
     if (m.t && noProgress > 20) b += Math.min(noProgress - 20, 16) * 2;
     if (!m.t && fdDist) b += ((fdDist[m.from] ?? 99) - (fdDist[m.to] ?? 99)) * 1.5;
-    if (!m.t && CAMPS.has(m.to)) b += 6;   // 先手占营的主动权价值（eval 里双方对称，这里补先手 tempo）
+    if (!m.t && CAMPS.has(m.to)) b += 14;  // 先手占营的主动权价值（eval 里双方对称，这里补先手 tempo）
     return b + Math.random() * 3;
   };
 
   // 迭代加深：限时内逐层加深，用最后完成的一层结果（开局浅、残局自然更深）
   let bestMove = null, bestVal = -Infinity, passVal = null, depthReached = 0;
   searchNodes = 0;
-  searchDeadline = performance.now() + AI_TIME_BUDGET;
+  tt = new Map();   // 翻开状态变了，上一回合的置换表作废
+  const tStart = performance.now();
+  searchDeadline = tStart + AI_TIME_BUDGET;
   try {
-    for (let depth = 2; depth <= 6; depth++) {
+    for (let depth = 2; depth <= 20; depth++) {
+      // 上一层的着法评分排序：好着法先搜，深层剪枝率大增
+      rootMoves.sort((a, b) => (b.score ?? -1e18) - (a.score ?? -1e18));
       let dBest = null, dVal = -Infinity;
       for (const m of rootMoves) {
         let v;
@@ -959,6 +1009,7 @@ function aiTurn() {
           unmakeMove(m);
         }
         v += adjust(m);
+        m.score = v;
         if (v > dVal) { dVal = v; dBest = m; }
       }
       // "站桩"基准：本回合不走子（翻子）时，让对手先行的搜索值
@@ -967,6 +1018,8 @@ function aiTurn() {
     }
   } catch (e) { if (e !== SEARCH_ABORT) { restore(); throw e; } }
   restore();
+  const se = $('stSearch');
+  if (se) se.textContent = `深度 ${depthReached} 层 · ${searchNodes.toLocaleString()} 节点 · ${Math.round(performance.now() - tStart)}ms`;
 
   // 翻子候选：站桩搜索值 + 情报加成，与走子同尺度竞争
   let bestFlip = null, bestFlipVal = -Infinity;
