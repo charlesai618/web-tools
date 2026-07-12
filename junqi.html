@@ -637,7 +637,9 @@ function pv(p) {
   if (p.special === 'mine') return 80;
   if (p.special === 'bomb') {
     // 炸弹价值随局势浮动："大子"是相对概念——对方现存最大子（含暗子）越强、
-    // 且我方没有同级以上的子能应对时，炸弹越金贵
+    // 且我方没有同级以上的子能应对时，炸弹越金贵。
+    // 持有方不对称：己方炸弹按高价保护；对方炸弹按低价计——它换掉我方大子是它的胜利，
+    // 这让"军长被炸"在搜索里读作实亏而非等价交换
     const opp = oppOf(p.side);
     let oppMax = 0, myMax = 0;
     for (const x of pieces) {
@@ -647,7 +649,9 @@ function pv(p) {
     }
     if (!oppMax) return 40;
     const topPv = { 9:100, 8:85, 7:70, 6:56, 5:45, 4:36, 3:28, 2:22, 1:20 }[oppMax];
-    return Math.max(40, Math.round(topPv * (oppMax >= myMax ? 0.85 : 0.6)));
+    const own = p.side === aiSide;
+    return Math.max(own ? 40 : 30,
+      Math.round(topPv * (oppMax >= myMax ? (own ? 0.85 : 0.55) : (own ? 0.6 : 0.4))));
   }
   if (p.kind === '工兵') return minesLeft(oppOf(p.side)) > 0 ? 48 : 20;
   return { 9:100, 8:85, 7:70, 6:56, 5:45, 4:36, 3:28, 2:22 }[p.rank];
@@ -813,7 +817,7 @@ function prepEval() {
   });
   if (totUnrev) {
     const latent = {};
-    for (let r = 5; r <= 9; r++)
+    for (let r = 1; r <= 9; r++)
       latent[r] = (humBombs + humRanks.filter(v => v > r).length) / totUnrev;
     EV.latent = latent;
   }
@@ -821,11 +825,17 @@ function prepEval() {
 
 // 静态评估（AI 视角，正分利于 AI）：材料 + 胜利进度 + 双向威胁逼近 + 行营
 function evaluate() {
-  let aiMr = 99, huMr = 99;
-  for (const x of pieces)
-    if (x.alive && x.rank > 0 && x.rank < (x.side === aiSide ? aiMr : huMr)) {
-      if (x.side === aiSide) aiMr = x.rank; else huMr = x.rank;
+  let aiMr = 99, huMr = 99, aiTop = 0, huTop = 0;
+  for (const x of pieces) {
+    if (!x.alive || x.rank <= 0) continue;
+    if (x.side === aiSide) {
+      if (x.rank < aiMr) aiMr = x.rank;
+      if (x.rank > aiTop) aiTop = x.rank;
+    } else {
+      if (x.rank < huMr) huMr = x.rank;
+      if (x.rank > huTop) huTop = x.rank;
     }
+  }
   let s = 0, aiMov = 0, huMov = 0, aiMines = 0, huMines = 0;
   let aiEngD = 99, huEngD = 99, aiRushD = 99, huRushD = 99;
   for (const x of pieces) {
@@ -859,6 +869,9 @@ function evaluate() {
   }
   // 无子可动且无暗子可翻 → 和棋：局面归零（领先方在搜索中会主动避开这种线路）
   if (fdRemain === 0 && (aiMov === 0 || huMov === 0)) return 0;
+  // 制高权：在场最大子的等级压制。军长换炸弹在材料上打平，但失去压制权后
+  // 对方现存最大子横行无忌——这正是"大子不该和炸弹对换"的棋理
+  if (aiTop > huTop) s += 30; else if (huTop > aiTop) s -= 30;
   // 挖雷进度（吃掉对方雷同时获得材料分+进度分）
   s += (3 - huMines) * 170 - (3 - aiMines) * 160;
   // 工兵逼近敌雷（进攻驱动）/ 敌工兵（炸弹）逼近我雷（警戒项——刻意调小：
@@ -984,7 +997,9 @@ function infoBonus(k) {
   else if (movableCnt < 3) s += 6;
   adj[k].forEach(n => {
     const q = board[n];
-    if (q && q.revealed && q.side === aiSide && q.rank >= 6) s += 5;   // 我方大子旁翻子，翻出敌小子可立即吃
+    // 在己方棋子旁翻子的暴露风险：翻出的可能正是能吃它的敌子，而且对方先行
+    if (q && q.revealed && q.side === aiSide && q.rank > 0 && EV && EV.latent)
+      s -= pv(q) * (EV.latent[q.rank] || 0) * 0.9;
     if (!q && CAMPS.has(n)) s -= 6;   // 行营旁翻子：若翻出对方可动子，对方先行进营取势
   });
   s -= flipRisk(k);                        // 期望送子损失
@@ -1035,6 +1050,27 @@ function aiTurn() {
   };
 
   const movable = x => x.alive && (x.rank > 0 || x.special === 'bomb');
+  // 对方已翻开炸弹的潜在打击范围：邻格 + 铁路直线可达（无视目标格现在站的是谁——
+  // 用合法走法算会漏掉"现被对方自己的子占着"的格子，恰恰是诱饵所在）
+  const bombZone = new Set();
+  for (const e of pieces) {
+    if (!(e.alive && e.revealed && e.side === humanSide && e.special === 'bomb' && e.pos)) continue;
+    adj[e.pos].forEach(x => bombZone.add(x));
+    if (railNodes.has(e.pos)) {
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr, dc]) => {
+        let [rr, cc] = RC(e.pos);
+        for (;;) {
+          const nr = rr + dr, nc = cc + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+          const nk = K(nr, nc);
+          if (!railEdges.has(K(rr, cc) + '|' + nk)) break;
+          bombZone.add(nk);
+          if (board[nk]) break;
+          rr = nr; cc = nc;
+        }
+      });
+    }
+  }
   // 该子当前是否处于对方已翻开棋子的攻击范围内
   const threatenedNow = k => {
     for (const e of pieces) {
@@ -1060,6 +1096,8 @@ function aiTurn() {
       b += pv(m.t) * 0.45 + 12;
     // 拆炸弹要用小子：撞炸弹是同归于尽，派大子去等于白送战力（司令撞弹尤其荒谬）
     if (m.t && m.t.special === 'bomb' && m.p.rank >= 5) b -= pv(m.p) - 25;
+    // 军长/司令勿踏入敌方已翻开炸弹的打击圈（行营内除外）——对方乐意用炸弹换大子
+    if (m.p.rank >= 7 && bombZone.has(m.to) && !CAMPS.has(m.to)) b -= 30;
     // 炸弹是否炸雷视局势而定：有工兵且工兵到得了这颗雷才罚，罚度随工兵路程衰减；
     // 工兵死光或被隔断时，炸雷是完全正当的手段
     if (m.p.special === 'bomb' && m.t && m.t.special === 'mine') {
