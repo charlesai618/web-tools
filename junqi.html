@@ -858,6 +858,13 @@ function evaluate() {
         for (const n of adj[x.pos]) { const q = board[n]; if (q && !q.revealed) fdAdj++; }
         if (fdAdj) s -= Math.min(fdAdj, 3) * pv(x) * EV.latent[x.rank] * 1.2;
       }
+      // 大子贴着对方已翻开的炸弹：随时可能被等价对换，主动躲开为上
+      if (x.rank >= 7 && !CAMPS.has(x.pos)) {
+        for (const n of adj[x.pos]) {
+          const q = board[n];
+          if (q && q.revealed && q.side !== aiSide && q.special === 'bomb') { s -= 18; break; }
+        }
+      }
     } else {
       if ((x.kind === '工兵' || x.special === 'bomb') && EV.enemyEngToAiMine) {
         const d = EV.enemyEngToAiMine[x.pos] ?? 99; if (d < huEngD) huEngD = d;
@@ -1050,27 +1057,30 @@ function aiTurn() {
   };
 
   const movable = x => x.alive && (x.rank > 0 || x.special === 'bomb');
-  // 对方已翻开炸弹的潜在打击范围：邻格 + 铁路直线可达（无视目标格现在站的是谁——
-  // 用合法走法算会漏掉"现被对方自己的子占着"的格子，恰恰是诱饵所在）
-  const bombZone = new Set();
-  for (const e of pieces) {
-    if (!(e.alive && e.revealed && e.side === humanSide && e.special === 'bomb' && e.pos)) continue;
-    adj[e.pos].forEach(x => bombZone.add(x));
-    if (railNodes.has(e.pos)) {
-      [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr, dc]) => {
-        let [rr, cc] = RC(e.pos);
-        for (;;) {
-          const nr = rr + dr, nc = cc + dc;
-          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
-          const nk = K(nr, nc);
-          if (!railEdges.has(K(rr, cc) + '|' + nk)) break;
-          bombZone.add(nk);
-          if (board[nk]) break;
-          rr = nr; cc = nc;
+  // 对方已翻开炸弹能否打到 to 格 —— 按走完后的棋盘判定：from 格视为已腾空
+  // （静态打击圈有两类漏洞：目标格被对方自己的子占着的"诱饵格"，以及大子自己
+  //  让开后炸弹射线变通的"引路格"）
+  const bombStrikes = (from, to) => {
+    for (const e of pieces) {
+      if (!(e.alive && e.revealed && e.side === humanSide && e.special === 'bomb' && e.pos)) continue;
+      if (adj[e.pos].includes(to)) return true;
+      if (railNodes.has(e.pos)) {
+        for (const [dr, dc] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+          let [rr, cc] = RC(e.pos);
+          for (;;) {
+            const nr = rr + dr, nc = cc + dc;
+            if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+            const nk = K(nr, nc);
+            if (!railEdges.has(K(rr, cc) + '|' + nk)) break;
+            if (nk === to) return true;
+            if (board[nk] && nk !== from) break;   // from 已腾空可穿过
+            rr = nr; cc = nc;
+          }
         }
-      });
+      }
     }
-  }
+    return false;
+  };
   // 该子当前是否处于对方已翻开棋子的攻击范围内
   const threatenedNow = k => {
     for (const e of pieces) {
@@ -1094,10 +1104,21 @@ function aiTurn() {
     // 殉爆：炸弹已被对方盯上（横竖要没），主动炸向最大可及目标，绝不等对方用小子来拆
     if (m.p.special === 'bomb' && m.t && m.t.special !== 'mine' && threatenedNow(m.from))
       b += pv(m.t) * 0.45 + 12;
-    // 拆炸弹要用小子：撞炸弹是同归于尽，派大子去等于白送战力（司令撞弹尤其荒谬）
-    if (m.t && m.t.special === 'bomb' && m.p.rank >= 5) b -= pv(m.p) - 25;
-    // 军长/司令勿踏入敌方已翻开炸弹的打击圈（行营内除外）——对方乐意用炸弹换大子
-    if (m.p.rank >= 7 && bombZone.has(m.to) && !CAMPS.has(m.to)) b -= 30;
+    // 拆炸弹优先用小子；但对方炸弹已按低价计（材料上团长/旅长换炸弹是划算的），
+    // 额外罚分只保留给师长以上——他们的压制权不该消耗在拆弹上
+    if (m.t && m.t.special === 'bomb' && m.p.rank >= 7) b -= pv(m.p) - 40;
+    // 大子勿停留在敌方已翻开炸弹的打击线上（行营内除外）——按走完后的棋盘动态判定
+    if (m.p.rank >= 7 && !CAMPS.has(m.to) && !(m.t && m.t.special === 'bomb') &&
+        bombStrikes(m.from, m.to)) b -= m.p.rank >= 8 ? 45 : 30;
+    // 被更大的子（或炸弹）盯上时，同级兑子是止损正解——拖下去终将被大子白吃
+    if (m.t && m.pDies && m.t.rank > 0 && m.t.rank === m.p.rank) {
+      const dmF = getDM(m.from);
+      for (const e of pieces) {
+        if (!e.alive || !e.revealed || e.side !== humanSide || !e.pos) continue;
+        if (e.special === 'mine' || e.special === 'flag') continue;
+        if ((e.special === 'bomb' || e.rank > m.p.rank) && (dmF[e.pos] ?? 99) <= 2) { b += 20; break; }
+      }
+    }
     // 炸弹是否炸雷视局势而定：有工兵且工兵到得了这颗雷才罚，罚度随工兵路程衰减；
     // 工兵死光或被隔断时，炸雷是完全正当的手段
     if (m.p.special === 'bomb' && m.t && m.t.special === 'mine') {
