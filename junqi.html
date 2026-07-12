@@ -635,7 +635,12 @@ function explainIllegal(p, k) {
 function pv(p) {
   if (p.special === 'flag') return 2000;
   if (p.special === 'mine') return 80;
-  if (p.special === 'bomb') return 62;
+  if (p.special === 'bomb') {
+    // 炸弹的核心价值是换掉对方大子；对方司令/军长（含未翻开的）仍在时更金贵，不可轻掷
+    const opp = oppOf(p.side);
+    for (const x of pieces) if (x.alive && x.side === opp && x.rank >= 8) return 78;
+    return 45;
+  }
   if (p.kind === '工兵') return minesLeft(oppOf(p.side)) > 0 ? 48 : 20;
   return { 9:100, 8:85, 7:70, 6:56, 5:45, 4:36, 3:28, 2:22 }[p.rank];
 }
@@ -855,9 +860,11 @@ function alphabeta(depth, alpha, beta, side, ply) {
   }
   const alpha0 = alpha;
   let best = -Infinity, bestM = null;
-  // 有暗子可翻时，"翻子"是保底安静着法（近似局面不变）——避免臆想对手被迫送子
+  // 有暗子可翻时，"翻子"近似为局面不变、轮对方行棋 —— 做真实的让手递归而非静态截断
+  // （否则对方"连吃多子"的持续威胁被地平线掩盖，AI 就不懂保子/兑子）。
+  // 让手分支降深搜索（空着裁剪同款 R=2~3），控制树规模的同时保留威胁可见性。
   if (fdRemain > 0) {
-    best = (side === aiSide ? 1 : -1) * evaluate();
+    best = -alphabeta(Math.max(0, depth - 3), -beta, -alpha, oppOf(side), ply + 1);
     if (best > alpha) alpha = best;
     if (best >= beta) return best;
   }
@@ -929,7 +936,8 @@ function flipRisk(k) {
 }
 // 翻子的情报加成（叠加在"站桩"搜索基准值上，与走子的搜索分同尺度比较）
 function infoBonus(k) {
-  let s = 5 + 20 * (fdRemain / 50);
+  // 让手递归后 passVal 已包含"以后再行动"的价值，翻子加成只需覆盖纯情报增量，宜小
+  let s = 2 + 10 * (fdRemain / 50);
   let movableCnt = 0, enemyMovableCnt = 0, infoMissing = false;
   for (const x of pieces) {
     if (!x.alive) continue;
@@ -940,10 +948,11 @@ function infoBonus(k) {
     }
   }
   if (movableCnt === 0) s += 500;          // 没有可动子时翻子几乎是唯一选择
-  else if (movableCnt < 3) s += 10;
+  else if (movableCnt < 3) s += 6;
   adj[k].forEach(n => {
     const q = board[n];
     if (q && q.revealed && q.side === aiSide && q.rank >= 6) s += 5;   // 我方大子旁翻子，翻出敌小子可立即吃
+    if (!q && CAMPS.has(n)) s -= 6;   // 行营旁翻子：若翻出对方可动子，对方先行进营取势
   });
   s -= flipRisk(k);                        // 期望送子损失
   if (noProgress > 20) s += Math.min(noProgress - 20, 16) * 2;   // 翻子重置无吃子计数
@@ -954,10 +963,17 @@ function infoBonus(k) {
 function aiTurn() {
   if (over || turn !== 'ai') return;
   const flips = NODES.filter(k => board[k] && !board[k].revealed);
-  // 开局首翻（颜色未定）：随机翻一子
+  // 开局首翻（颜色未定）：翻出的子归对方——避开行营旁（对方翻出可动子会立刻进营取势）和铁路要道
   if (phase === 'first' || !humanSide) {
     if (!flips.length) { drawGame('电脑无棋可走'); return; }
-    flipPiece(flips[Math.floor(Math.random() * flips.length)], false); endTurn(); return;
+    let bestK = null, bs = -1e18;
+    for (const k of flips) {
+      let s = Math.random() * 6;
+      adj[k].forEach(n => { if (!board[n] && CAMPS.has(n)) s -= 12; });
+      if (railNodes.has(k)) s -= 3;
+      if (s > bs) { bs = s; bestK = k; }
+    }
+    flipPiece(bestK, false); endTurn(); return;
   }
   dmCache = {}; moveFieldCache = {};
   fdRemain = flips.length;
@@ -984,6 +1000,18 @@ function aiTurn() {
     if (m.t && noProgress > 20) b += Math.min(noProgress - 20, 16) * 2;
     if (!m.t && fdDist) b += ((fdDist[m.from] ?? 99) - (fdDist[m.to] ?? 99)) * 1.5;
     if (!m.t && CAMPS.has(m.to)) b += 14;  // 先手占营的主动权价值（eval 里双方对称，这里补先手 tempo）
+    // 有工兵在，炸弹别浪费在雷上 —— 留着换对方的司令/军长
+    if (m.p.special === 'bomb' && m.t && m.t.special === 'mine' &&
+        pieces.some(x => x.alive && x.side === aiSide && x.kind === '工兵')) b -= 70;
+    // 及时清除威胁我方雷/旗的子：搜索里"以后再吃"常与"现在吃"等价，
+    // 但拖延会引入翻子等不可控变数，平局时倾向立即动手
+    if (m.t && (m.t.kind === '工兵' || m.t.special === 'bomb') &&
+        pieces.some(x => x.side === aiSide && x.special === 'mine' && x.alive && x.revealed)) b += 22;
+    else if (m.t) {
+      const flagP = pieces.find(x => x.side === aiSide && x.special === 'flag' && x.alive && x.revealed);
+      if (flagP && minesLeft(aiSide) === 0 &&
+          (m.t.special === 'bomb' || m.t.rank === minRank(humanSide))) b += 22;
+    }
     return b + Math.random() * 3;
   };
 
@@ -1021,6 +1049,8 @@ function aiTurn() {
   const se = $('stSearch');
   if (se) se.textContent = `深度 ${depthReached} 层 · ${searchNodes.toLocaleString()} 节点 · ${Math.round(performance.now() - tStart)}ms`;
 
+  // 已找到必胜线路：直接执行，不给翻子拖延的机会（拖一手可能放走胜利）
+  if (bestMove && bestVal >= WIN - 1000) { doMove(bestMove.from, bestMove.to); return; }
   // 翻子候选：站桩搜索值 + 情报加成，与走子同尺度竞争
   let bestFlip = null, bestFlipVal = -Infinity;
   if (flips.length) {
