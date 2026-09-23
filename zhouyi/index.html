@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>周易 · 六十四卦</title>
+<meta name="description" content="周易六十四卦：卦辞、爻辞、彖传、象传原文，附白话译文、释义与字词注释；八卦、起卦与易学入门。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 56'%3E%3Cg fill='%23a8322a'%3E%3Crect y='0' width='60' height='6' rx='1'/%3E%3Crect y='10' width='26' height='6' rx='1'/%3E%3Crect x='34' y='10' width='26' height='6' rx='1'/%3E%3Crect y='20' width='60' height='6' rx='1'/%3E%3Crect y='30' width='26' height='6' rx='1'/%3E%3Crect x='34' y='30' width='26' height='6' rx='1'/%3E%3Crect y='40' width='60' height='6' rx='1'/%3E%3Crect y='50' width='26' height='6' rx='1'/%3E%3Crect x='34' y='50' width='26' height='6' rx='1'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- non-blocking: Google Fonts is unreachable in some regions; the serif stack below falls back to local 宋体 -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<script>
+  // apply the saved theme before first paint
+  try { const t = localStorage.getItem('zhouyi-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  :root {
+    --bg: #f3eee3;
+    --surface: #fbf8f2;
+    --surface-2: #f1eadc;
+    --ink: #2a2521;
+    --ink-2: #4b433b;
+    --muted: #7c7266;
+    --line: #e1d6c3;
+    --line-2: #d3c6ae;
+    --accent: #a8322a;
+    --accent-ink: #fff8f2;
+    --accent-soft: #f2dfd8;
+    --gold: #8f6f2e;
+    --good: #2f7350;
+    --good-soft: #dcebe0;
+    --mid: #8f6f2e;
+    --mid-soft: #f0e6cf;
+    --bad: #a8322a;
+    --bad-soft: #f2dfd8;
+    --shadow: 0 1px 2px rgba(60, 40, 20, .06), 0 4px 14px rgba(60, 40, 20, .06);
+    --serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", "Source Han Serif SC", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15120f; --surface: #1e1a16; --surface-2: #26211b; --ink: #ece3d4; --ink-2: #d2c7b6; --muted: #a0947f;
+      --line: #342d25; --line-2: #463d32; --accent: #d9604f; --accent-ink: #1a0f0c; --accent-soft: #3a211c;
+      --gold: #cfa95c; --good: #6fbf8c; --good-soft: #1f3327; --mid: #cfa95c; --mid-soft: #342b19; --bad: #e0705f; --bad-soft: #3a211c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15120f; --surface: #1e1a16; --surface-2: #26211b; --ink: #ece3d4; --ink-2: #d2c7b6; --muted: #a0947f;
+    --line: #342d25; --line-2: #463d32; --accent: #d9604f; --accent-ink: #1a0f0c; --accent-soft: #3a211c;
+    --gold: #cfa95c; --good: #6fbf8c; --good-soft: #1f3327; --mid: #cfa95c; --mid-soft: #342b19; --bad: #e0705f; --bad-soft: #3a211c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 72px; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.75;
+    min-height: 100vh;
+  }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  svg { display: block; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(1.2) blur(8px);
+    -webkit-backdrop-filter: saturate(1.2) blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-in {
+    max-width: 1080px; margin: 0 auto; padding: 10px 16px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 9px; text-decoration: none;
+    font-family: var(--serif); font-weight: 700; font-size: 1.25rem; letter-spacing: .12em;
+  }
+  .brand svg { width: 22px; color: var(--accent); }
+  .nav { display: flex; gap: 2px; flex-wrap: wrap; }
+  .nav a {
+    text-decoration: none; padding: 5px 11px; border-radius: 999px; font-size: .93rem; color: var(--ink-2);
+  }
+  .nav a:hover { background: var(--surface-2); }
+  .nav a.on { background: var(--ink); color: var(--bg); }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .home-link { font-size: .85rem; color: var(--muted); text-decoration: none; }
+  .home-link:hover { color: var(--accent); }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+    cursor: pointer; display: grid; place-items: center;
+  }
+  .icon-btn:hover { border-color: var(--line-2); }
+  .icon-btn svg { width: 17px; height: 17px; }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 22px 16px 60px; }
+  .narrow { max-width: 860px; margin: 0 auto; }
+
+  h1, h2, h3 { font-family: var(--serif); font-weight: 700; letter-spacing: .04em; }
+  .page-title { font-size: 1.9rem; margin-bottom: 4px; }
+  .page-sub { color: var(--muted); margin-bottom: 22px; }
+
+  /* ---------- hexagram figures ---------- */
+  .hx rect { fill: currentColor; }
+  .hx rect.hl { fill: var(--accent); }
+  .hx .mv { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .hx.dim rect { fill: var(--line-2); }
+  .hx.dim rect.hl { fill: var(--accent); }
+
+  /* ---------- list view ---------- */
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .search {
+    flex: 1 1 260px; display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0 12px;
+  }
+  .search:focus-within { border-color: var(--accent); }
+  .search svg { width: 17px; color: var(--muted); flex: none; }
+  .search input {
+    flex: 1; border: 0; outline: 0; background: transparent; padding: 10px 0; font: inherit; color: var(--ink); min-width: 0;
+  }
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button {
+    border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: .9rem; color: var(--ink-2);
+  }
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+
+  .group-title {
+    display: flex; align-items: baseline; gap: 10px; margin: 26px 0 12px;
+    font-family: var(--serif); font-size: 1.25rem; font-weight: 700; letter-spacing: .1em;
+  }
+  .group-title small { font-family: var(--sans); font-size: .85rem; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+  .ggrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+  .gcard {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 16px 8px 12px; text-decoration: none; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 12px; transition: transform .15s, border-color .15s, box-shadow .15s;
+  }
+  .gcard:hover { transform: translateY(-2px); border-color: var(--line-2); box-shadow: var(--shadow); }
+  .gcard .hx { width: 46px; color: var(--ink); }
+  .gcard .gnum { position: absolute; top: 6px; left: 9px; font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .gcard .gname { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; line-height: 1.2; margin-top: 4px; }
+  .gcard .gfull { font-size: .78rem; color: var(--muted); }
+
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { border-collapse: separate; border-spacing: 4px; margin: 0 auto; }
+  .matrix th { font-weight: 400; font-size: .8rem; color: var(--muted); padding: 4px; }
+  .matrix th .tri { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .matrix th .tri b { font-family: var(--serif); color: var(--ink); font-size: 1rem; }
+  .matrix th .hx { width: 22px; color: var(--ink); }
+  .matrix td a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px; width: 88px; padding: 9px 4px 7px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 9px; text-decoration: none;
+  }
+  .matrix td a:hover { border-color: var(--accent); }
+  .matrix td .hx { width: 30px; color: var(--ink); }
+  .matrix td .nm { font-family: var(--serif); font-weight: 700; font-size: .98rem; line-height: 1.2; }
+  .matrix td .fn { font-size: .7rem; color: var(--muted); }
+  .matrix .axis { font-size: .78rem; color: var(--muted); text-align: center; }
+
+  .hits { margin-top: 26px; }
+  .hit {
+    display: block; text-decoration: none; padding: 11px 14px; border-bottom: 1px solid var(--line);
+  }
+  .hit:hover { background: var(--surface); }
+  .hit .where { font-size: .8rem; color: var(--muted); }
+  .hit .t { font-family: var(--serif); }
+  mark { background: var(--mid-soft); color: inherit; border-radius: 2px; padding: 0 1px; }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+
+  .song {
+    margin-top: 34px; padding: 20px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .song h3 { font-size: 1.05rem; margin-bottom: 10px; }
+  .song p { font-family: var(--serif); font-size: 1.05rem; letter-spacing: .08em; line-height: 2.1; color: var(--ink-2); }
+
+  /* ---------- detail view ---------- */
+  .dhead {
+    display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center;
+    padding: 26px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow);
+  }
+  .dfig { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .dfig .hx { width: 132px; color: var(--ink); }
+  .dfig .hx rect { cursor: pointer; transition: fill .15s; }
+  .dfig .hx rect:hover { fill: var(--accent); }
+  .dfig .trinote { display: flex; flex-direction: column; gap: 2px; font-size: .82rem; color: var(--muted); text-align: center; }
+  .dmeta .no { color: var(--muted); font-size: .9rem; letter-spacing: .1em; }
+  .dmeta h1 { font-size: 3.2rem; line-height: 1.15; letter-spacing: .12em; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .dmeta h1 .py { font-family: var(--sans); font-size: 1.05rem; font-weight: 400; color: var(--muted); letter-spacing: .02em; }
+  .dmeta .full { font-family: var(--serif); font-size: 1.1rem; color: var(--ink-2); margin-top: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; padding: 2px 10px; border-radius: 999px;
+    background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); text-decoration: none; line-height: 1.7;
+  }
+  a.chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip .hx { width: 16px; color: currentColor; }
+  .chip.kw { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-family: var(--serif); font-size: .88rem; }
+  .rel-label { color: var(--muted); font-size: .8rem; margin-right: 2px; }
+
+  .dnav { display: flex; justify-content: space-between; gap: 10px; margin: 14px 0 6px; flex-wrap: wrap; }
+  .dnav a {
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink-2); font-size: .9rem;
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  }
+  .dnav a:hover { border-color: var(--accent); color: var(--accent); }
+  .dnav .hx { width: 16px; }
+
+  .modebar { display: flex; justify-content: flex-end; margin: 14px 0 0; }
+
+  .blk { margin-top: 30px; }
+  .blk > h2 {
+    display: flex; align-items: center; gap: 10px; font-size: 1.3rem; margin-bottom: 12px; letter-spacing: .12em;
+  }
+  .blk > h2::before { content: ""; width: 4px; height: 1.1em; border-radius: 2px; background: var(--accent); }
+  .blk > h2 small { font-family: var(--sans); font-size: .8rem; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+  .card + .card { margin-top: 12px; }
+  .prose { color: var(--ink-2); }
+  .prose + .prose { margin-top: 10px; }
+
+  .yuan {
+    font-family: var(--serif); font-size: 1.3rem; line-height: 1.95; letter-spacing: .05em; color: var(--ink);
+  }
+  .yuan.sm { font-size: 1.1rem; }
+  .yuan .pre { color: var(--accent); font-weight: 700; margin-right: .3em; }
+  .yi, .jie { margin-top: 12px; font-size: .98rem; }
+  .yi { color: var(--ink-2); }
+  .jie {
+    color: var(--ink-2); background: var(--surface-2); border-radius: 10px; padding: 12px 14px;
+  }
+  .lab {
+    display: inline-block; font-size: .72rem; line-height: 1.6; padding: 0 7px; margin-right: 8px; border-radius: 4px;
+    vertical-align: .12em; letter-spacing: .08em; border: 1px solid var(--line-2); color: var(--muted); font-weight: 400;
+    font-family: var(--sans);
+  }
+  .jie .lab { border-color: var(--accent); color: var(--accent); }
+  .xx { margin-top: 10px; }
+  .xx .yuan { font-size: 1.08rem; color: var(--ink-2); }
+
+  body[data-mode="yuan"] .yi, body[data-mode="yuan"] .jie, body[data-mode="yuan"] .hide-yuan { display: none; }
+  body[data-mode="yi"] .jie { display: none; }
+
+  .yao { display: grid; grid-template-columns: 54px 1fr; gap: 16px; }
+  .yao + .yao { margin-top: 12px; }
+  .yao .side { padding-top: 6px; }
+  .yao .side .hx { width: 46px; color: var(--ink); }
+  .yao-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .yao-h .pos { font-family: var(--serif); font-weight: 700; font-size: 1.15rem; letter-spacing: .1em; }
+  .tone { font-size: .75rem; padding: 0 9px; border-radius: 999px; line-height: 1.8; font-weight: 600; }
+  .tone.t-吉 { background: var(--good-soft); color: var(--good); }
+  .tone.t-平 { background: var(--mid-soft); color: var(--mid); }
+  .tone.t-凶 { background: var(--bad-soft); color: var(--bad); }
+  .fact { font-size: .74rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; line-height: 1.75; }
+
+  .overview { padding: 8px 10px; }
+  .ov-row {
+    display: grid; grid-template-columns: 44px 52px 1fr auto; align-items: center; gap: 10px; padding: 7px 8px;
+    text-decoration: none; border-radius: 8px;
+  }
+  .ov-row + .ov-row { border-top: 1px solid var(--line); }
+  .ov-row:hover { background: var(--surface-2); }
+  .ov-row .ov-bar { width: 40px; color: var(--ink); }
+  .ov-yong { font-family: var(--serif); color: var(--muted); font-size: .85rem; text-align: center; }
+  .ov-pos { font-family: var(--serif); font-weight: 700; letter-spacing: .06em; }
+  .ov-t { font-family: var(--serif); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  details.fold > summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: .95rem;
+  }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary::before { content: "▸"; color: var(--accent); transition: transform .15s; }
+  details.fold[open] > summary::before { transform: rotate(90deg); }
+  .wy-sec + .wy-sec { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line-2); }
+  .wy-p + .wy-p { margin-top: 14px; }
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .note { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .note .w { font-family: var(--serif); font-weight: 700; font-size: 1.1rem; }
+  .note .py { color: var(--accent); font-size: .85rem; margin-left: 6px; }
+  .note .g { color: var(--ink-2); font-size: .9rem; margin-top: 2px; }
+
+  .gl { border-bottom: 1.5px dotted var(--accent); cursor: help; }
+  .gl:focus { outline: none; background: var(--accent-soft); }
+  .pop {
+    position: fixed; z-index: 50; max-width: min(320px, calc(100vw - 32px)); padding: 10px 13px; border-radius: 10px;
+    background: var(--ink); color: var(--bg); font-size: .88rem; line-height: 1.6; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .pop b { font-family: var(--serif); font-size: 1.05rem; }
+  .pop .py { opacity: .75; margin-left: 6px; }
+  .pop[hidden] { display: none; }
+
+  /* ---------- bagua ---------- */
+  .song-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+  .song-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .song-cell .hx { width: 34px; color: var(--ink); }
+  .song-cell b { font-family: var(--serif); font-size: 1.05rem; }
+  .song-cell span { font-family: var(--serif); font-size: .9rem; color: var(--ink-2); letter-spacing: .06em; }
+  .diagram-wrap { display: grid; grid-template-columns: minmax(0, 420px) 1fr; gap: 28px; align-items: center; }
+  .diagram { width: 100%; max-width: 420px; margin: 0 auto; color: var(--ink); }
+  .diagram text { font-family: var(--serif); fill: var(--ink); }
+  .diagram .dir { fill: var(--muted); font-family: var(--sans); font-size: 12px; }
+  .diagram .ring { fill: none; stroke: var(--line-2); }
+  .tj-dark { fill: var(--ink); }
+  .tj-light { fill: var(--surface); }
+  .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .tcard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  .tcard-h { display: flex; align-items: center; gap: 14px; }
+  .tcard-h .hx { width: 44px; color: var(--ink); }
+  .tcard-h h3 { font-size: 1.6rem; line-height: 1.2; }
+  .tcard-h h3 small { font-family: var(--sans); font-size: .85rem; color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .tcard-h .nat { color: var(--ink-2); font-size: .9rem; }
+  dl.attrs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 10px; margin: 14px 0 10px; }
+  dl.attrs div { background: var(--surface-2); border-radius: 8px; padding: 5px 8px; text-align: center; }
+  dl.attrs dt { font-size: .7rem; color: var(--muted); }
+  dl.attrs dd { font-family: var(--serif); font-weight: 600; }
+
+  /* ---------- qigua ---------- */
+  .coins { display: flex; justify-content: center; gap: 18px; margin: 18px 0 8px; perspective: 600px; }
+  .coin { width: 74px; height: 74px; }
+  .coin .rim { fill: var(--gold); }
+  .coin .face { fill: color-mix(in srgb, var(--gold) 72%, var(--surface)); }
+  .coin .hole { fill: var(--bg); stroke: color-mix(in srgb, var(--gold) 60%, var(--ink)); stroke-width: 1.2; }
+  .coin text { font-family: var(--serif); font-weight: 700; font-size: 10.5px; fill: color-mix(in srgb, var(--gold) 35%, var(--ink)); }
+  .coin.flip { animation: flip .55s ease-out; }
+  @keyframes flip { 0% { transform: rotateY(0) translateY(0); } 40% { transform: rotateY(540deg) translateY(-18px); } 100% { transform: rotateY(1080deg) translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .coin.flip { animation: none; } }
+  .coin-cap { text-align: center; color: var(--muted); font-size: .9rem; min-height: 1.7em; }
+  .btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 14px 0 6px; }
+  .btn {
+    border: 1px solid var(--line-2); background: var(--surface); padding: 8px 18px; border-radius: 999px; cursor: pointer; font-size: .95rem;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.06); color: var(--accent-ink); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .throws { margin: 18px auto 0; max-width: 520px; }
+  .throw { display: grid; grid-template-columns: 56px 1fr 82px 64px; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  .throw .p { font-family: var(--serif); font-weight: 700; }
+  .throw .c { color: var(--muted); font-size: .88rem; }
+  .throw .v { font-size: .88rem; }
+  .throw .v.mv { color: var(--accent); font-weight: 600; }
+  .throw .hx { width: 60px; color: var(--ink); }
+  .throw.pending { opacity: .4; }
+  .throw select { font: inherit; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); }
+  .result { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 8px; }
+  .rcard { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; padding: 18px 22px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); min-width: 150px; }
+  .rcard:hover { border-color: var(--accent); }
+  .rcard .hx { width: 78px; color: var(--ink); }
+  .rcard .k { font-size: .8rem; color: var(--muted); }
+  .rcard .nm { font-family: var(--serif); font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+  .rcard .fn { color: var(--muted); font-size: .85rem; }
+  .arrow { font-size: 1.6rem; color: var(--muted); }
+  .rule { margin-top: 18px; padding: 12px 16px; border-radius: 10px; background: var(--mid-soft); color: var(--ink-2); font-size: .95rem; }
+  .read-item + .read-item { margin-top: 12px; }
+  .read-item .src { font-size: .82rem; color: var(--muted); margin-bottom: 4px; }
+  .read-item .src a { color: var(--accent); }
+  .main-tag { font-size: .72rem; background: var(--accent); color: var(--accent-ink); border-radius: 4px; padding: 0 6px; margin-left: 6px; vertical-align: .1em; }
+  .disclaimer { color: var(--muted); font-size: .85rem; margin-top: 14px; text-align: center; }
+
+  /* ---------- intro ---------- */
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .toc a { font-size: .85rem; text-decoration: none; padding: 3px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
+  .toc a:hover { border-color: var(--accent); color: var(--accent); }
+  .intro-sec .prose { font-size: 1rem; }
+  dl.terms { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin-top: 14px; }
+  dl.terms dt { font-family: var(--serif); font-weight: 700; color: var(--accent); }
+  dl.terms dd { color: var(--ink-2); }
+
+  footer.foot { max-width: 1080px; margin: 0 auto; padding: 22px 16px 40px; color: var(--muted); font-size: .82rem; border-top: 1px solid var(--line); }
+
+  @media (max-width: 720px) {
+    main { padding: 16px 16px 48px; }
+    .topbar-in { gap: 8px; padding: 8px 16px; flex-wrap: nowrap; }
+    .brand { font-size: 1.1rem; gap: 6px; letter-spacing: .06em; }
+    .nav { flex-wrap: nowrap; }
+    .nav a { padding: 4px 8px; font-size: .88rem; white-space: nowrap; }
+    .top-right .home-link { display: none; }
+    .dhead { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 20px 16px; gap: 14px; }
+    .dmeta h1 { justify-content: center; font-size: 2.6rem; }
+    .dmeta .chips { justify-content: center; }
+    .card { padding: 16px; }
+    .yao { grid-template-columns: 1fr; gap: 4px; }
+    .yao .side { display: none; }
+    .yuan { font-size: 1.18rem; }
+    .song-row { grid-template-columns: repeat(4, 1fr); }
+    .diagram-wrap { grid-template-columns: 1fr; }
+    dl.attrs { grid-template-columns: repeat(2, 1fr); }
+    .throw { grid-template-columns: 48px 1fr 70px 52px; gap: 6px; padding: 7px 4px; }
+    .modebar { justify-content: center; }
+    .page-title { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body data-mode="full">
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#/">
+      <svg viewBox="0 0 60 56" aria-hidden="true"><g fill="currentColor"><rect y="0" width="60" height="6" rx="1"/><rect y="10" width="26" height="6" rx="1"/><rect x="34" y="10" width="26" height="6" rx="1"/><rect y="20" width="60" height="6" rx="1"/><rect y="30" width="26" height="6" rx="1"/><rect x="34" y="30" width="26" height="6" rx="1"/><rect y="40" width="60" height="6" rx="1"/><rect y="50" width="26" height="6" rx="1"/><rect x="34" y="50" width="26" height="6" rx="1"/></g></svg>
+      周易
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a href="#/" data-nav="list">六十四卦</a>
+      <a href="#/bagua" data-nav="bagua">八卦</a>
+      <a href="#/qigua" data-nav="qigua">起卦</a>
+      <a href="#/intro" data-nav="intro">入门</a>
+    </nav>
+    <div class="top-right">
+      <a class="home-link" href="../index.html">← 工具首页</a>
+      <button class="icon-btn" id="themeBtn" title="切换深浅色" aria-label="切换深浅色"></button>
+    </div>
+  </div>
+</header>
+<main id="app"></main>
+<footer class="foot">
+  经文底本：维基文库《周易》（通行本，含彖传、象传、文言传），并以《周易正义》（阮刻十三经注疏本）逐句校订；序卦、杂卦、说卦据维基文库。
+  白话译文、释义与字词注释为本站编写，仅供学习参考。
+</footer>
+<div class="pop" id="pop" hidden></div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+  'use strict';
+  const D = window.ZHOUYI;
+  const HEX = D.hexagrams;                       // index = n - 1
+  const BY_BITS = {}; HEX.forEach(h => { BY_BITS[h.bits] = h; });
+  const TRI = {}; D.trigrams.forEach(t => { TRI[t.name] = t; });
+  const TRI_ORDER = ['乾', '兑', '离', '震', '巽', '坎', '艮', '坤'];
+  const NUM_CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  const app = document.getElementById('app');
+
+  // ---------- helpers ----------
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const cnNum = n => {
+    if (n <= 10) return n === 10 ? '十' : NUM_CN[n];
+    const t = Math.floor(n / 10), o = n % 10;
+    return (t === 1 ? '' : NUM_CN[t]) + '十' + (o ? NUM_CN[o] : '');
+  };
+  const stripTone = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ü/g, 'v').toLowerCase();
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } },
+  };
+
+  /** Hexagram / trigram figure. bits: bottom→top string of 1 (yang) / 0 (yin). */
+  function fig(bits, opt = {}) {
+    const n = bits.length, gap = 10, bh = 6, W = 60;
+    const H = (n - 1) * gap + bh;
+    const extra = opt.moving ? 16 : 0;
+    let s = `<svg class="hx ${opt.cls || ''}" viewBox="0 0 ${W + extra} ${H}" aria-hidden="true">`;
+    for (let i = 0; i < n; i++) {
+      const y = H - bh - i * gap;
+      const hl = (opt.hl === i || opt.hl === 'all') ? ' hl' : '';
+      const data = opt.clickable ? ` data-line="${i + 1}"` : '';
+      if (bits[i] === '1') s += `<rect class="${hl}" x="0" y="${y}" width="${W}" height="${bh}" rx="1"${data}/>`;
+      else s += `<rect class="${hl}" x="0" y="${y}" width="26" height="${bh}" rx="1"${data}/><rect class="${hl}" x="34" y="${y}" width="26" height="${bh}" rx="1"${data}/>`;
+      if (opt.moving && opt.moving[i]) {
+        const cy = y + bh / 2, cx = W + 9;
+        s += opt.moving[i] === 9
+          ? `<circle class="mv" cx="${cx}" cy="${cy}" r="3.6"/>`
+          : `<path class="mv" d="M${cx - 3.4} ${cy - 3.4}L${cx + 3.4} ${cy + 3.4}M${cx + 3.4} ${cy - 3.4}L${cx - 3.4} ${cy + 3.4}"/>`;
+      }
+    }
+    return s + '</svg>';
+  }
+
+  /** Wrap the first occurrence of each glossed word in a classical-text string. */
+  function gloss(text, notes) {
+    if (!notes || !notes.length) return esc(text);
+    const ranges = [];
+    [...notes.map((n, i) => ({ w: n.w, i }))].sort((a, b) => b.w.length - a.w.length).forEach(({ w, i }) => {
+      const at = text.indexOf(w);
+      if (at < 0) return;
+      const end = at + w.length;
+      if (ranges.some(r => at < r.end && end > r.start)) return;
+      ranges.push({ start: at, end, i });
+    });
+    ranges.sort((a, b) => a.start - b.start);
+    let out = '', pos = 0;
+    ranges.forEach(r => {
+      out += esc(text.slice(pos, r.start)) + `<span class="gl" tabindex="0" data-g="${r.i}">${esc(text.slice(r.start, r.end))}</span>`;
+      pos = r.end;
+    });
+    return out + esc(text.slice(pos));
+  }
+
+  const hexLink = (h, label) => `<a class="chip" href="#/gua/${h.n}">${fig(h.bits)}${label ? `<span class="rel-label">${label}</span>` : ''}${esc(h.full)}</a>`;
+
+  // ---------- theme ----------
+  const themeBtn = document.getElementById('themeBtn');
+  const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>';
+  const isDark = () => {
+    const t = document.documentElement.dataset.theme;
+    return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  };
+  const paintThemeBtn = () => { themeBtn.innerHTML = isDark() ? SUN : MOON; };
+  themeBtn.addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    store.set('zhouyi-theme', next);
+    paintThemeBtn();
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintThemeBtn);
+  paintThemeBtn();
+
+  // ---------- display mode (原文 / 译文 / 释义) ----------
+  const MODES = [['full', '原文·译文·释义'], ['yi', '原文·译文'], ['yuan', '仅原文']];
+  let mode = store.get('zhouyi-mode', 'full');
+  if (!MODES.some(m => m[0] === mode)) mode = 'full';
+  document.body.dataset.mode = mode;
+  const modeBar = () => `<div class="modebar"><div class="seg" role="group" aria-label="显示内容">${MODES.map(([k, l]) =>
+    `<button data-mode="${k}" class="${k === mode ? 'on' : ''}">${l}</button>`).join('')}</div></div>`;
+  app.addEventListener('click', e => {
+    const b = e.target.closest('[data-mode]');
+    if (!b || !b.closest('.modebar')) return;
+    mode = b.dataset.mode;
+    document.body.dataset.mode = mode;
+    store.set('zhouyi-mode', mode);
+    document.querySelectorAll('.modebar button').forEach(x => x.classList.toggle('on', x.dataset.mode === mode));
+  });
+
+  // ---------- gloss popover ----------
+  const pop = document.getElementById('pop');
+  let curNotes = [], pinned = false;
+  function showPop(el) {
+    const n = curNotes[+el.dataset.g];
+    if (!n) return;
+    pop.innerHTML = `<b>${esc(n.w)}</b><span class="py">${esc(n.py)}</span><div>${esc(n.g)}</div>`;
+    pop.hidden = false;
+    const r = el.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let left = Math.min(Math.max(12, r.left + r.width / 2 - pw / 2), innerWidth - pw - 12);
+    let top = r.bottom + 8;
+    if (top + ph > innerHeight - 8) top = r.top - ph - 8;
+    pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  }
+  const hidePop = () => { pop.hidden = true; pinned = false; };
+  document.addEventListener('pointerover', e => {
+    if (e.pointerType !== 'mouse' || pinned) return;
+    const el = e.target.closest && e.target.closest('.gl');
+    if (el) showPop(el);
+  });
+  document.addEventListener('pointerout', e => {
+    if (e.pointerType !== 'mouse' || pinned) return;
+    if (e.target.closest && e.target.closest('.gl')) hidePop();
+  });
+  document.addEventListener('click', e => {
+    const el = e.target.closest('.gl');
+    if (el) { showPop(el); pinned = true; } else if (!e.target.closest('#pop')) hidePop();
+  });
+  document.addEventListener('focusin', e => { if (e.target.classList && e.target.classList.contains('gl')) showPop(e.target); });
+  addEventListener('scroll', () => { if (!pop.hidden) hidePop(); }, { passive: true });
+
+  // =====================================================================
+  // 六十四卦列表
+  // =====================================================================
+  let listView = store.get('zhouyi-list', 'seq');
+  let query = '';
+
+  function card(h) {
+    return `<a class="gcard" href="#/gua/${h.n}" title="${esc(h.full)}"><span class="gnum">${String(h.n).padStart(2, '0')}</span>${fig(h.bits)}<span class="gname">${esc(h.name)}</span><span class="gfull">${esc(h.full)}</span></a>`;
+  }
+
+  function matchHex(h, q) {
+    const qq = stripTone(q).replace(/\s+/g, '');
+    return h.name.includes(q) || h.full.includes(q) || (h.kw || []).some(k => k.includes(q))
+      || (qq && /^[a-z]+$/.test(qq) && stripTone(h.py).replace(/\s+/g, '').startsWith(qq));
+  }
+
+  function textHits(q) {
+    if (!/[一-鿿]/.test(q)) return [];
+    const hits = [];
+    const push = (h, where, text, line) => { if (text.includes(q)) hits.push({ h, where, text, line }); };
+    HEX.forEach(h => {
+      push(h, '卦辞', h.guaci);
+      h.lines.forEach((l, i) => { push(h, l.pos, l.text, i + 1); push(h, l.pos + ' · 小象', l.xx, i + 1); });
+      h.tuan.forEach(t => push(h, '彖传', t));
+      push(h, '大象', h.daxiang);
+    });
+    return hits;
+  }
+
+  function hl(text, q) {
+    const i = text.indexOf(q);
+    if (i < 0) return esc(text);
+    return esc(text.slice(0, i)) + '<mark>' + esc(q) + '</mark>' + esc(text.slice(i + q.length));
+  }
+
+  function renderListBody() {
+    const body = document.getElementById('listBody');
+    if (!body) return;
+    const q = query.trim();
+    if (q) {
+      const hs = HEX.filter(h => matchHex(h, q));
+      const th = textHits(q);
+      let html = hs.length ? `<div class="group-title">卦名 <small>${hs.length} 个</small></div><div class="ggrid">${hs.map(card).join('')}</div>` : '';
+      if (th.length) {
+        html += `<div class="hits"><div class="group-title">经文 <small>「${esc(q)}」出现 ${th.length} 处</small></div>` +
+          th.slice(0, 120).map(x => `<a class="hit" href="#/gua/${x.h.n}${x.line ? '/' + x.line : ''}"><div class="where">第${cnNum(x.h.n)}卦 ${esc(x.h.name)} · ${esc(x.where)}</div><div class="t">${hl(x.text, q)}</div></a>`).join('') +
+          (th.length > 120 ? `<div class="empty">仅显示前 120 条</div>` : '') + '</div>';
+      }
+      body.innerHTML = html || `<div class="empty">没有找到与「${esc(q)}」相关的卦或经文</div>`;
+      return;
+    }
+    if (listView === 'matrix') {
+      let t = '<div class="matrix-wrap"><table class="matrix"><thead><tr><th class="axis">上卦 ↓　下卦 →</th>';
+      TRI_ORDER.forEach(lo => { t += `<th><div class="tri">${fig(TRI[lo].bits)}<b>${lo}</b>${TRI[lo].nature}</div></th>`; });
+      t += '</tr></thead><tbody>';
+      TRI_ORDER.forEach(up => {
+        t += `<tr><th><div class="tri">${fig(TRI[up].bits)}<b>${up}</b>${TRI[up].nature}</div></th>`;
+        TRI_ORDER.forEach(lo => {
+          const h = BY_BITS[TRI[lo].bits + TRI[up].bits];
+          t += `<td><a href="#/gua/${h.n}" title="第${cnNum(h.n)}卦">${fig(h.bits)}<span class="nm">${esc(h.name)}</span><span class="fn">${esc(h.full)}</span></a></td>`;
+        });
+        t += '</tr>';
+      });
+      body.innerHTML = t + '</tbody></table></div>';
+      return;
+    }
+    body.innerHTML =
+      `<div class="group-title">上经 <small>乾至离 · 三十卦</small></div><div class="ggrid">${HEX.slice(0, 30).map(card).join('')}</div>` +
+      `<div class="group-title">下经 <small>咸至未济 · 三十四卦</small></div><div class="ggrid">${HEX.slice(30).map(card).join('')}</div>` +
+      `<div class="song"><h3>上下经卦名次序歌 <small style="font-family:var(--sans);font-weight:400;color:var(--muted);font-size:.8rem">朱熹《周易本义》</small></h3>
+        <p>乾坤屯蒙需讼师，比小畜兮履泰否。同人大有谦豫随，蛊临观兮噬嗑贲。剥复无妄大畜颐，大过坎离三十备。</p>
+        <p>咸恒遯兮及大壮，晋与明夷家人睽。蹇解损益夬姤萃，升困井革鼎震继。艮渐归妹丰旅巽，兑涣节兮中孚至。小过既济兼未济，是为下经三十四。</p></div>`;
+  }
+
+  function viewList() {
+    app.innerHTML = `
+      <h1 class="page-title">六十四卦</h1>
+      <p class="page-sub">点选任意一卦，查看卦辞、爻辞、彖传、象传原文，以及白话译文与释义。</p>
+      <div class="toolbar">
+        <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+          <input id="q" type="search" placeholder="搜索卦名、拼音、全称或经文字句，如：屯、zhun、水雷、龙" autocomplete="off" value="${esc(query)}" /></label>
+        <div class="seg" role="group" aria-label="排列方式">
+          <button data-view="seq" class="${listView === 'seq' ? 'on' : ''}">序卦</button>
+          <button data-view="matrix" class="${listView === 'matrix' ? 'on' : ''}">上下卦</button>
+        </div>
+      </div>
+      <div id="listBody"></div>`;
+    const q = document.getElementById('q');
+    q.addEventListener('input', () => { query = q.value; renderListBody(); });
+    app.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+      listView = b.dataset.view; store.set('zhouyi-list', listView);
+      app.querySelectorAll('[data-view]').forEach(x => x.classList.toggle('on', x === b));
+      if (query) { query = ''; q.value = ''; }
+      renderListBody();
+    }));
+    renderListBody();
+  }
+
+  // =====================================================================
+  // 卦详情
+  // =====================================================================
+  const FACT = f => [f[0] ? '当位' : '不当位', f[1] ? '居中' : '', f[2] ? '有应' : '无应'].filter(Boolean);
+  const pair = (yuanHtml, yi, jie, opt = {}) =>
+    `<p class="yuan${opt.sm ? ' sm' : ''}">${yuanHtml}</p>` +
+    (yi ? `<div class="yi"><span class="lab">译文</span>${esc(yi)}</div>` : '') +
+    (jie ? `<div class="jie"><span class="lab">释义</span>${esc(jie)}</div>` : '');
+
+  function viewGua(n, lineNo) {
+    const h = HEX[n - 1];
+    if (!h) return viewList();
+    curNotes = h.notes || [];
+    const G = t => gloss(t, curNotes);
+    const up = TRI[h.upper], lo = TRI[h.lower];
+    const prev = HEX[(n + 62) % 64], next = HEX[n % 64];
+    const rels = [['错卦', h.cuo], ['综卦', h.zong], ['互卦', h.hu]]
+      .map(([k, m]) => m === n
+        ? `<span class="chip" title="${k}与本卦相同">${fig(h.bits)}<span class="rel-label">${k}</span>即本卦</span>`
+        : hexLink(HEX[m - 1], k)).join('');
+    const kw = (h.kw || []).map(k => `<span class="chip kw">${esc(k)}</span>`).join('');
+
+    let html = `
+      <div class="narrow">
+      <div class="dnav">
+        <a href="#/gua/${prev.n}" title="上一卦">‹ ${fig(prev.bits)}${esc(prev.name)}</a>
+        <a href="#/">六十四卦</a>
+        <a href="#/gua/${next.n}" title="下一卦">${esc(next.name)}${fig(next.bits)} ›</a>
+      </div>
+      <section class="dhead">
+        <div class="dfig">${fig(h.bits, { clickable: true })}
+          <div class="trinote"><span>上卦 ${up.sym} ${esc(h.upper)} · ${esc(up.nature)}</span><span>下卦 ${lo.sym} ${esc(h.lower)} · ${esc(lo.nature)}</span></div>
+        </div>
+        <div class="dmeta">
+          <div class="no">第${cnNum(n)}卦 · ${n <= 30 ? '上经' : '下经'}</div>
+          <h1>${esc(h.name)}<span class="py">${esc(h.py)}</span></h1>
+          <div class="full">${esc(h.full)}　${esc(h.lower)}下${esc(h.upper)}上</div>
+          ${kw ? `<div class="chips">${kw}</div>` : ''}
+          <div class="chips">${rels}</div>
+        </div>
+      </section>
+      ${modeBar()}`;
+
+    if (h.summary) {
+      html += `<section class="blk hide-yuan"><h2>卦义</h2><div class="card"><p class="prose">${esc(h.summary)}</p>
+        <p class="prose" style="margin-top:12px"><span class="lab">卦象</span>${esc(h.xiang)}</p></div></section>`;
+    }
+    html += `<section class="blk"><h2>卦辞</h2><div class="card">${pair(G(h.guaci), h.guaciYi, h.guaciJie)}</div></section>`;
+    html += `<section class="blk"><h2>彖传 <small>解释卦名与卦辞</small></h2><div class="card">` +
+      h.tuan.map((t, i) => pair(`${i === 0 ? '<span class="pre">彖曰</span>' : ''}${G(t)}`, h.tuanYi && h.tuanYi[i], null, { sm: true })).join('<div style="height:14px"></div>') +
+      `</div></section>`;
+    html += `<section class="blk"><h2>大象传 <small>由卦象引出君子之道</small></h2><div class="card">${pair(`<span class="pre">象曰</span>${G(h.daxiang)}`, h.daxiangYi, h.daxiangJie, { sm: true })}</div></section>`;
+
+    html += `<section class="blk"><h2>六爻 <small>自下而上：初、二、三、四、五、上</small></h2>`;
+    // overview, top line first so it reads like the figure
+    const order = [5, 4, 3, 2, 1, 0].concat(h.lines.length > 6 ? [6] : []);
+    html += `<div class="card overview">` + order.map(i => {
+      const l = h.lines[i];
+      const bar = i === 6 ? '<span class="ov-yong">用</span>' : fig(h.bits[i], { cls: 'ov-bar' });
+      return `<a class="ov-row" href="#/gua/${n}/${i + 1}">${bar}<span class="ov-pos">${esc(l.pos)}</span><span class="ov-t">${esc(l.text)}</span>${l.tone ? `<span class="tone t-${l.tone}">${l.tone}</span>` : ''}</a>`;
+    }).join('') + `</div><div style="height:12px"></div>`;
+    h.lines.forEach((l, i) => {
+      const isYong = i === 6;
+      const facts = l.f ? FACT(l.f).map(x => `<span class="fact">${x}</span>`).join('') : '<span class="fact">六爻皆变时所用</span>';
+      html += `<article class="card yao" id="yao-${i + 1}">
+        <div class="side">${fig(h.bits, { hl: isYong ? 'all' : i, cls: 'dim' })}</div>
+        <div>
+          <div class="yao-h"><span class="pos">${esc(l.pos)}</span>${l.tone ? `<span class="tone t-${l.tone}" title="整体倾向">${l.tone}</span>` : ''}${facts}</div>
+          <p class="yuan">${G(l.text)}</p>
+          <div class="xx"><p class="yuan"><span class="pre">象曰</span>${G(l.xx)}</p></div>
+          ${l.yi ? `<div class="yi"><span class="lab">译文</span>${esc(l.yi)}<br><span class="lab">小象</span>${esc(l.xxyi)}</div>` : ''}
+          ${l.jie ? `<div class="jie"><span class="lab">释义</span>${esc(l.jie)}</div>` : ''}
+        </div></article>`;
+    });
+    html += `</section>`;
+
+    if (h.wenyan && h.wenyan.length) {
+      html += `<section class="blk"><h2>文言传 <small>专释${esc(h.name)}卦的传文</small></h2><details class="fold card"><summary>展开《文言》全文${h.wenyanYi ? '及译文' : ''}</summary><div style="margin-top:14px">` +
+        h.wenyan.map((sec, a) => `<div class="wy-sec">${sec.map((p, b) =>
+          `<div class="wy-p">${pair(G(p), h.wenyanYi && h.wenyanYi[a] && h.wenyanYi[a][b], null, { sm: true })}</div>`).join('')}</div>`).join('') +
+        `</div></details></section>`;
+    }
+
+    html += `<section class="blk"><h2>序卦 · 杂卦 <small>卦与卦之间的次序与对照</small></h2><div class="card">
+      ${pair(`<span class="pre">序卦</span>${esc(h.xugua)}`, h.xuguaYi, null, { sm: true })}
+      <div style="height:16px"></div>
+      ${pair(`<span class="pre">杂卦</span>${esc(h.zagua)}`, h.zaguaYi, null, { sm: true })}
+    </div></section>`;
+
+    if (curNotes.length) {
+      html += `<section class="blk"><h2>字词注释 <small>原文中带点线的字词可点按查看</small></h2><div class="notes">` +
+        curNotes.map(x => `<div class="note"><span class="w">${esc(x.w)}</span><span class="py">${esc(x.py)}</span><div class="g">${esc(x.g)}</div></div>`).join('') +
+        `</div></section>`;
+    }
+    html += `<div class="dnav" style="margin-top:30px">
+        <a href="#/gua/${prev.n}">‹ 第${cnNum(prev.n)}卦 ${esc(prev.full)}</a>
+        <a href="#/gua/${next.n}">第${cnNum(next.n)}卦 ${esc(next.full)} ›</a>
+      </div></div>`;
+    app.innerHTML = html;
+    const goLine = k => {
+      const el = document.getElementById('yao-' + k);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', `#/gua/${n}/${k}`);
+    };
+    app.querySelectorAll('.dfig [data-line]').forEach(r => r.addEventListener('click', () => goLine(r.dataset.line)));
+    app.querySelectorAll('.ov-row').forEach(a => a.addEventListener('click', e => {
+      e.preventDefault();
+      goLine(a.getAttribute('href').split('/').pop());
+    }));
+    if (lineNo) {
+      const el = document.getElementById('yao-' + lineNo);
+      if (el) requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }));
+    }
+  }
+
+  // =====================================================================
+  // 八卦
+  // =====================================================================
+  let baguaMode = 'ht';
+  const DIR_ANGLE = { '南': -90, '西南': -45, '西': 0, '西北': 45, '北': 90, '东北': 135, '东': 180, '东南': -135 };
+
+  function taiji(r) {
+    return `<g><circle r="${r}" class="tj-light" stroke="currentColor" stroke-width="1.2"/>
+      <path class="tj-dark" d="M0 ${-r}A${r} ${r} 0 0 1 0 ${r}A${r / 2} ${r / 2} 0 0 1 0 0A${r / 2} ${r / 2} 0 0 0 0 ${-r}Z"/>
+      <circle cy="${-r / 2}" r="${r / 7}" class="tj-dark"/><circle cy="${r / 2}" r="${r / 7}" class="tj-light"/></g>`;
+  }
+
+  function diagram(which) {
+    const R = 128, S = 420, c = S / 2;
+    let s = `<svg class="diagram" viewBox="0 0 ${S} ${S}" role="img" aria-label="${which === 'xt' ? '先天八卦图' : '后天八卦图'}"><g transform="translate(${c} ${c})">`;
+    s += `<circle class="ring" r="${R + 44}"/><circle class="ring" r="${R - 30}"/>` + taiji(46);
+    D.trigrams.forEach(t => {
+      const dir = which === 'xt' ? t.xt : t.ht;
+      const a = DIR_ANGLE[dir] * Math.PI / 180, rot = DIR_ANGLE[dir] + 90;
+      const x = Math.cos(a) * R, y = Math.sin(a) * R;
+      // trigram bars: base (bottom line) faces the centre
+      let bars = '';
+      for (let i = 0; i < 3; i++) {
+        const yy = 12 - i * 11;
+        bars += t.bits[i] === '1' ? `<rect x="-24" y="${yy}" width="48" height="6" rx="1" fill="currentColor"/>`
+          : `<rect x="-24" y="${yy}" width="20" height="6" rx="1" fill="currentColor"/><rect x="4" y="${yy}" width="20" height="6" rx="1" fill="currentColor"/>`;
+      }
+      s += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot})">${bars}</g>`;
+      const lx = Math.cos(a) * (R - 58), ly = Math.sin(a) * (R - 58);
+      s += `<text x="${lx.toFixed(1)}" y="${(ly + 6).toFixed(1)}" text-anchor="middle" font-size="17" font-weight="700">${t.name}</text>`;
+      const dx = Math.cos(a) * (R + 58), dy = Math.sin(a) * (R + 58);
+      const num = which === 'xt' ? t.xn : t.hn;
+      s += `<text class="dir" x="${dx.toFixed(1)}" y="${(dy + 4).toFixed(1)}" text-anchor="middle">${dir} · ${t.nature}${which === 'xt' ? '' : ''} ${num}</text>`;
+    });
+    return s + '</g></svg>';
+  }
+
+  function viewBagua() {
+    curNotes = [];
+    const B = D.bagua || {};
+    let html = `<h1 class="page-title">八卦</h1>
+      <p class="page-sub">三画卦是六十四卦的基本单元。两个八卦上下相重，便成一个六画卦。</p>
+      <section class="blk"><h2>八卦取象歌 <small>朱熹《周易本义》</small></h2><div class="song-row">` +
+      ['乾', '坤', '震', '艮', '离', '坎', '兑', '巽'].map(k => `<div class="song-cell">${fig(TRI[k].bits)}<b>${k}</b><span>${TRI[k].song}</span></div>`).join('') +
+      `</div></section>
+      <section class="blk"><h2>八卦方位图 <small>上南下北，左东右西；方位后为卦数</small></h2>
+        <div class="card"><div class="diagram-wrap">
+          <div><div class="seg" role="group" style="margin-bottom:10px"><button data-bg="xt" class="${baguaMode === 'xt' ? 'on' : ''}">先天八卦（伏羲）</button><button data-bg="ht" class="${baguaMode === 'ht' ? 'on' : ''}">后天八卦（文王）</button></div>
+            <div id="dg">${diagram(baguaMode)}</div></div>
+          <div id="dgText" class="prose">${esc(baguaMode === 'xt' ? B.xiantian : B.houtian)}</div>
+        </div></div></section>
+      <section class="blk"><h2>八卦详解</h2><div class="tgrid">`;
+    D.trigrams.forEach(t => {
+      html += `<article class="tcard">
+        <div class="tcard-h">${fig(t.bits)}<div><h3>${t.name}<small>${t.py}</small></h3><div class="nat">象${t.nature} · ${t.song}</div></div></div>
+        <dl class="attrs">
+          <div><dt>卦德</dt><dd>${t.de}</dd></div><div><dt>家人</dt><dd>${t.family}</dd></div>
+          <div><dt>身体</dt><dd>${t.body}</dd></div><div><dt>动物</dt><dd>${t.animal}</dd></div>
+          <div><dt>先天方位</dt><dd>${t.xt}</dd></div><div><dt>后天方位</dt><dd>${t.ht}</dd></div>
+          <div><dt>五行</dt><dd>${t.wx}</dd></div><div><dt>先天/后天数</dt><dd>${t.xn} / ${t.hn}</dd></div>
+        </dl>
+        ${t.desc ? `<p class="prose">${esc(t.desc)}</p>` : ''}
+        <details class="fold" style="margin-top:10px"><summary>《说卦》广象</summary><div style="margin-top:8px">` +
+        t.images.map((p, i) => pair(esc(p), t.imagesYi && t.imagesYi[i], null, { sm: true })).join('<div style="height:10px"></div>') +
+        `</div></details></article>`;
+    });
+    html += `</div></section>
+      <section class="blk"><h2>说卦传 <small>十翼之一，专论八卦的象与义</small></h2>` +
+      D.shuogua.map(c => `<details class="fold card"><summary>${esc(c.title)}　<span style="color:var(--muted);font-size:.88rem">${esc(c.paras[0].slice(0, 22))}…</span></summary><div style="margin-top:12px">` +
+        c.paras.map((p, i) => `<div class="wy-p">${pair(esc(p), c.yi && c.yi[i], null, { sm: true })}</div>`).join('') + `</div></details>`).join('') +
+      `</section>`;
+    app.innerHTML = `<div class="narrow" style="max-width:980px">${html}</div>`;
+    app.querySelectorAll('[data-bg]').forEach(b => b.addEventListener('click', () => {
+      baguaMode = b.dataset.bg;
+      app.querySelectorAll('[data-bg]').forEach(x => x.classList.toggle('on', x === b));
+      document.getElementById('dg').innerHTML = diagram(baguaMode);
+      document.getElementById('dgText').textContent = baguaMode === 'xt' ? (B.xiantian || '') : (B.houtian || '');
+    }));
+  }
+
+  // =====================================================================
+  // 起卦（三钱法）
+  // =====================================================================
+  const VAL = { 6: ['老阴', '×', true], 7: ['少阳', '', false], 8: ['少阴', '', false], 9: ['老阳', '○', true] };
+  const POS_NAME = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
+  let qg = { throws: [], coins: null, manual: false };
+
+  function coinSVG(back, flip) {
+    const chars = back ? '' : `<text x="32" y="16.5" text-anchor="middle">开</text><text x="32" y="55.5" text-anchor="middle">元</text><text x="50" y="36" text-anchor="middle">通</text><text x="14" y="36" text-anchor="middle">宝</text>`;
+    return `<svg class="coin${flip ? ' flip' : ''}" viewBox="0 0 64 64" aria-label="${back ? '背' : '字'}"><circle class="rim" cx="32" cy="32" r="31"/><circle class="face" cx="32" cy="32" r="27"/>${back ? '<circle cx="32" cy="32" r="21" fill="none" stroke="currentColor" stroke-opacity=".18"/>' : ''}<rect class="hole" x="25" y="25" width="14" height="14"/>${chars}</svg>`;
+  }
+
+  function throwOnce() {
+    const r = new Uint8Array(3);
+    crypto.getRandomValues(r);
+    const coins = [...r].map(x => (x & 1) === 1);          // true = 背 (3), false = 字 (2)
+    const v = coins.reduce((s, b) => s + (b ? 3 : 2), 0);   // 6/7/8/9
+    return { coins, v };
+  }
+
+  function readingFor(ben, zhi, moving) {
+    // 朱熹《易学启蒙·考变占》
+    const k = moving.length;
+    const lineItem = (h, i, main) => ({ h, i, main });
+    const guaItem = (h, main) => ({ h, i: null, main });
+    const stat = [0, 1, 2, 3, 4, 5].filter(i => !moving.includes(i));
+    if (k === 0) return { rule: '六爻皆不变：以本卦卦辞占断。', items: [guaItem(ben)] };
+    if (k === 1) return { rule: '一爻变：以本卦变爻的爻辞占断。', items: [lineItem(ben, moving[0])] };
+    if (k === 2) return { rule: '二爻变：以本卦两个变爻的爻辞占断，以上面一爻为主。', items: [lineItem(ben, moving[0]), lineItem(ben, moving[1], true)] };
+    if (k === 3) return { rule: '三爻变：占本卦与之卦的卦辞，以本卦为主（贞），之卦为辅（悔）。', items: [guaItem(ben, true), guaItem(zhi)] };
+    if (k === 4) return { rule: '四爻变：以之卦中两个不变爻的爻辞占断，以下面一爻为主。', items: [lineItem(zhi, stat[0], true), lineItem(zhi, stat[1])] };
+    if (k === 5) return { rule: '五爻变：以之卦中唯一不变爻的爻辞占断。', items: [lineItem(zhi, stat[0])] };
+    if (ben.n === 1) return { rule: '六爻皆变：乾卦占「用九」。', items: [lineItem(ben, 6)] };
+    if (ben.n === 2) return { rule: '六爻皆变：坤卦占「用六」。', items: [lineItem(ben, 6)] };
+    return { rule: '六爻皆变：以之卦卦辞占断。', items: [guaItem(zhi)] };
+  }
+
+  function renderQigua(animate) {
+    const box = document.getElementById('qg');
+    if (!box) return;
+    const t = qg.throws, done = t.length === 6;
+    let html = '';
+    if (!qg.manual) {
+      const coins = qg.coins || [false, true, false];
+      html += `<div class="coins">${coins.map(b => coinSVG(b, animate)).join('')}</div>
+        <div class="coin-cap">${qg.coins ? `${coins.map(b => b ? '背' : '字').join(' ')} → ${VAL[t[t.length - 1]][0]}（${t[t.length - 1]}）` : '字面为「开元通宝」，背面光素；背记三、字记二。'}</div>
+        <div class="btns">
+          <button class="btn primary" data-q="one" ${done ? 'disabled' : ''}>${done ? '六爻已成' : `掷第${cnNum(t.length + 1)}次`}</button>
+          <button class="btn" data-q="all" ${done ? 'disabled' : ''}>一次掷完</button>
+          <button class="btn" data-q="reset">重新开始</button>
+          <button class="btn" data-q="manual">手动录入</button>
+        </div>`;
+    } else {
+      html += `<div class="btns"><button class="btn" data-q="auto">改用在线掷钱</button><button class="btn" data-q="reset">清空</button></div>
+        <p class="disclaimer" style="margin-top:0">若已亲手掷过铜钱，可逐爻选择结果（自下而上）。</p>`;
+    }
+    html += '<div class="throws">';
+    for (let i = 5; i >= 0; i--) {
+      const v = t[i];
+      if (qg.manual) {
+        html += `<div class="throw"><span class="p">${POS_NAME[i]}</span>
+          <select data-pos="${i}" aria-label="${POS_NAME[i]}"><option value="">— 选择 —</option>${[7, 8, 9, 6].map(x => `<option value="${x}" ${v === x ? 'selected' : ''}>${VAL[x][0]}（${x}）${VAL[x][1]}</option>`).join('')}</select>
+          <span class="v ${v && VAL[v][2] ? 'mv' : ''}">${v ? (VAL[v][2] ? '动爻 ' + VAL[v][1] : '静爻') : ''}</span>
+          <span>${v ? fig(v % 2 ? '1' : '0', { moving: VAL[v][2] ? { 0: v } : null }) : ''}</span></div>`;
+      } else {
+        html += `<div class="throw${v ? '' : ' pending'}"><span class="p">${POS_NAME[i]}</span>
+          <span class="c">${v ? `第${cnNum(i + 1)}次` : '待掷'}</span>
+          <span class="v ${v && VAL[v][2] ? 'mv' : ''}">${v ? `${VAL[v][0]} ${v}${VAL[v][1] ? ' ' + VAL[v][1] : ''}` : ''}</span>
+          <span>${v ? fig(v % 2 ? '1' : '0', { moving: VAL[v][2] ? { 0: v } : null }) : ''}</span></div>`;
+      }
+    }
+    html += '</div>';
+
+    if (done) {
+      const benBits = t.map(v => (v % 2 ? '1' : '0')).join('');
+      const zhiBits = t.map(v => (v === 9 ? '0' : v === 6 ? '1' : (v % 2 ? '1' : '0'))).join('');
+      const moving = t.map((v, i) => (v === 6 || v === 9 ? i : -1)).filter(i => i >= 0);
+      const ben = BY_BITS[benBits], zhi = BY_BITS[zhiBits];
+      const mvMap = {}; moving.forEach(i => { mvMap[i] = t[i]; });
+      html += `<section class="blk"><h2>卦象</h2><div class="result">
+        <a class="rcard" href="#/gua/${ben.n}"><span class="k">本卦</span>${fig(ben.bits, { moving: mvMap })}<span class="nm">${esc(ben.name)}</span><span class="fn">${esc(ben.full)}</span></a>
+        ${moving.length ? `<span class="arrow">→</span><a class="rcard" href="#/gua/${zhi.n}"><span class="k">之卦（变卦）</span>${fig(zhi.bits)}<span class="nm">${esc(zhi.name)}</span><span class="fn">${esc(zhi.full)}</span></a>` : ''}
+      </div>`;
+      const rd = readingFor(ben, zhi, moving);
+      html += `<div class="rule"><b>读卦方法</b>　${esc(rd.rule)}<br><span style="font-size:.85rem;color:var(--muted)">变爻：${moving.length ? moving.map(i => ben.lines[i].pos).join('、') : '无'}（依朱熹《易学启蒙·考变占》）</span></div>`;
+      html += `<div style="margin-top:14px">` + rd.items.map(it => {
+        const h = it.h;
+        if (it.i == null) {
+          return `<div class="card read-item"><div class="src"><a href="#/gua/${h.n}">${esc(h.full)}</a> · 卦辞${it.main ? '<span class="main-tag">主</span>' : ''}</div>${pair(esc(h.guaci), h.guaciYi, h.guaciJie)}</div>`;
+        }
+        const l = h.lines[it.i];
+        return `<div class="card read-item"><div class="src"><a href="#/gua/${h.n}/${it.i + 1}">${esc(h.full)}</a> · ${esc(l.pos)}${it.main ? '<span class="main-tag">主</span>' : ''}</div>${pair(esc(l.text), l.yi, l.jie)}</div>`;
+      }).join('') + `</div></section>`;
+    }
+    box.innerHTML = html;
+  }
+
+  function viewQigua() {
+    curNotes = [];
+    app.innerHTML = `<div class="narrow">
+      <h1 class="page-title">起卦</h1>
+      <p class="page-sub">三钱法（金钱卦）：以三枚铜钱代替蓍草，每掷一次得一爻，自下而上共掷六次，得本卦；遇老阳、老阴则为动爻，变而得之卦。</p>
+      <div class="card">
+        <div class="prose" style="font-size:.93rem">三背为<b>老阳</b>（九，○，阳变阴）；两背一字为<b>少阴</b>（八）；一背两字为<b>少阳</b>（七）；三字为<b>老阴</b>（六，×，阴变阳）。</div>
+        <div id="qg"></div>
+      </div>
+      <p class="disclaimer">起卦功能用于了解传统占筮方法、学习经文，请勿以之代替现实中的判断与决策。</p>
+    </div>`;
+    const box = document.getElementById('qg');
+    box.addEventListener('click', e => {
+      const b = e.target.closest('[data-q]');
+      if (!b) return;
+      const act = b.dataset.q;
+      if (act === 'one' && qg.throws.length < 6) {
+        const r = throwOnce(); qg.coins = r.coins; qg.throws.push(r.v); renderQigua(true);
+      } else if (act === 'all') {
+        let r;
+        while (qg.throws.length < 6) { r = throwOnce(); qg.throws.push(r.v); }
+        qg.coins = r.coins; renderQigua(true);
+      } else if (act === 'reset') {
+        qg = { throws: [], coins: null, manual: qg.manual }; renderQigua(false);
+      } else if (act === 'manual') {
+        qg = { throws: [], coins: null, manual: true }; renderQigua(false);
+      } else if (act === 'auto') {
+        qg = { throws: [], coins: null, manual: false }; renderQigua(false);
+      }
+    });
+    box.addEventListener('change', e => {
+      const s = e.target.closest('select[data-pos]');
+      if (!s) return;
+      const arr = [];
+      box.querySelectorAll('select[data-pos]').forEach(x => { arr[+x.dataset.pos] = x.value ? +x.value : undefined; });
+      const full = arr.length === 6 && arr.every(Boolean);
+      qg.throws = full ? arr : arr.slice();
+      // keep partial selections without rendering a result
+      if (!full) { qg.throws = arr; renderPartialManual(arr); return; }
+      renderQigua(false);
+    });
+    renderQigua(false);
+  }
+
+  function renderPartialManual(arr) {
+    // only refresh the per-line markers so the selects keep focus
+    document.querySelectorAll('.throw').forEach(row => {
+      const s = row.querySelector('select');
+      if (!s) return;
+      const v = arr[+s.dataset.pos];
+      const vs = row.querySelector('.v');
+      vs.className = 'v' + (v && VAL[v][2] ? ' mv' : '');
+      vs.textContent = v ? (VAL[v][2] ? '动爻 ' + VAL[v][1] : '静爻') : '';
+      row.lastElementChild.innerHTML = v ? fig(v % 2 ? '1' : '0', { moving: VAL[v][2] ? { 0: v } : null }) : '';
+    });
+    const res = document.querySelector('#qg .blk');
+    if (res) res.remove();
+  }
+
+  // =====================================================================
+  // 入门
+  // =====================================================================
+  function viewIntro() {
+    curNotes = [];
+    const I = D.intro;
+    if (!I) { app.innerHTML = '<div class="empty">内容准备中</div>'; return; }
+    app.innerHTML = `<div class="narrow">
+      <h1 class="page-title">${esc(I.title || '易学入门')}</h1>
+      <p class="page-sub">${esc(I.lead || '')}</p>
+      <nav class="toc">${I.sections.map((s, i) => `<a href="#/intro/${i + 1}">${esc(s.title)}</a>`).join('')}</nav>
+      ${I.sections.map((s, i) => `<section class="blk intro-sec" id="sec-${i + 1}"><h2>${esc(s.title)}</h2><div class="card">
+        ${s.paras.map(p => `<p class="prose">${esc(p)}</p>`).join('')}
+        ${s.terms && s.terms.length ? `<dl class="terms">${s.terms.map(t => `<dt>${esc(t.t)}</dt><dd>${esc(t.d)}</dd>`).join('')}</dl>` : ''}
+      </div></section>`).join('')}
+    </div>`;
+  }
+
+  // =====================================================================
+  // router
+  // =====================================================================
+  let lastRoute = '';
+  function route() {
+    const parts = (location.hash || '#/').replace(/^#\/?/, '').split('/').filter(Boolean);
+    const [page, a, b] = parts;
+    const key = page === 'gua' ? `gua/${a}` : (page || 'list');
+    const nav = page === 'gua' ? 'list' : (page || 'list');
+    document.querySelectorAll('.nav a').forEach(x => x.classList.toggle('on', x.dataset.nav === nav));
+    hidePop();
+    const sameRoute = key === lastRoute;
+    if (page === 'gua') {
+      const n = Math.min(64, Math.max(1, parseInt(a, 10) || 1));
+      if (!sameRoute) viewGua(n, parseInt(b, 10) || 0);
+      else if (b) { const el = document.getElementById('yao-' + b); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      document.title = `${HEX[n - 1].name}卦 · ${HEX[n - 1].full} — 周易`;
+      if (!sameRoute && !b) scrollTo(0, 0);
+    } else if (page === 'bagua') { if (!sameRoute) { viewBagua(); scrollTo(0, 0); } document.title = '八卦 — 周易'; }
+    else if (page === 'qigua') { if (!sameRoute) { viewQigua(); scrollTo(0, 0); } document.title = '起卦 — 周易'; }
+    else if (page === 'intro') {
+      if (!sameRoute) { viewIntro(); scrollTo(0, 0); }
+      document.title = '入门 — 周易';
+      if (a) { const el = document.getElementById('sec-' + a); if (el) el.scrollIntoView({ behavior: sameRoute ? 'smooth' : 'auto', block: 'start' }); }
+    } else { if (!sameRoute) { viewList(); scrollTo(0, 0); } document.title = '周易 · 六十四卦'; }
+    lastRoute = page === 'intro' ? 'intro' : key;
+  }
+  addEventListener('hashchange', route);
+  addEventListener('keydown', e => {
+    if (!lastRoute.startsWith('gua/') || e.target.closest('input, select, textarea') || e.altKey || e.ctrlKey || e.metaKey) return;
+    const n = +lastRoute.split('/')[1];
+    if (e.key === 'ArrowLeft') location.hash = `#/gua/${n === 1 ? 64 : n - 1}`;
+    if (e.key === 'ArrowRight') location.hash = `#/gua/${n === 64 ? 1 : n + 1}`;
+  });
+  route();
+})();
+</script>
+</body>
+</html>
