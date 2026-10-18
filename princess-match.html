@@ -1026,6 +1026,59 @@ const SND = (() => {
     if (m < 2 && cur) stop(.3);
   }
 
+  /* spoken names: pre-rendered neural-voice clips (princess-match/voice/{en,zh}/<id>.mp3), device voice as fallback */
+  const vcache = {};
+  let voiceSrc = null;
+  function getVoice(lg, id) {
+    const k = lg + '/' + id;
+    if (!vcache[k]) vcache[k] = fetch('princess-match/voice/' + k + '.mp3')
+      .then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+      .then(ab => init() ? new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)) : null)
+      .catch(() => null);
+    return vcache[k];
+  }
+  function deviceVoice(lg) {
+    if (!('speechSynthesis' in window)) return null;
+    const re = lg === 'zh' ? /^zh/i : /^en/i;
+    let best = null, bestScore = -1;
+    for (const v of speechSynthesis.getVoices()) {
+      if (!re.test(v.lang)) continue;
+      const n = v.name;
+      const s = (/natural|neural|online/i.test(n) ? 6 : 0) + (/premium|enhanced/i.test(n) ? 5 : 0) + (/google/i.test(n) ? 3 : 0) +
+        (/female|aria|jenny|ava|samantha|allison|karen|xiaoxiao|xiaoyi|tingting|meijia|huihui/i.test(n) ? 2 : 0) +
+        (/^(zh-CN|en-US)/i.test(v.lang) ? 1 : 0);
+      if (s > bestScore) { best = v; bestScore = s; }
+    }
+    return best;
+  }
+  function speakFallback(text, lg) {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    const v = deviceVoice(lg);
+    if (v) u.voice = v;
+    u.lang = lg === 'zh' ? 'zh-CN' : 'en-US'; u.rate = .9; u.pitch = 1.15; u.volume = 1;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }
+  function preloadVoices(lg, ids) { ids.forEach(id => getVoice(lg, id)); }
+  function say(lg, id, text, delay) {
+    if (!init() || mode < 1) return;
+    const asked = ctx.currentTime;
+    getVoice(lg, id).then(buf => {
+      if (mode < 1) return;
+      if (!buf) { speakFallback(text, lg); return; }
+      if (voiceSrc) { try { voiceSrc.stop(); } catch (e) {} }
+      const t = Math.max(ctx.currentTime + .02, asked + (delay || 0));
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = buf; g.gain.value = 1.15;
+      src.connect(g); g.connect(sfxGain); src.start(t);
+      voiceSrc = src;
+      if (mode === 2) {                       // let the voice sit on top of the music
+        musicGain.gain.setTargetAtTime(MUSIC_VOL * .35, t - .05, .04);
+        musicGain.gain.setTargetAtTime(MUSIC_VOL, t + buf.duration, .25);
+      }
+    });
+  }
+
   const ok = () => init() && mode >= 1;
   const now = () => ctx.currentTime + .01;
   const STEPS = [0, 2, 4, 7, 9, 12, 14, 16];
@@ -1057,7 +1110,7 @@ const SND = (() => {
       for (let i = 0; i < 10; i++) note('musicbox', 84 + [0, 2, 4, 7, 9, 12, 14, 16][rnd(8)], t + .9 + i * .09, .2, .07, sfxGain);
     }
   };
-  return { unlock, play, stop, setMode, get mode() { return mode; }, get state() { return ctx ? ctx.state : 'none'; }, get song() { return cur && cur.id; }, sfx };
+  return { unlock, play, stop, setMode, say, preloadVoices, getVoice, get mode() { return mode; }, get state() { return ctx ? ctx.state : 'none'; }, get song() { return cur && cur.id; }, sfx };
 })();
 
 /* ═══════════════════════  BOARD LOGIC  ═══════════════════════ */
@@ -1214,6 +1267,7 @@ function startLevel(i) {
   theme(G.L); setLevelText();
   const tiles = buildTiles(G.L);
   G.total = G.left = tiles.length / 2;
+  SND.preloadVoices(lang, [...new Set(tiles)]);
   if (wantTranspose()) { const x = G.R; G.R = G.C; G.C = x; }
   G.g = emptyGrid(G.R, G.C);
   const cells = [];
@@ -1280,6 +1334,7 @@ function doMatch(a, b, path, tp) {
   [ea, eb].forEach(el => { if (!el) return; el.classList.add('gone'); setTimeout(() => { burst(el); }, 150); setTimeout(() => el.remove(), 650); });
   if (ea && eb) namePop(tp, ea, eb);
   SND.sfx.match(G.matches - 1);
+  SND.say(lang, tp, nameOf(tp), .22);
   setHud();
   if (G.left === 0) { G.over = true; later('win', 800, win); return; }
   if (!findAnyPair(G.g, G.R, G.C)) { G.busy = true; later('auto', 750, () => { toast(t('shuffling')); reshuffle(); }); }
