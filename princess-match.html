@@ -215,23 +215,21 @@ let lang = store.get('lang', /^zh/i.test(navigator.language || '') ? 'zh' : 'en'
 const STR = {
   en: {
     title: 'Princess Match', sub: 'Find two pictures that are the same and tap them!',
-    rule: 'They disappear when a line with no more than two turns can join them.',
+    rule: 'Any two that are the same will disappear — no matter where they are!',
     foot: 'Every level plays its own tune 🎵 — classic and folk melodies played right in your browser. Characters are original fan-art drawings.',
     level: n => 'Level ' + n, langBtn: '中文',
     win: 'Hooray! You did it!', winSub: n => n + ' says thank you!', allDone: 'You finished every level! 👑',
     next: 'Next level ▶', again: 'Play again', levels: 'All levels',
-    blocked: 'Too many turns — try another pair!', shuffling: 'No moves left — shuffling! ✨',
     hint: 'Hint', shuffle: 'Shuffle', home: 'All levels', pairs: 'Pairs left',
     sound: ['Sound off', 'Sound effects only', 'Music and sound on']
   },
   zh: {
     title: '公主连连看', sub: '找到两个一样的图案，点一点它们！',
-    rule: '两个相同图案之间，能用不超过两个拐弯的线连起来，就会消失。',
+    rule: '只要两个图案一样就能消除，不管它们在哪里！',
     foot: '每一关都有不同的音乐 🎵 —— 经典名曲和民歌，在浏览器里现场演奏。人物都是原创的同人画。',
     level: n => '第 ' + n + ' 关', langBtn: 'EN',
     win: '太棒啦！你完成了！', winSub: n => n + '说：谢谢你！', allDone: '全部通关啦！👑',
     next: '下一关 ▶', again: '再玩一次', levels: '选关',
-    blocked: '拐弯太多啦，换一对试试！', shuffling: '没有能连的了——洗牌啦！✨',
     hint: '提示', shuffle: '洗牌', home: '选关', pairs: '剩余',
     sound: ['声音关闭', '只有音效', '音乐和音效']
   }
@@ -1143,32 +1141,21 @@ function findPath(g, R, C, a, b) {
   }
   return best;
 }
+// Easy rule: any two identical pictures match wherever they are, so every board is solvable and can't get stuck.
+// For hints, pick a random picture and show its two closest copies.
 function findAnyPair(g, R, C) {
   const groups = {};
   for (let r = 1; r <= R; r++) for (let c = 1; c <= C; c++) { const v = g[r][c]; if (v) (groups[v] = groups[v] || []).push([r, c]); }
-  for (const k of shuffle(Object.keys(groups))) {
-    const ps = groups[k];
-    for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) if (findPath(g, R, C, ps[i], ps[j])) return [ps[i], ps[j]];
-  }
-  return null;
-}
-function solvable(g, R, C) {
-  const w = g.map(row => row.slice());
-  let n = 0; for (let r = 1; r <= R; r++) for (let c = 1; c <= C; c++) if (w[r][c]) n++;
-  while (n > 0) {
-    const p = findAnyPair(w, R, C);
-    if (!p) return false;
-    w[p[0][0]][p[0][1]] = null; w[p[1][0]][p[1][1]] = null; n -= 2;
-  }
-  return true;
+  const k = shuffle(Object.keys(groups).filter(x => groups[x].length >= 2))[0];
+  if (!k) return null;
+  const ps = groups[k], d = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+  let best = [ps[0], ps[1]];
+  for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) if (d(ps[i], ps[j]) < d(best[0], best[1])) best = [ps[i], ps[j]];
+  return best;
 }
 function fillCells(g, R, C, cells, tiles) {
-  for (let tries = 0; tries < 400; tries++) {
-    shuffle(tiles);
-    cells.forEach(([r, c], k) => { g[r][c] = tiles[k]; });
-    if (solvable(g, R, C)) return true;
-  }
-  return false;
+  shuffle(tiles);
+  cells.forEach(([r, c], k) => { g[r][c] = tiles[k]; });
 }
 function buildTiles(L) {
   const types = [L.p, ...L.friends].slice(0, L.types);
@@ -1307,8 +1294,6 @@ function tileEl(p) { return els.get(key(p[0], p[1])); }
 function select(p) { G.sel = p; const el = tileEl(p); if (el) el.classList.add('sel'); }
 function deselect() { if (G.sel) { const el = tileEl(G.sel); if (el) el.classList.remove('sel'); } G.sel = null; }
 function wobble(p) { const el = tileEl(p); if (!el) return; el.classList.remove('wobble'); void el.offsetWidth; el.classList.add('wobble'); }
-let lastBlockedToast = 0;
-
 function tap(r, c) {
   resetIdle(); clearHint();
   const tp = G.g[r][c]; if (!tp) return;
@@ -1316,12 +1301,8 @@ function tap(r, c) {
   if (!s) { select([r, c]); SND.sfx.select(); return; }
   if (s[0] === r && s[1] === c) { deselect(); SND.sfx.tap(); return; }
   if (G.g[s[0]][s[1]] !== tp) { wobble(s); deselect(); select([r, c]); SND.sfx.select(); return; }
-  const path = findPath(G.g, G.R, G.C, s, [r, c]);
-  if (!path) {
-    wobble(s); wobble([r, c]); deselect(); select([r, c]); SND.sfx.nope();
-    if (Date.now() - lastBlockedToast > 6000) { lastBlockedToast = Date.now(); toast(t('blocked')); }
-    return;
-  }
+  // Same picture = match. Draw the tidy connecting route when one exists, otherwise a straight sparkle line.
+  const path = findPath(G.g, G.R, G.C, s, [r, c]) || [s, [r, c]];
   deselect();
   doMatch(s, [r, c], path, tp);
 }
@@ -1336,8 +1317,7 @@ function doMatch(a, b, path, tp) {
   SND.sfx.match(G.matches - 1);
   SND.say(lang, tp, nameOf(tp), .22);
   setHud();
-  if (G.left === 0) { G.over = true; later('win', 800, win); return; }
-  if (!findAnyPair(G.g, G.R, G.C)) { G.busy = true; later('auto', 750, () => { toast(t('shuffling')); reshuffle(); }); }
+  if (G.left === 0) { G.over = true; later('win', 800, win); }
 }
 function drawPath(path) {
   const d = path.map(([r, c], i) => (i ? 'L' : 'M') + px(c, G.C).toFixed(1) + ' ' + px(r, G.R).toFixed(1)).join('');
@@ -1459,7 +1439,7 @@ showHome();
 
 /* debug / test hooks */
 window.PM = {
-  G, A, LEVELS, SONGS, SND, startLevel, findAnyPair, findPath, solvable, render, tap,
+  G, A, LEVELS, SONGS, SND, startLevel, findAnyPair, findPath, render, tap,
   validate() {
     const issues = [];
     for (const [id, s] of Object.entries(SONGS)) {
