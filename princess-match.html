@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffd6ea">
+<title>Princess Match · 公主连连看</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#ffe3f1; --bg2:#e9e2ff;
+  --ink:#5a2d6e; --ink2:#8a5a9e; --pink:#ff5fa2; --pink2:#ff8cc0; --gold:#ffcf3f; --lilac:#a78bfa;
+  --edge:#efc3dd;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'Fredoka','Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  color:var(--ink);background:linear-gradient(160deg,var(--bg1),var(--bg2));
+  overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;z-index:1}
+.hidden{display:none!important}
+
+/* ── floating decorations ── */
+#decor{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.dc{position:absolute;bottom:-50px;color:#fff;opacity:0;animation:drift linear infinite;text-shadow:0 0 8px rgba(255,255,255,.8)}
+@keyframes drift{0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:.75}90%{opacity:.75}100%{transform:translateY(-118vh) rotate(220deg);opacity:0}}
+
+/* ── buttons ── */
+.ib{width:44px;height:44px;border-radius:50%;border:0;background:#fff;flex:none;display:grid;place-items:center;font-size:1.25rem;
+  box-shadow:0 3px 0 var(--edge),0 4px 10px rgba(120,60,140,.15);transition:transform .12s}
+.ib:active{transform:translateY(2px);box-shadow:0 1px 0 var(--edge)}
+.ib.pill{width:auto;border-radius:22px;padding:0 16px;font-weight:600;font-size:1rem}
+.btn{border:0;border-radius:999px;padding:12px 22px;font-weight:700;font-size:1.05rem;background:var(--pink);color:#fff;box-shadow:0 4px 0 #d9468a}
+.btn.alt{background:#f3eafa;color:var(--ink);box-shadow:0 4px 0 #dccbe9}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #d9468a}
+
+/* ── home ── */
+#home{overflow-y:auto;align-items:center;padding:max(14px,env(safe-area-inset-top)) 16px 40px}
+.home-top{width:100%;max-width:1000px;display:flex;justify-content:flex-end;gap:10px}
+.crown{width:84px;height:84px;margin-top:-6px;animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px) rotate(-4deg)}}
+h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-align:center;line-height:1.1;
+  text-shadow:0 3px 0 var(--pink),0 6px 16px rgba(255,95,162,.45);letter-spacing:.5px}
+.sub{color:var(--ink2);text-align:center;margin:8px 0 4px;font-size:clamp(1rem,3.6vw,1.2rem);font-weight:600}
+.rule{color:var(--ink2);text-align:center;margin:0 0 18px;font-size:.88rem;max-width:560px;opacity:.85}
+.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:14px;width:100%;max-width:1000px}
+.lvl{position:relative;border:0;border-radius:24px;padding:14px 10px 12px;background:#fff;display:flex;flex-direction:column;align-items:center;gap:3px;
+  box-shadow:0 5px 0 var(--edge),0 10px 22px rgba(120,60,140,.14);transition:transform .15s}
+.lvl:hover{transform:translateY(-4px)}
+.lvl:active{transform:translateY(2px)}
+.lvl .por{width:100px;height:100px;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,var(--c1),var(--c2));
+  box-shadow:inset 0 0 0 4px #fff,0 0 0 3px var(--c2)}
+.lvl .por svg{width:100%;height:100%;display:block}
+.lvl .num{position:absolute;top:9px;left:10px;background:var(--pink);color:#fff;font-weight:700;border-radius:999px;min-width:30px;height:30px;
+  display:grid;place-items:center;font-size:1rem;box-shadow:0 2px 0 #d9468a}
+.lvl .size{position:absolute;top:11px;right:10px;font-size:.75rem;color:var(--ink2);background:#f6eefb;border-radius:8px;padding:2px 7px}
+.lvl .nm{font-weight:700;font-size:1.08rem;margin-top:4px}
+.lvl .st{color:var(--gold);letter-spacing:2px;font-size:1.15rem;text-shadow:0 1px 0 #d4a017;line-height:1}
+.lvl .st .off{color:#ece2f3;text-shadow:none}
+.lvl .song{font-size:.76rem;color:var(--ink2);text-align:center;line-height:1.2;min-height:1.9em}
+.foot{margin-top:22px;font-size:.78rem;color:var(--ink2);opacity:.8;text-align:center;max-width:560px}
+
+/* ── game ── */
+#game .bar{display:flex;align-items:center;gap:8px;padding:max(10px,env(safe-area-inset-top)) 12px 6px}
+.lvinfo{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.8);border-radius:24px;padding:4px 14px 4px 4px;height:44px}
+.lvinfo .mini{width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;background:#fff}
+.lvinfo .mini svg{width:100%;height:100%;display:block}
+.lvinfo .txt{min-width:0;display:flex;flex-direction:column;line-height:1.15}
+.lvinfo b{font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lvinfo small{font-size:.74rem;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pairs{display:flex;align-items:center;gap:4px;background:#fff;border-radius:22px;height:44px;padding:0 12px;font-weight:700;font-size:1.1rem;
+  box-shadow:0 3px 0 var(--edge);flex:none}
+.progress{height:8px;margin:2px 14px 0;border-radius:4px;background:rgba(255,255,255,.65);overflow:hidden;flex:none}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pink2),var(--lilac));border-radius:4px;transition:width .4s}
+#stage{flex:1;position:relative;display:grid;place-items:center;min-height:0;padding:4px 4px max(6px,env(safe-area-inset-bottom))}
+#board{position:relative}
+.lv-short{display:none}
+@media (max-width:440px){
+  .lvinfo small,.lv-long{display:none}
+  .lv-short{display:inline}
+  .lvinfo{padding:0 10px 0 14px}
+  .lvinfo .mini{display:none!important}
+  .lvinfo b{font-size:.95rem}
+  .ib{width:40px;height:40px;font-size:1.1rem}
+  .pairs{height:40px;padding:0 10px}
+  .lvinfo{height:40px}
+  #game .bar{gap:6px;padding-left:8px;padding-right:8px}
+}
+
+/* ── tiles ── */
+.tile{position:absolute;border:0;padding:.42em;border-radius:20%;background:#fff;
+  box-shadow:0 .3em 0 var(--edge),0 .45em .8em rgba(110,50,130,.18);transition:transform .14s ease,box-shadow .14s}
+.tile .art{display:block;width:100%;height:100%;border-radius:16%;overflow:hidden}
+.tile svg{display:block;width:100%;height:100%;pointer-events:none}
+.tile:hover{transform:translateY(-3%)}
+.tile.sel{transform:translateY(-7%) scale(1.08);z-index:3;
+  box-shadow:0 0 0 .24em var(--gold),0 0 1.1em .4em rgba(255,207,63,.9),0 .36em 0 var(--edge)}
+.tile.hint{animation:hintPulse .65s ease-in-out infinite alternate;z-index:2}
+@keyframes hintPulse{
+  from{box-shadow:0 0 0 .16em #fff,0 0 .6em .2em rgba(255,95,162,.55),0 .3em 0 var(--edge);transform:scale(1)}
+  to{box-shadow:0 0 0 .24em var(--pink),0 0 1.3em .55em rgba(255,95,162,.85),0 .3em 0 var(--edge);transform:scale(1.08)}}
+.tile.wobble{animation:wobble .42s}
+@keyframes wobble{20%{transform:rotate(-10deg)}40%{transform:rotate(9deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
+.tile.gone{animation:pop .4s ease-in .12s forwards;pointer-events:none;z-index:4;
+  box-shadow:0 0 0 .24em var(--gold),0 0 1.4em .6em rgba(255,207,63,.95)}
+@keyframes pop{0%{transform:scale(1.08)}35%{transform:scale(1.25);opacity:1}100%{transform:scale(0) rotate(30deg);opacity:0}}
+.tile.enter{animation:enter .45s cubic-bezier(.3,1.5,.6,1) both}
+@keyframes enter{from{transform:scale(0) rotate(-25deg);opacity:0}}
+
+#paths{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:6}
+#paths path{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw .2s ease-out forwards}
+#paths .p1{stroke:rgba(255,207,63,.5);filter:blur(3px)}
+#paths .p2{stroke:#ffc928}
+#paths .p3{stroke:#fff}
+#paths g{transition:opacity .35s}
+#paths g.fade{opacity:0}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ── effects ── */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+.pt{position:absolute;transform:translate(-50%,-50%);animation:fly .85s ease-out forwards;line-height:1}
+@keyframes fly{to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.3) rotate(200deg);opacity:0}}
+.namepop{position:absolute;transform:translate(-50%,-50%);font-weight:700;font-size:clamp(18px,4.6vw,30px);color:#fff;white-space:nowrap;
+  text-shadow:0 2px 0 var(--pink),2px 0 0 var(--pink),-2px 0 0 var(--pink),0 -2px 0 var(--pink),0 4px 14px rgba(255,95,162,.6);animation:rise 1.2s ease-out forwards}
+@keyframes rise{0%{opacity:0;transform:translate(-50%,-30%) scale(.5)}20%{opacity:1;transform:translate(-50%,-70%) scale(1.12)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+.cf{position:absolute;top:-24px;width:10px;height:15px;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translate(var(--dx),112vh) rotate(var(--rot))}}
+
+#toast{position:fixed;left:50%;top:calc(78px + env(safe-area-inset-top));transform:translate(-50%,-16px);background:#fff;color:var(--pink);font-weight:600;
+  padding:10px 20px;border-radius:999px;box-shadow:0 6px 18px rgba(120,60,140,.22);opacity:0;transition:.3s;z-index:60;max-width:92vw;text-align:center;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ── win ── */
+#win{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(255,236,248,.55);
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);padding:16px}
+.wcard{background:#fff;border-radius:32px;padding:20px 22px 24px;width:min(420px,100%);text-align:center;margin-top:70px;
+  box-shadow:0 8px 0 var(--edge),0 20px 50px rgba(120,60,140,.3);animation:cardIn .55s cubic-bezier(.3,1.4,.6,1)}
+@keyframes cardIn{from{transform:scale(.6) translateY(40px);opacity:0}}
+.wpor{width:150px;height:150px;margin:-92px auto 10px;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,var(--bg1),var(--bg2));
+  box-shadow:0 0 0 6px #fff,0 0 0 11px var(--gold),0 10px 30px rgba(255,180,0,.45);animation:bob 2.4s ease-in-out infinite}
+.wpor svg{width:100%;height:100%;display:block}
+.wcard h2{font-size:1.9rem;color:var(--pink);line-height:1.15}
+.wcard p{color:var(--ink2);margin:6px 0 6px;font-weight:600}
+.wstars{font-size:2.8rem;letter-spacing:6px;margin:2px 0 16px}
+.wstars span{display:inline-block;color:#ece2f3}
+.wstars span.on{color:var(--gold);text-shadow:0 3px 0 #d4a017;animation:starIn .55s cubic-bezier(.3,1.8,.6,1) both}
+@keyframes starIn{from{transform:scale(0) rotate(-120deg)}}
+.wbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.dc,.crown,.wpor{animation:none}}
+</style>
+</head>
+<body>
+<div id="decor" aria-hidden="true"></div>
+
+<section id="home" class="screen">
+  <div class="home-top">
+    <button id="h-lang" class="ib pill" type="button"></button>
+    <button id="h-sound" class="ib" type="button"></button>
+  </div>
+  <div class="crown" id="h-crown" aria-hidden="true"></div>
+  <h1 class="title" id="h-title"></h1>
+  <p class="sub" id="h-sub"></p>
+  <p class="rule" id="h-rule"></p>
+  <div class="levels" id="levels"></div>
+  <p class="foot" id="h-foot"></p>
+</section>
+
+<section id="game" class="screen hidden">
+  <header class="bar">
+    <button id="g-home" class="ib" type="button">🏰</button>
+    <div class="lvinfo"><span class="mini" id="g-mini"></span><span class="txt"><b id="g-title"></b><small id="g-song"></small></span></div>
+    <div class="pairs"><span aria-hidden="true">💖</span><b id="g-left">0</b></div>
+    <button id="g-hint" class="ib" type="button">💡</button>
+    <button id="g-shuffle" class="ib" type="button">🔀</button>
+    <button id="g-sound" class="ib" type="button"></button>
+  </header>
+  <div class="progress"><i id="g-prog"></i></div>
+  <main id="stage"><div id="board"><svg id="paths" xmlns="http://www.w3.org/2000/svg"></svg></div></main>
+</section>
+
+<div id="win" class="hidden" role="dialog" aria-modal="true">
+  <div class="wcard">
+    <div class="wpor" id="w-por"></div>
+    <h2 id="w-title"></h2>
+    <p id="w-sub"></p>
+    <div class="wstars" id="w-stars"><span>★</span><span>★</span><span>★</span></div>
+    <div class="wbtns">
+      <button class="btn alt" id="w-home" type="button"></button>
+      <button class="btn alt" id="w-again" type="button"></button>
+      <button class="btn" id="w-next" type="button"></button>
+    </div>
+  </div>
+</div>
+<div id="fx" aria-hidden="true"></div>
+<div id="toast" role="status"></div>
+
+<script>
+(function () {
+'use strict';
+const $ = s => document.querySelector(s);
+const rnd = n => Math.floor(Math.random() * n);
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('pmatch.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('pmatch.' + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ═══════════════════════  TEXT  ═══════════════════════ */
+let lang = store.get('lang', /^zh/i.test(navigator.language || '') ? 'zh' : 'en');
+const STR = {
+  en: {
+    title: 'Princess Match', sub: 'Find two pictures that are the same and tap them!',
+    rule: 'They disappear when a line with no more than two turns can join them.',
+    foot: 'Every level plays its own tune 🎵 — classic and folk melodies played right in your browser. Characters are original fan-art drawings.',
+    level: n => 'Level ' + n, langBtn: '中文',
+    win: 'Hooray! You did it!', winSub: n => n + ' says thank you!', allDone: 'You finished every level! 👑',
+    next: 'Next level ▶', again: 'Play again', levels: 'All levels',
+    blocked: 'Too many turns — try another pair!', shuffling: 'No moves left — shuffling! ✨',
+    hint: 'Hint', shuffle: 'Shuffle', home: 'All levels', pairs: 'Pairs left',
+    sound: ['Sound off', 'Sound effects only', 'Music and sound on']
+  },
+  zh: {
+    title: '公主连连看', sub: '找到两个一样的图案，点一点它们！',
+    rule: '两个相同图案之间，能用不超过两个拐弯的线连起来，就会消失。',
+    foot: '每一关都有不同的音乐 🎵 —— 经典名曲和民歌，在浏览器里现场演奏。人物都是原创的同人画。',
+    level: n => '第 ' + n + ' 关', langBtn: 'EN',
+    win: '太棒啦！你完成了！', winSub: n => n + '说：谢谢你！', allDone: '全部通关啦！👑',
+    next: '下一关 ▶', again: '再玩一次', levels: '选关',
+    blocked: '拐弯太多啦，换一对试试！', shuffling: '没有能连的了——洗牌啦！✨',
+    hint: '提示', shuffle: '洗牌', home: '选关', pairs: '剩余',
+    sound: ['声音关闭', '只有音效', '音乐和音效']
+  }
+};
+const t = (k, ...a) => { const v = STR[lang][k]; return typeof v === 'function' ? v(...a) : v; };
+
+/* ═══════════════════════  ART (original drawings, 100×100)  ═══════════════════════ */
+const A = {};
+const ALL = [];
+function def(id, en, zh, tint, svg, isP) { A[id] = { id, en, zh, tint, svg, p: !!isP }; ALL.push(id); }
+const nameOf = id => A[id][lang];
+const sparkle = (x, y, s, c) => `<path d="M${x} ${y - s}Q${x} ${y} ${x + s} ${y}Q${x} ${y} ${x} ${y + s}Q${x} ${y} ${x - s} ${y}Q${x} ${y} ${x} ${y - s}Z" fill="${c}"/>`;
+function flower(x, y, r, pc, cc) {
+  let s = '';
+  for (let i = 0; i < 5; i++) {
+    const a = i * 1.2566 - 1.5708;
+    s += `<circle cx="${(x + Math.cos(a) * r).toFixed(1)}" cy="${(y + Math.sin(a) * r).toFixed(1)}" r="${(r * .78).toFixed(2)}" fill="${pc}"/>`;
+  }
+  return s + `<circle cx="${x}" cy="${y}" r="${(r * .55).toFixed(2)}" fill="${cc}"/>`;
+}
+const mir = s => `<g transform="matrix(-1 0 0 1 100 0)">${s}</g>`;
+const braid = (pts, fill, line) => pts.map(([x, y, r]) =>
+  `<ellipse cx="${x}" cy="${y}" rx="5.4" ry="4.3" transform="rotate(${r} ${x} ${y})" fill="${fill}" stroke="${line}" stroke-width="1"/>`).join('');
+const TORSO = 'M17 101C17 86 30 76 50 76C70 76 83 86 83 101Z';
+
+function face(o) {
+  const b = o.blush == null ? .42 : o.blush;
+  return `<ellipse cx="50" cy="47" rx="19.5" ry="20.5" fill="${o.skin}"/>` +
+    `<ellipse cx="42" cy="49.5" rx="3.3" ry="4.3" fill="#2b1d1a"/><ellipse cx="58" cy="49.5" rx="3.3" ry="4.3" fill="#2b1d1a"/>` +
+    `<ellipse cx="42" cy="50.7" rx="2.3" ry="2.8" fill="${o.eye}"/><ellipse cx="58" cy="50.7" rx="2.3" ry="2.8" fill="${o.eye}"/>` +
+    `<circle cx="43.2" cy="48" r="1.25" fill="#fff"/><circle cx="59.2" cy="48" r="1.25" fill="#fff"/>` +
+    `<circle cx="41" cy="52.3" r=".55" fill="#fff" opacity=".8"/><circle cx="57" cy="52.3" r=".55" fill="#fff" opacity=".8"/>` +
+    `<path d="M38.8 46.4l-1.9-1.4M61.2 46.4l1.9-1.4" stroke="#2b1d1a" stroke-width="1" stroke-linecap="round"/>` +
+    `<path d="M38.6 42.4Q42 40.8 45.4 42.2M54.6 42.2Q58 40.8 61.4 42.4" stroke="${o.brow}" stroke-width="1.25" fill="none" stroke-linecap="round"/>` +
+    `<ellipse cx="37.4" cy="55.6" rx="3.2" ry="1.9" fill="#ff7f9f" opacity="${b}"/><ellipse cx="62.6" cy="55.6" rx="3.2" ry="1.9" fill="#ff7f9f" opacity="${b}"/>` +
+    `<path d="M49.2 54.4Q50 55.2 50.8 54.4" stroke="#000" stroke-opacity=".22" stroke-width=".9" fill="none" stroke-linecap="round"/>` +
+    `<path d="M46.8 58.2Q50 62 53.2 58.2Q50 59.4 46.8 58.2Z" fill="${o.lip}" stroke="${o.lip}" stroke-width=".7" stroke-linejoin="round"/>`;
+}
+function princess(o) {
+  const neck = `<path d="M44.6 60V75.5Q50 78.5 55.4 75.5V60Z" fill="${o.skin}"/><path d="M44.6 63Q50 69 55.4 63V61H44.6Z" fill="#000" opacity=".07"/>`;
+  const ears = o.ears ? `<ellipse cx="30.8" cy="50" rx="2.7" ry="3.7" fill="${o.skin}"/><ellipse cx="69.2" cy="50" rx="2.7" ry="3.7" fill="${o.skin}"/>` : '';
+  return (o.back || '') + (o.under || '') + ears + neck + (o.body || '') + face(o) + (o.extra || '') + (o.front || '') + (o.acc || '');
+}
+
+def('snowwhite', 'Snow White', '白雪公主', '#ffe1e7', princess({
+  skin: '#fde4d8', eye: '#5a3a26', brow: '#1f1b2e', lip: '#e0283c',
+  back: `<path d="M27 48C25 29 37 20 50 20C63 20 75 29 73 48C74 57 72 63 67 66C62 68 38 68 33 66C28 63 26 57 27 48Z" fill="#1f1b2e"/>`,
+  under: `<path d="M30 80C23 72 24 62 31 61L44 74H56L69 61C76 62 77 72 70 80Z" fill="#fff" stroke="#dfe3f2" stroke-width="1"/>`,
+  body: `<path d="${TORSO}" fill="#2a5db0"/><path d="M41 76Q50 84 59 76Z" fill="#fde4d8"/>` +
+    `<ellipse cx="23" cy="88" rx="10" ry="9" fill="#3b78d8"/><ellipse cx="77" cy="88" rx="10" ry="9" fill="#3b78d8"/>` +
+    `<path d="M19 84Q22 89 20 95M26 81Q28 87 27 94M81 84Q78 89 80 95M74 81Q72 87 73 94" stroke="#e0283c" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+  front: `<path d="M29.5 47C29 32 39 24 51 24C63 24 71 32 70.5 47C68 39 63 34 57 32C50 36 41 39 29.5 47Z" fill="#1f1b2e"/>` +
+    `<circle cx="30.5" cy="56" r="4" fill="#1f1b2e"/><circle cx="69.5" cy="56" r="4" fill="#1f1b2e"/>`,
+  acc: `<g transform="translate(50 21.5)"><path d="M-1 0L-12.5-6.5Q-16 0-12.5 6.5Z" fill="#e5283b"/><path d="M1 0L12.5-6.5Q16 0 12.5 6.5Z" fill="#e5283b"/><circle r="3.3" fill="#c01b2e"/></g>`
+}), true);
+
+def('cinderella', 'Cinderella', '灰姑娘', '#dcecff', princess({
+  skin: '#fde6d8', eye: '#4f8fe0', brow: '#c9a14a', lip: '#e36b7b',
+  back: `<circle cx="50" cy="19.5" r="10" fill="#f6d77e"/><path d="M29 50C27 31 38 23 50 23C62 23 73 31 71 50C71 55 69.5 59 67 61H33C30.5 59 29 55 29 50Z" fill="#f6d77e"/>`,
+  body: `<path d="${TORSO}" fill="#fde6d8"/><path d="M19 101C21 92 28 87.5 34 87.5Q50 95 66 87.5C72 87.5 79 92 81 101Z" fill="#a6d6ff"/>` +
+    `<path d="M30 89Q50 98 70 89" stroke="#e1f1ff" stroke-width="2" fill="none"/><ellipse cx="22" cy="88" rx="8.5" ry="7" fill="#cfe9ff"/><ellipse cx="78" cy="88" rx="8.5" ry="7" fill="#cfe9ff"/>` +
+    `<path d="M44.6 69Q50 72 55.4 69V71.6Q50 74.6 44.6 71.6Z" fill="#23304f"/>`,
+  front: `<path d="M30 48C30 33 40 26.5 50 27.5C60 26.5 70 33 70 48C67 40 62 35 56 34C53 37 47 37 44 34C38 35 33 40 30 48Z" fill="#f6d77e"/>` +
+    `<path d="M50 28Q46.5 31 44 34M50 28Q53.5 31 56 34M36 38Q32.5 42 31 47M64 38Q67.5 42 69 47" stroke="#dcae4a" stroke-width="1" fill="none"/>`,
+  acc: `<path d="M31 36Q50 21 69 36" stroke="#4fa3ff" stroke-width="3.4" fill="none" stroke-linecap="round"/>` +
+    `<circle cx="30.6" cy="58.5" r="1.8" fill="#fff" stroke="#cfd8e8" stroke-width=".6"/><circle cx="69.4" cy="58.5" r="1.8" fill="#fff" stroke="#cfd8e8" stroke-width=".6"/>`
+}), true);
+
+def('aurora', 'Aurora', '睡美人', '#ffe0f1', princess({
+  skin: '#fde4d4', eye: '#7b5bb5', brow: '#c9921f', lip: '#e5577a',
+  back: `<path d="M26 48C23 28 36 19 50 19C64 19 77 28 74 48C76 60 79 72 77 84C73 82 69 78 66 73H34C31 78 27 82 23 84C21 72 24 60 26 48Z" fill="#f3bf3d"/>`,
+  body: `<path d="${TORSO}" fill="#fde4d4"/><path d="M19 101C21 91 28 85.5 35 85.5Q50 92 65 85.5C72 85.5 79 91 81 101Z" fill="#f794c0"/>` +
+    `<path d="M29 87.5Q50 97 71 87.5" stroke="#ffd1e6" stroke-width="2.4" fill="none"/><path d="M43 71Q50 77 57 71" stroke="#ffd54a" stroke-width="1.5" fill="none"/>`,
+  front: `<path d="M29.5 50C27 64 25 76 21 90C27 90 31 84 33 76C34.5 68 34 58 32 52Z" fill="#f3bf3d"/><path d="M70.5 50C73 64 75 76 79 90C73 90 69 84 67 76C65.5 68 66 58 68 52Z" fill="#f3bf3d"/>` +
+    `<path d="M30 48C29 32 40 24 52 24C64 25 71 33 70 48C66 38 58 32 50 33C44 35 36 40 30 48Z" fill="#f3bf3d"/>` +
+    `<path d="M50 33C44 35 38 39 33 45M58 33C62 36 66 40 68 45" stroke="#d39a22" stroke-width="1" fill="none"/>`,
+  acc: `<path d="M39 27L41 19.5L45.5 24L50 15.5L54.5 24L59 19.5L61 27Q50 24 39 27Z" fill="#ffd54a" stroke="#d4a017" stroke-width=".9" stroke-linejoin="round"/><circle cx="50" cy="22.5" r="1.8" fill="#ff5fa2"/>`
+}), true);
+
+def('ariel', 'Ariel', '小美人鱼', '#d3f5ee', princess({
+  skin: '#fde6da', eye: '#2a8be0', brow: '#c4271d', lip: '#e8506a',
+  back: `<path d="M24 47C20 25 36 14 52 15C69 16 80 27 76 47C80 62 82 77 78 93C72 87 68 79 66 73H34C32 80 28 87 22 93C18 77 20 62 24 47Z" fill="#ef3b2f"/>`,
+  body: `<path d="${TORSO}" fill="#fde6da"/><path d="M31 101Q36 85 48.5 94Q42 101 31 101Z" fill="#9b66db"/><path d="M69 101Q64 85 51.5 94Q58 101 69 101Z" fill="#9b66db"/>` +
+    `<path d="M38 91L39.5 99M43 91.5L43.5 98.5M62 91L60.5 99M57 91.5L56.5 98.5" stroke="#7a48bf" stroke-width="1"/>`,
+  front: `<path d="M29.5 50C26 64 24 78 19 93C26 92 31 85 33 76C34.5 68 34 58 32 52Z" fill="#ef3b2f"/><path d="M70.5 50C74 64 76 78 81 93C74 92 69 85 67 76C65.5 68 66 58 68 52Z" fill="#ef3b2f"/>` +
+    `<path d="M29 47C26 30 38 20 54 21C67 22 75 31 71 47C69 38 63 31 55 30.5C50 33.5 46 34 42 33C35 36 31 41 29 47Z" fill="#ef3b2f"/>` +
+    `<path d="M35 24C41 11 60 9 67 19C57 14 46 16 35 24Z" fill="#ef3b2f"/>` +
+    `<path d="M55 30.5C48 26.5 42 26.5 37.5 28.5M66 36C68 39 69.5 42 70.5 46" stroke="#c4271d" stroke-width="1.1" fill="none"/>`
+}), true);
+
+def('belle', 'Belle', '贝儿公主', '#fff0c2', princess({
+  skin: '#fbe0cf', eye: '#6b4a2b', brow: '#5a3218', lip: '#d94d5e',
+  back: `<ellipse cx="50" cy="21" rx="11" ry="6.5" fill="#7a4a28"/><path d="M27 48C25 29 37 21 50 21C63 21 75 29 73 48C74 58 74 68 71 78H29C26 68 26 58 27 48Z" fill="#7a4a28"/>`,
+  body: `<path d="${TORSO}" fill="#fbe0cf"/><path d="M19 101C21 91 28 86 34 86Q50 93 66 86C72 86 79 91 81 101Z" fill="#f8c63c"/>` +
+    `<path d="M27 88.5Q33.5 93 40 90.5Q46 94.5 50 92.5Q54 94.5 60 90.5Q66.5 93 73 88.5" stroke="#e3a514" stroke-width="1.4" fill="none"/>`,
+  front: `<path d="M30 47C30 31 40 25 50 25C60 25 70 31 70 47C66 38 60 33 53 32C47 35 38 39 30 47Z" fill="#7a4a28"/>` +
+    `<path d="M34.5 35C29.5 43 30.5 51 33 56" stroke="#7a4a28" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M53 32C49 30 44 30 40 32" stroke="#5a3218" stroke-width="1" fill="none"/>`,
+  acc: `<circle cx="30.6" cy="59" r="1.9" fill="#ffd54a"/><circle cx="69.4" cy="59" r="1.9" fill="#ffd54a"/>`
+}), true);
+
+def('jasmine', 'Jasmine', '茉莉公主', '#d6f1f8', princess({
+  skin: '#dfa477', eye: '#4a2d1a', brow: '#1c1b35', lip: '#c9475a', blush: .3,
+  back: `<path d="M25 48C22 27 36 18 50 18C64 18 78 27 75 48C78 60 78 72 74 83H26C22 72 22 60 25 48Z" fill="#1c1b35"/>`,
+  body: `<path d="${TORSO}" fill="#dfa477"/><path d="M23 101C24 93 30 89 36 89Q50 94 64 89C70 89 76 93 77 101Z" fill="#22b3a6"/>` +
+    `<ellipse cx="21" cy="92" rx="7" ry="6" fill="#33c9bb"/><ellipse cx="79" cy="92" rx="7" ry="6" fill="#33c9bb"/>` +
+    `<path d="M41 72Q50 81 59 72" stroke="#ffcf3f" stroke-width="2" fill="none"/><ellipse cx="50" cy="78.5" rx="2.4" ry="2.9" fill="#2f7de1" stroke="#ffcf3f" stroke-width=".8"/>`,
+  front: `<path d="M30 48C29 31 40 23 50 25C60 23 71 31 70 48C67 39 61 33 53 31.5L50 34.5L47 31.5C39 33 33 39 30 48Z" fill="#1c1b35"/>`,
+  acc: `<path d="M31.5 35Q50 24 68.5 35" stroke="#22b3a6" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+    `<ellipse cx="50" cy="29.6" rx="3" ry="3.6" fill="#2f7de1" stroke="#ffcf3f" stroke-width="1.1"/>` +
+    `<circle cx="30.8" cy="58.5" r="2.7" fill="none" stroke="#ffcf3f" stroke-width="1.4"/><circle cx="69.2" cy="58.5" r="2.7" fill="none" stroke="#ffcf3f" stroke-width="1.4"/>`
+}), true);
+
+def('mulan', 'Mulan', '花木兰', '#ffe4d6', princess({
+  skin: '#f6d7bd', eye: '#2b1d1a', brow: '#151319', lip: '#d9415a', ears: true,
+  back: `<ellipse cx="50" cy="19" rx="9.5" ry="7.5" fill="#151319"/>`,
+  body: `<path d="M17 101C17 84 29 72 50 72C71 72 83 84 83 101Z" fill="#79b0e6"/><path d="M40.5 72L60 101H66.5L47 72Z" fill="#fff6f0"/><path d="M59.5 72L49.5 87.5L53 90.5L65.5 73.5Z" fill="#fff6f0"/>` +
+    `<path d="M17.6 93H82.4L83 101H17Z" fill="#e8506e"/>`,
+  front: `<path d="M29.6 50C28 31 38 23 50 23C62 23 72 31 70.4 50C69 42 66 37 61 34.5C55 37.5 45 37.5 39 34.5C34 37 31 42 29.6 50Z" fill="#151319"/>`,
+  acc: flower(59.5, 18.5, 3.1, '#ff8fb1', '#ffd54a') + `<path d="M39.5 17.5L46.5 13" stroke="#ffcf3f" stroke-width="1.6" stroke-linecap="round"/>`
+}), true);
+
+def('tiana', 'Tiana', '蒂安娜公主', '#e1f5d8', princess({
+  skin: '#8d5a3c', eye: '#3a2414', brow: '#2a1a12', lip: '#b8455a', blush: .28, ears: true,
+  back: `<circle cx="50" cy="19.5" r="10" fill="#2a1a12"/>`,
+  body: `<path d="${TORSO}" fill="#8d5a3c"/><path d="M19 101C21 91 28 86 35 86Q50 92 65 86C72 86 79 91 81 101Z" fill="#79cc7e"/>` +
+    [[31, 88.5, -30], [40, 91, -12], [50, 92, 0], [60, 91, 12], [69, 88.5, 30]].map(([x, y, r]) =>
+      `<ellipse cx="${x}" cy="${y}" rx="5.2" ry="3" transform="rotate(${r} ${x} ${y})" fill="#b5e6a6"/>`).join(''),
+  front: `<path d="M29.6 49C28 31 38 23 50 23C62 23 72 31 70.4 49C68 41 64 36 58 34C50 38 40 39 34 37C31.5 40 30 44 29.6 49Z" fill="#2a1a12"/>`,
+  acc: `<path d="M40 28L42 22L46 25.5L50 19L54 25.5L58 22L60 28Q50 25 40 28Z" fill="#ffd54a" stroke="#c99212" stroke-width=".8" stroke-linejoin="round"/>` +
+    `<circle cx="50" cy="24.6" r="1.6" fill="#3fbf6a"/><circle cx="30.8" cy="55.5" r="1.7" fill="#fff"/><circle cx="69.2" cy="55.5" r="1.7" fill="#fff"/>`
+}), true);
+
+def('rapunzel', 'Rapunzel', '长发公主', '#efe2ff', princess({
+  skin: '#fde5d5', eye: '#3faa5a', brow: '#d9ab2b', lip: '#e3627c',
+  back: `<path d="M25 48C23 27 36 19 50 19C64 19 77 27 75 48C77 64 79 82 82 101H18C21 82 23 64 25 48Z" fill="#f8d34a"/>`,
+  body: `<path d="M25 101C25 88 34 77 50 77C66 77 75 88 75 101Z" fill="#9b6bd6"/><path d="M41 77.5Q50 86 59 77.5Z" fill="#fde5d5"/>` +
+    `<path d="M46 86L54 92M54 86L46 92M46 92L54 98M54 92L46 98" stroke="#f2a0cf" stroke-width="1.6"/>` +
+    `<ellipse cx="29" cy="86" rx="7" ry="6.5" fill="#f2b3dc"/><ellipse cx="71" cy="86" rx="7" ry="6.5" fill="#f2b3dc"/>` +
+    `<path d="M27 80.5V91.5M31 80V92M69 80V92M73 80.5V91.5" stroke="#b58be3" stroke-width="1.5"/>`,
+  front: `<path d="M30 52C28 66 25 84 22 101H30C31 86 33 68 33 56Z" fill="#f8d34a"/><path d="M70 52C72 66 75 84 78 101H70C69 86 67 68 67 56Z" fill="#f8d34a"/>` +
+    `<path d="M30 48C29 31 40 24 52 24C64 24 71 32 70 48C66 38 58 31 50 33C44 36 36 40 30 48Z" fill="#f8d34a"/><path d="M50 33C44 36 38 40 33 46" stroke="#dcae2a" stroke-width="1" fill="none"/>`,
+  acc: flower(24, 72, 2.6, '#ff8fc8', '#ffe066') + flower(76.5, 66, 2.6, '#c9a2ff', '#ffe066') + flower(79, 88, 2.4, '#ffffff', '#ffe066') +
+    flower(22, 92, 2.4, '#ff8fc8', '#ffe066') + flower(64, 27, 2.3, '#c9a2ff', '#ffe066')
+}), true);
+
+def('elsa', 'Elsa', '艾莎', '#dff3ff', princess({
+  skin: '#fde9e1', eye: '#3d8fe0', brow: '#b7a77e', lip: '#d65a7f',
+  back: `<path d="M28 48C26 30 38 21 50 21C62 21 74 30 72 48C72 55 70 60 67 63H33C30 60 28 55 28 48Z" fill="#f3eddb"/>`,
+  body: `<path d="${TORSO}" fill="#cdeefc"/><path d="M31 101Q33 89 40 87.5Q46 87 50 91Q54 87 60 87.5Q67 89 69 101Z" fill="#5ec1ec"/>` +
+    `<g fill="#fff"><circle cx="40" cy="93" r=".9"/><circle cx="47" cy="97" r=".8"/><circle cx="56" cy="94" r=".9"/><circle cx="62" cy="98" r=".8"/><circle cx="25" cy="90" r=".8"/><circle cx="76" cy="87" r=".8"/><circle cx="30" cy="84" r=".7"/></g>`,
+  extra: `<path d="M38.6 46Q42 43.6 45.4 46M54.6 46Q58 43.6 61.4 46" stroke="#b89ae0" stroke-width="1.5" fill="none" opacity=".75"/>`,
+  front: `<path d="M30 46C26 30 36 17 52 18C66 19 74 28 70 44C68 36 63 30 55 29C49 28 43 29 39 31.5C34.5 34.5 31 40 30 46Z" fill="#f3eddb"/>` +
+    `<path d="M35 36C40 26 52 22 63 26M40 31C46 25 55 24 61 27" stroke="#d6cba6" stroke-width="1.1" fill="none"/>` +
+    `<path d="M68.5 44C71.5 50 70.5 54 67.5 57" stroke="#f3eddb" stroke-width="6" fill="none" stroke-linecap="round"/>` +
+    braid([[67.5, 58, -20], [69.5, 65, 15], [70, 72.5, -15], [69, 80, 15], [67.5, 87.5, -15], [66, 95, 10]], '#f3eddb', '#d6cba6') +
+    sparkle(69.5, 65, 2.4, '#ffffff') + sparkle(68.5, 81, 2.2, '#9fdcff') + sparkle(66.5, 94, 2, '#ffffff')
+}), true);
+
+def('anna', 'Anna', '安娜', '#ffe3ee', princess({
+  skin: '#fde3d3', eye: '#3d8fe0', brow: '#8f3e1f', lip: '#e0566c',
+  back: `<path d="M28 48C26 30 38 22 50 22C62 22 74 30 72 48C72 54 71 58 69 60H31C29 58 28 54 28 48Z" fill="#b5532f"/>`,
+  body: `<path d="${TORSO}" fill="#c2186b"/><path d="M37 101Q38 85 50 83Q62 85 63 101Z" fill="#1f3a6b"/><path d="M43 75.5L50 84L57 75.5Q50 79 43 75.5Z" fill="#fff"/>` +
+    `<circle cx="45" cy="93" r="1.5" fill="#ff8fb1"/><circle cx="50" cy="96" r="1.5" fill="#ffd54a"/><circle cx="55" cy="93" r="1.5" fill="#7fd1ff"/><circle cx="50" cy="89.5" r="1.3" fill="#9be36a"/>`,
+  extra: `<g fill="#d98a6a"><circle cx="38" cy="55.2" r=".55"/><circle cx="40.2" cy="56.8" r=".55"/><circle cx="36.4" cy="57.2" r=".55"/><circle cx="62" cy="55.2" r=".55"/><circle cx="59.8" cy="56.8" r=".55"/><circle cx="63.6" cy="57.2" r=".55"/></g>`,
+  front: braid([[31, 58, -10], [29.5, 65, 10], [29, 72, -10], [29, 79, 10], [29.5, 86, -8]], '#b5532f', '#8f3e1f') +
+    braid([[69, 58, 10], [70.5, 65, -10], [71, 72, 10], [71, 79, -10], [70.5, 86, 8]], '#b5532f', '#8f3e1f') +
+    `<rect x="26.5" y="89.6" width="6" height="2.4" rx="1" fill="#3fae5a"/><path d="M27 92Q29.5 99 32 92Z" fill="#b5532f"/>` +
+    `<rect x="67.5" y="89.6" width="6" height="2.4" rx="1" fill="#3fae5a"/><path d="M68 92Q70.5 99 73 92Z" fill="#b5532f"/>` +
+    `<path d="M30 48C29 32 39 24 51 24C63 24 71 32 70 48C67 40 62 35 57 33C51 37 40 39 30 48Z" fill="#b5532f"/><path d="M57 33C52 30 45 30 40 33" stroke="#8f3e1f" stroke-width="1" fill="none"/>`
+}), true);
+
+const moanaLock = `<path d="M29 52C25 62 29 70 25 80C22 88 26 94 24 101H32C33 90 31 82 33 74C35 64 32 58 32 54Z" fill="#2d1b12"/>`;
+def('moana', 'Moana', '莫阿娜', '#fff0d6', princess({
+  skin: '#b97a52', eye: '#2b1a10', brow: '#2d1b12', lip: '#b04a52', blush: .3,
+  back: `<path d="M22 48C18 26 34 15 50 15C66 15 82 26 78 48C82 64 85 82 85 101H15C15 82 18 64 22 48Z" fill="#2d1b12"/>` +
+    [[19, 60], [16.5, 76], [16, 92], [81, 60], [83.5, 76], [84, 92], [25, 28], [75, 28]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#2d1b12"/>`).join(''),
+  body: `<path d="${TORSO}" fill="#b97a52"/><path d="M27 101C28 90 36 84.5 50 84.5C64 84.5 72 90 73 101Z" fill="#d6393a"/>` +
+    `<path d="M31 92H69" stroke="#f5deb3" stroke-width="2" stroke-dasharray="3 2"/><path d="M42 71Q50 80 58 71" stroke="#5a3a1a" stroke-width="1" fill="none"/>` +
+    `<circle cx="50" cy="77.6" r="2.6" fill="#2fbfa8" stroke="#1d8f7c" stroke-width=".8"/>`,
+  front: moanaLock + mir(moanaLock) +
+    `<path d="M30 48C28 30 40 22 50 24C60 22 72 30 70 48C67 38 60 31 52 30L50 33L48 30C40 31 33 38 30 48Z" fill="#2d1b12"/>`,
+  acc: flower(29, 37, 4.2, '#ff5a6e', '#ffd54a')
+}), true);
+
+/* friends & magic things */
+def('apple', 'Apple', '红苹果', '#ffe6e6',
+  `<path d="M50 33C41 24 22 26 22 49C22 71 37 85 50 80C63 85 78 71 78 49C78 26 59 24 50 33Z" fill="#e8343a"/>` +
+  `<path d="M50 33C55 30 62 29 67 31" stroke="#b71c2a" stroke-width="1.5" fill="none" opacity=".5"/>` +
+  `<ellipse cx="35" cy="46" rx="5" ry="10" fill="#fff" opacity=".38" transform="rotate(22 35 46)"/>` +
+  `<path d="M50 33Q49 24 54 17" stroke="#6d4c2f" stroke-width="3.2" fill="none" stroke-linecap="round"/>` +
+  `<path d="M53 24C59 13 72 14 73 19C67 26 59 27 53 24Z" fill="#46a84a"/>` + sparkle(74, 64, 4, '#fff'));
+
+def('slipper', 'Glass Slipper', '水晶鞋', '#e6f6ff',
+  `<path d="M14 72C14 63 20 59 28 59C36 59 42 62 48 64C56 60 68 50 78 44C84 41 87 46 85 52L82 64L80 84H75.5L75 68C64 70 52 76 40 77C28 78 14 78 14 72Z" fill="#c9eeff" stroke="#5fbbea" stroke-width="2.2" stroke-linejoin="round"/>` +
+  `<path d="M48 64C58 58 70 50 80 46" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
+  `<path d="M22 66C28 63 34 63 40 65" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".9"/>` +
+  sparkle(70, 28, 7, '#fff6b0') + sparkle(30, 42, 5, '#ffffff') + sparkle(86, 24, 4, '#9fdcff'));
+
+def('pumpkin', 'Pumpkin Coach', '南瓜马车', '#fff0dc',
+  `<path d="M50 28C51 21 57 18 62 21" stroke="#3f9a3a" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="50" cy="52" rx="32" ry="25" fill="#ff9a2e"/><ellipse cx="50" cy="52" rx="20" ry="25" fill="#ffab45"/><ellipse cx="50" cy="52" rx="8" ry="25" fill="#ffb95e"/>` +
+  `<path d="M30 32C25 42 25 62 30 72M70 32C75 42 75 62 70 72" stroke="#e5781a" stroke-width="1.5" fill="none"/>` +
+  `<ellipse cx="50" cy="50" rx="9" ry="11" fill="#fff4cc" stroke="#d4a017" stroke-width="2.5"/><path d="M50 39V61" stroke="#d4a017" stroke-width="1.5"/>` +
+  `<path d="M40 27C44 21 56 21 60 27" stroke="#d4a017" stroke-width="2" fill="none"/>` +
+  `<g fill="none" stroke="#d4a017" stroke-width="3"><circle cx="28" cy="79" r="9"/><circle cx="72" cy="79" r="9"/></g>` +
+  `<path d="M28 70V88M19 79H37M72 70V88M63 79H81" stroke="#d4a017" stroke-width="1.6"/>`);
+
+def('bird', 'Bluebird', '小蓝鸟', '#e6f2ff',
+  `<path d="M28 58L10 50L13 66Z" fill="#3d86d6"/><ellipse cx="48" cy="56" rx="25" ry="21" fill="#5aaaf2"/><ellipse cx="53" cy="63" rx="15" ry="11" fill="#d8eeff"/>` +
+  `<path d="M28 55C34 42 52 45 52 57C45 64 35 63 28 55Z" fill="#3d86d6"/>` +
+  `<circle cx="62" cy="47" r="3.6" fill="#2a1d1a"/><circle cx="63.2" cy="45.8" r="1.2" fill="#fff"/>` +
+  `<path d="M71 49L82 52.5L71 56Z" fill="#ffb02e"/><ellipse cx="64" cy="55" rx="3" ry="1.8" fill="#ff8fab" opacity=".6"/>` +
+  `<path d="M47 36.5C44 30 48 27 51.5 31Z" fill="#3d86d6"/><path d="M51 36C51 29 56 28 57.5 33Z" fill="#3d86d6"/>` +
+  `<path d="M44 76L42 84M52 76L54 84" stroke="#ffb02e" stroke-width="2.5" stroke-linecap="round"/>` +
+  `<path d="M78 28V16L86 14V26" stroke="#ff5fa2" stroke-width="2" fill="none"/><circle cx="76" cy="28" r="2.6" fill="#ff5fa2"/><circle cx="84" cy="26" r="2.6" fill="#ff5fa2"/>`);
+
+const crabClaw = `<path d="M30 56C24 52 22 47 22 43" stroke="#e8402f" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M22 45C12 43 10 31 18 26L21 34L27 30C31 37 29 45 22 45Z" fill="#e8402f"/><path d="M30 64L20 72M32 69L24 78" stroke="#c62f20" stroke-width="3" stroke-linecap="round"/>`;
+def('crab', 'Crab', '小螃蟹', '#ffe9e0',
+  crabClaw + mir(crabClaw) + `<ellipse cx="50" cy="60" rx="23" ry="15" fill="#e8402f"/>` +
+  `<path d="M43 48L41 36M57 48L59 36" stroke="#e8402f" stroke-width="3" stroke-linecap="round"/>` +
+  `<circle cx="41" cy="33" r="5.5" fill="#fff" stroke="#c62f20" stroke-width="1"/><circle cx="42" cy="34" r="2.6" fill="#2a1d1a"/>` +
+  `<circle cx="59" cy="33" r="5.5" fill="#fff" stroke="#c62f20" stroke-width="1"/><circle cx="58" cy="34" r="2.6" fill="#2a1d1a"/>` +
+  `<path d="M43 62Q50 68 57 62" stroke="#7a1a12" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="36" cy="60" rx="3" ry="1.8" fill="#ffb3a8"/><ellipse cx="64" cy="60" rx="3" ry="1.8" fill="#ffb3a8"/>`);
+
+def('fish', 'Little Fish', '小鱼', '#e0f0ff',
+  `<path d="M70 50L88 36C90 46 90 56 88 66Z" fill="#2f7de1"/><path d="M38 33C44 22 58 22 62 34Z" fill="#2f7de1"/>` +
+  `<ellipse cx="46" cy="52" rx="28" ry="21" fill="#ffd83b"/>` +
+  `<path d="M48 32C43 43 43 61 48 72" stroke="#2f7de1" stroke-width="6" fill="none"/><path d="M60 35C56 45 56 59 60 69" stroke="#2f7de1" stroke-width="5" fill="none"/>` +
+  `<circle cx="30" cy="47" r="6.5" fill="#fff"/><circle cx="31" cy="48" r="3.6" fill="#1d2a4a"/><circle cx="32.3" cy="46.4" r="1.3" fill="#fff"/>` +
+  `<path d="M20 57Q24 60 28 57" stroke="#a06a00" stroke-width="1.8" fill="none" stroke-linecap="round"/>` +
+  `<path d="M40 60C46 57 51 62 47 67C43 66 40 63 40 60Z" fill="#2f7de1" opacity=".85"/>` +
+  `<circle cx="15" cy="30" r="3" fill="none" stroke="#8fc8f5" stroke-width="1.5"/><circle cx="21" cy="21" r="2" fill="none" stroke="#8fc8f5" stroke-width="1.5"/>`);
+
+def('shell', 'Seashell', '贝壳', '#ffeaf4',
+  `<path d="M50 80L20 52C18 32 34 20 50 20C66 20 82 32 80 52Z" fill="#f9a8cc" stroke="#e57fb0" stroke-width="2" stroke-linejoin="round"/>` +
+  `<path d="M50 78L28 34M50 78L38 25M50 78V22M50 78L62 25M50 78L72 34" stroke="#e57fb0" stroke-width="1.8" fill="none"/>` +
+  `<path d="M40 80H60L56 88H44Z" fill="#e57fb0"/>` +
+  `<circle cx="76" cy="78" r="7" fill="#fff6fb" stroke="#e6d3e0" stroke-width="1"/><circle cx="74" cy="76" r="2" fill="#fff"/>` + sparkle(24, 76, 4, '#fff'));
+
+def('rose', 'Magic Rose', '魔法玫瑰', '#f4e8ff',
+  `<rect x="22" y="80" width="56" height="8" rx="3" fill="#a0603a"/><rect x="28" y="76" width="44" height="5" rx="2" fill="#c47a48"/>` +
+  `<path d="M50 76V53" stroke="#2e8b57" stroke-width="3"/><path d="M50 67C42 63 40 59 42 57C46 57 50 61 50 67Z" fill="#3aa36a"/><path d="M50 63C58 59 60 55 58 53C54 53 50 57 50 63Z" fill="#3aa36a"/>` +
+  `<circle cx="50" cy="45" r="10" fill="#d81b3c"/><path d="M50 45C47 41 52 38 55 42C57 47 50 51 45 48C41 44 45 36 51 36" stroke="#a3112a" stroke-width="1.6" fill="none"/>` +
+  `<ellipse cx="62" cy="73.5" rx="3.5" ry="2" fill="#d81b3c" transform="rotate(20 62 73.5)"/>` +
+  `<path d="M27 77V44C27 20 73 20 73 44V77Z" fill="#dff4ff" fill-opacity=".35" stroke="#8fd0f2" stroke-width="2"/>` +
+  `<circle cx="50" cy="21.5" r="3.4" fill="#ffd54a"/><path d="M33 42C34 33 38 29 42 27" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".9"/>` +
+  sparkle(64, 33, 4, '#ffe680'));
+
+def('teacup', 'Teacup', '小茶杯', '#eef3ff',
+  `<ellipse cx="50" cy="80" rx="33" ry="7" fill="#fff" stroke="#9db8e8" stroke-width="2"/>` +
+  `<path d="M74 50C88 48 88 68 70 70" stroke="#9db8e8" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M74 50C88 48 88 68 70 70" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/>` +
+  `<path d="M23 42H77C77 66 67 79 50 79C33 79 23 66 23 42Z" fill="#fff" stroke="#9db8e8" stroke-width="2"/>` +
+  `<path d="M24.3 50Q50 55 75.7 50" stroke="#4a7fd4" stroke-width="3.5" fill="none"/>` +
+  `<ellipse cx="50" cy="42" rx="27" ry="5.5" fill="#eef4ff" stroke="#9db8e8" stroke-width="2"/><ellipse cx="50" cy="42.5" rx="22.5" ry="3.6" fill="#c98b4a"/>` +
+  `<path d="M35 37.4L37.5 41.6L40 37.2" fill="#eef4ff" stroke="#9db8e8" stroke-width="1.4" stroke-linejoin="round"/>` +
+  `<ellipse cx="42" cy="62" rx="2.6" ry="3.4" fill="#2a1d1a"/><ellipse cx="57" cy="62" rx="2.6" ry="3.4" fill="#2a1d1a"/><circle cx="43" cy="60.8" r="1" fill="#fff"/><circle cx="58" cy="60.8" r="1" fill="#fff"/>` +
+  `<path d="M45 69Q49.5 73 54 69" stroke="#2a1d1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="36" cy="67" rx="3" ry="1.8" fill="#ff8fab" opacity=".55"/><ellipse cx="63" cy="67" rx="3" ry="1.8" fill="#ff8fab" opacity=".55"/>` +
+  `<path d="M44 33C40 27 48 23 44 17M57 33C53 27 61 23 57 17" stroke="#c9d6ee" stroke-width="2.4" fill="none" stroke-linecap="round"/>`);
+
+def('lamp', 'Magic Lamp', '神灯', '#fff6d6',
+  `<path d="M14 46C6 38 18 32 13 24C9 16 20 10 26 16" stroke="#9aa8ff" stroke-width="3.5" fill="none" stroke-linecap="round" opacity=".75"/>` +
+  `<path d="M28 60L11 49C10 47 12 45 14 46L32 54Z" fill="#f7c331" stroke="#c99212" stroke-width="1.8" stroke-linejoin="round"/>` +
+  `<path d="M74 56C88 52 90 72 72 68" stroke="#c99212" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+  `<path d="M44 70H66L71 80H39Z" fill="#e8ad1f" stroke="#c99212" stroke-width="1.8" stroke-linejoin="round"/>` +
+  `<path d="M24 60C34 54 42 52 50 52H68C77 52 80 60 75 66C70 72 60 74 50 72C40 71 30 66 24 60Z" fill="#f7c331" stroke="#c99212" stroke-width="2" stroke-linejoin="round"/>` +
+  `<path d="M46 52C48 42 68 42 70 52Z" fill="#f7c331" stroke="#c99212" stroke-width="1.8"/><circle cx="58" cy="41" r="3.4" fill="#f7c331" stroke="#c99212" stroke-width="1.5"/>` +
+  `<path d="M36 60C42 57 50 56 58 57" stroke="#fff3c4" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="62" cy="63" r="2.5" fill="#e53950"/>` +
+  sparkle(26, 24, 4, '#fff') + sparkle(80, 34, 3.5, '#fff6b0'));
+
+def('dragon', 'Little Dragon', '小红龙', '#fff0e0',
+  `<path d="M26 40L20 30L32 34L32 22L42 30L48 18L54 30L64 22L66 34L78 30L72 42Z" fill="#ff9f1a"/>` +
+  `<path d="M38 31C34 21 38 15 42 13C40 21 42 27 44 31Z" fill="#ffd54a"/><path d="M62 31C66 21 62 15 58 13C60 21 58 27 56 31Z" fill="#ffd54a"/>` +
+  `<path d="M25 48L12 42L22 57Z" fill="#e53935"/><path d="M75 48L88 42L78 57Z" fill="#e53935"/>` +
+  `<ellipse cx="50" cy="52" rx="26" ry="22" fill="#e53935"/>` +
+  `<path d="M34 38Q40 34 46 38M54 38Q60 34 66 38" stroke="#ffd54a" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="40" cy="47" rx="7" ry="7.5" fill="#fff"/><circle cx="41.5" cy="48" r="4" fill="#2a1d1a"/><circle cx="43" cy="46.5" r="1.4" fill="#fff"/>` +
+  `<ellipse cx="60" cy="47" rx="7" ry="7.5" fill="#fff"/><circle cx="58.5" cy="48" r="4" fill="#2a1d1a"/><circle cx="60" cy="46.5" r="1.4" fill="#fff"/>` +
+  `<ellipse cx="50" cy="66" rx="17" ry="11" fill="#ffb74d"/><ellipse cx="44" cy="62" rx="2" ry="1.4" fill="#a8541a"/><ellipse cx="56" cy="62" rx="2" ry="1.4" fill="#a8541a"/>` +
+  `<path d="M40 69Q50 76 60 69" stroke="#a8541a" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+  `<path d="M33 64C24 64 20 70 14 68M67 64C76 64 80 70 86 68" stroke="#ffd54a" stroke-width="2" fill="none" stroke-linecap="round"/>`);
+
+def('frog', 'Frog Prince', '青蛙王子', '#eaf8e0',
+  `<ellipse cx="50" cy="60" rx="31" ry="23" fill="#69c24a"/><circle cx="33" cy="40" r="11" fill="#69c24a"/><circle cx="67" cy="40" r="11" fill="#69c24a"/>` +
+  `<circle cx="33" cy="40" r="7.2" fill="#fff"/><circle cx="34" cy="41" r="3.8" fill="#1d2a1a"/><circle cx="35.4" cy="39.4" r="1.4" fill="#fff"/>` +
+  `<circle cx="67" cy="40" r="7.2" fill="#fff"/><circle cx="66" cy="41" r="3.8" fill="#1d2a1a"/><circle cx="67.4" cy="39.4" r="1.4" fill="#fff"/>` +
+  `<ellipse cx="50" cy="71" rx="18" ry="9" fill="#b8eaa0"/><path d="M30 60Q50 74 70 60" stroke="#2f6b22" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="27" cy="63" rx="4" ry="2.4" fill="#ff8fab" opacity=".6"/><ellipse cx="73" cy="63" rx="4" ry="2.4" fill="#ff8fab" opacity=".6"/>` +
+  `<path d="M42 38L41 28L46 32L50 24L54 32L59 28L58 38Z" fill="#ffd54a" stroke="#d4a017" stroke-width="1" stroke-linejoin="round"/><circle cx="50" cy="34" r="1.6" fill="#e53950"/>`);
+
+def('lantern', 'Lantern', '天灯', '#fff3d9',
+  `<circle cx="50" cy="52" r="40" fill="url(#g-glow)"/>` +
+  `<path d="M32 28H68L63 76H37Z" fill="#ffb648" stroke="#e8871e" stroke-width="2" stroke-linejoin="round"/><path d="M38 34H62L58.5 70H41.5Z" fill="#ffd77a"/>` +
+  `<rect x="30" y="25" width="40" height="5" rx="2" fill="#c96b14"/><rect x="35" y="74" width="30" height="4" rx="2" fill="#c96b14"/>` +
+  `<circle cx="50" cy="51" r="6" fill="#9b5de5"/>` +
+  `<path d="M50 40V43M50 59V62M39 51H42M58 51H61M42.2 43.2L44.3 45.3M55.7 56.7L57.8 58.8M42.2 58.8L44.3 56.7M55.7 45.3L57.8 43.2" stroke="#9b5de5" stroke-width="2" stroke-linecap="round"/>` +
+  `<path d="M50 86C46.5 82.5 48 79 50 77.5C52 79 53.5 82.5 50 86Z" fill="#ff7a1a"/>` +
+  `<path d="M13 22H23L21.5 34H14.5Z" fill="#ffc46b"/><path d="M78 12H86L85 21H79Z" fill="#ffc46b"/>`);
+
+def('chameleon', 'Chameleon', '变色龙', '#ecf9e0',
+  `<path d="M12 80H88" stroke="#8a5a2b" stroke-width="4" stroke-linecap="round"/>` +
+  `<path d="M70 60C84 60 88 74 79 77C72 79 69 71 75 69" stroke="#6fcf3a" stroke-width="7" fill="none" stroke-linecap="round"/>` +
+  `<path d="M38 64L34 78M58 64L62 78" stroke="#5ab52c" stroke-width="5" stroke-linecap="round"/>` +
+  `<path d="M22 54C22 38 40 31 56 35C67 38 75 46 75 56C75 65 65 69 54 67H38C28 67 22 62 22 54Z" fill="#6fcf3a"/>` +
+  `<path d="M24 46C26 36 36 32 42 34" stroke="#5ab52c" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+  `<circle cx="52" cy="46" r="3" fill="#9be36a"/><circle cx="62" cy="52" r="2.6" fill="#9be36a"/><circle cx="48" cy="57" r="2.2" fill="#9be36a"/>` +
+  `<circle cx="34" cy="48" r="8" fill="#5ab52c"/><circle cx="34" cy="48" r="5.6" fill="#fff"/><circle cx="35.5" cy="48.5" r="3" fill="#1d2a1a"/><circle cx="36.5" cy="47.4" r="1" fill="#fff"/>` +
+  `<path d="M23 57Q30 62 38 59" stroke="#2f6b22" stroke-width="1.8" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="30" cy="58" rx="2.6" ry="1.5" fill="#ff8fab" opacity=".55"/>`);
+
+def('snowman', 'Snowman', '小雪人', '#e9f6ff',
+  `<path d="M50 20V10M50 15L46 10M45 21L40 13M55 21L60 13" stroke="#7a5230" stroke-width="2.4" stroke-linecap="round"/>` +
+  `<path d="M30 62L14 52M18 55L14 58M70 62L86 50M82 52L86 56" stroke="#7a5230" stroke-width="2.6" stroke-linecap="round"/>` +
+  `<ellipse cx="50" cy="70" rx="21" ry="19" fill="#fff" stroke="#bfe3f7" stroke-width="2"/>` +
+  `<ellipse cx="50" cy="37" rx="17" ry="17" fill="#fff" stroke="#bfe3f7" stroke-width="2"/>` +
+  `<ellipse cx="44" cy="32" rx="2.4" ry="3.2" fill="#2a1d1a"/><ellipse cx="56" cy="32" rx="2.4" ry="3.2" fill="#2a1d1a"/>` +
+  `<path d="M41 26Q44 24 47 26M53 26Q56 24 59 26" stroke="#2a1d1a" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
+  `<path d="M50 38L65 41L50 42Z" fill="#ff8a1f"/>` +
+  `<path d="M42 45Q50 52 58 45Q50 48 42 45Z" fill="#2a1d1a"/><rect x="48" y="46" width="4" height="3.2" rx=".6" fill="#fff"/>` +
+  `<circle cx="50" cy="64" r="2.2" fill="#3a3a4a"/><circle cx="50" cy="72" r="2.2" fill="#3a3a4a"/><circle cx="50" cy="80" r="2.2" fill="#3a3a4a"/>` +
+  sparkle(18, 28, 3.5, '#9fdcff') + sparkle(82, 26, 3, '#9fdcff'));
+
+def('reindeer', 'Reindeer', '小驯鹿', '#f5ece2',
+  `<g stroke="#8a5a2b" stroke-width="3.5" fill="none" stroke-linecap="round"><path d="M38 30C32 22 30 14 32 8M33 18C28 16 24 12 24 8M35 24C30 24 26 22 22 18"/><path d="M62 30C68 22 70 14 68 8M67 18C72 16 76 12 76 8M65 24C70 24 74 22 78 18"/></g>` +
+  `<ellipse cx="28" cy="41" rx="9" ry="4.5" fill="#a0703f" transform="rotate(-20 28 41)"/><ellipse cx="72" cy="41" rx="9" ry="4.5" fill="#a0703f" transform="rotate(20 72 41)"/>` +
+  `<ellipse cx="28" cy="41" rx="5" ry="2.2" fill="#e8b4a0" transform="rotate(-20 28 41)"/><ellipse cx="72" cy="41" rx="5" ry="2.2" fill="#e8b4a0" transform="rotate(20 72 41)"/>` +
+  `<path d="M50 26C64 26 70 38 68 52C67 62 66 72 60 80C56 85 44 85 40 80C34 72 33 62 32 52C30 38 36 26 50 26Z" fill="#a0703f"/>` +
+  `<ellipse cx="50" cy="72" rx="14" ry="11" fill="#e9caa0"/>` +
+  `<ellipse cx="50" cy="66" rx="7" ry="4.8" fill="#3b2a20"/><ellipse cx="48" cy="64.6" rx="2" ry="1.2" fill="#fff" opacity=".6"/>` +
+  `<ellipse cx="42" cy="48" rx="3.4" ry="4.2" fill="#2a1d1a"/><circle cx="43.2" cy="46.6" r="1.3" fill="#fff"/>` +
+  `<ellipse cx="58" cy="48" rx="3.4" ry="4.2" fill="#2a1d1a"/><circle cx="59.2" cy="46.6" r="1.3" fill="#fff"/>` +
+  `<path d="M45 76Q50 80 55 76" stroke="#5a3a20" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M53 78C54 84 59 84 58 78Z" fill="#ff7f9f"/>` +
+  `<path d="M44 29C46 23 50 25 50 29C52 23 56 25 56 30" fill="#8a5a2b"/>`);
+
+def('snowflake', 'Snowflake', '雪花', '#e3f3ff',
+  `<g stroke="#4fb3ea" stroke-width="4" stroke-linecap="round" fill="none">` +
+  [0, 60, 120, 180, 240, 300].map(a => `<path transform="rotate(${a} 50 50)" d="M50 46V16M50 27L42 20M50 27L58 20M50 37L44 32M50 37L56 32"/>`).join('') +
+  `</g><circle cx="50" cy="50" r="6.5" fill="#bfe9ff" stroke="#4fb3ea" stroke-width="3"/>` + sparkle(78, 22, 4, '#fff'));
+
+def('crown', 'Crown', '王冠', '#fff6d0',
+  `<path d="M20 72L15 34L34 50L50 26L66 50L85 34L80 72Z" fill="#ffd54a" stroke="#d4a017" stroke-width="2.5" stroke-linejoin="round"/>` +
+  `<rect x="19" y="66" width="62" height="11" rx="3" fill="#ffc21a" stroke="#d4a017" stroke-width="2.5"/>` +
+  `<circle cx="50" cy="71.5" r="3.6" fill="#e53950"/><circle cx="34" cy="71.5" r="2.8" fill="#2f7de1"/><circle cx="66" cy="71.5" r="2.8" fill="#2fbf71"/>` +
+  `<circle cx="15" cy="33" r="3.2" fill="#fff"/><circle cx="50" cy="25" r="3.6" fill="#fff"/><circle cx="85" cy="33" r="3.2" fill="#fff"/>` +
+  `<path d="M50 42L55 50L50 58L45 50Z" fill="#ff5fa2"/><path d="M27 60L25 44" stroke="#fff3b0" stroke-width="2.4" stroke-linecap="round"/>`);
+
+function buildSprite() {
+  const defs = `<defs><radialGradient id="g-glow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".95"/>` +
+    `<stop offset=".55" stop-color="#ffd27a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>`;
+  const syms = ALL.map(id => `<symbol id="a-${id}" viewBox="0 0 100 100">${A[id].svg}</symbol>`).join('');
+  const holder = document.createElement('div');
+  holder.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">${defs}${syms}</svg>`;
+  document.body.prepend(holder.firstChild);
+}
+const art = id => `<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#a-${id}"/></svg>`;
+
+/* ═══════════════════════  LEVELS  ═══════════════════════ */
+const LEVELS = [
+  { p: 'snowwhite', cols: 4, rows: 4, types: 4, friends: ['apple', 'bird'], song: 'twinkle', bg: ['#ffe3ec', '#fff2d6'], deco: '♥✿✦' },
+  { p: 'cinderella', cols: 5, rows: 4, types: 5, friends: ['slipper', 'pumpkin'], song: 'danube', bg: ['#dcecff', '#f2e6ff'], deco: '✦✧♥' },
+  { p: 'aurora', cols: 6, rows: 4, types: 6, friends: ['crown', 'bird', 'rose'], song: 'lullaby', bg: ['#ffe0f1', '#ece2ff'], deco: '✿♥✧' },
+  { p: 'ariel', cols: 6, rows: 5, types: 8, friends: ['crab', 'fish', 'shell'], song: 'bonnie', bg: ['#cff3ee', '#d9e6ff'], deco: '○◦✦' },
+  { p: 'belle', cols: 6, rows: 6, types: 9, friends: ['rose', 'teacup', 'crown'], song: 'minuet', bg: ['#fff0c2', '#ffe0d6'], deco: '✿✦♥' },
+  { p: 'jasmine', cols: 7, rows: 6, types: 10, friends: ['lamp', 'crown', 'bird'], song: 'desert', bg: ['#d5f2f7', '#eadfff'], deco: '✦✧☾' },
+  { p: 'mulan', cols: 8, rows: 6, types: 12, friends: ['dragon', 'lantern', 'bird'], song: 'jasmineflower', bg: ['#ffe4d6', '#ffd9e6'], deco: '✿❀✦' },
+  { p: 'tiana', cols: 8, rows: 7, types: 14, friends: ['frog', 'crown', 'lantern'], song: 'saints', bg: ['#e1f5d8', '#fff1c4'], deco: '✦✿♥' },
+  { p: 'rapunzel', cols: 8, rows: 8, types: 16, friends: ['lantern', 'chameleon', 'crown'], song: 'morning', bg: ['#efe2ff', '#ffe8c6'], deco: '✦✧✿' },
+  { p: 'elsa', cols: 9, rows: 8, types: 18, friends: ['snowman', 'reindeer', 'snowflake', 'anna'], song: 'elise', bg: ['#dcf2ff', '#ebe4ff'], deco: '❄❅✦' }
+];
+
+/* ═══════════════════════  MUSIC (all public-domain tunes except "Desert Moon", composed for this game)  ═══════════════════════
+   Notation: NOTE[:beats] — e.g. E5:.5, R = rest, A+B = chord, | = bar line (checked by PM.validate()). */
+const SONGS = {
+  home: { en: 'Ode to Joy', zh: '欢乐颂', bpm: 100, bar: 4, inst: 'celesta', acc: 'pluck4', accInst: 'pluck', mo: 12,
+    mel: `E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | E4:1.5 D4:.5 D4:2 |
+          E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | D4:1.5 C4:.5 C4:2 |
+          D4 D4 E4 C4 | D4 E4:.5 F4:.5 E4 C4 | D4 E4:.5 F4:.5 E4 D4 | C4 D4 G3:2 |
+          E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | D4:1.5 C4:.5 C4:2`,
+    chords: `C:4 | G:4 | C:4 | G:4 | C:4 | G:4 | C:4 | G:2 C:2 | G:4 | G:2 C:2 | G:2 C:2 | D7:2 G:2 | C:4 | G:4 | C:4 | G:2 C:2` },
+  twinkle: { en: 'Twinkle, Twinkle, Little Star', zh: '小星星', bpm: 104, bar: 4, inst: 'musicbox', acc: 'pluck4', accInst: 'pluck', mo: 12,
+    mel: `C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2 |
+          G4 G4 F4 F4 | E4 E4 D4:2 | G4 G4 F4 F4 | E4 E4 D4:2 |
+          C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2`,
+    chords: `C:2 C:2 | F:2 C:2 | F:2 C:2 | G:2 C:2 | C:2 F:2 | C:2 G:2 | C:2 F:2 | C:2 G:2 | C:2 C:2 | F:2 C:2 | F:2 C:2 | G:2 C:2` },
+  danube: { en: 'The Blue Danube', zh: '蓝色多瑙河', bpm: 168, bar: 3, inst: 'piano', acc: 'waltz', tr: 2,
+    intro: `C4`,
+    mel: `C4 E4 G4 | G4:2 E5+G5 | E5+G5:2 C5+E5 | C5+E5:2 C4 |
+          C4 E4 G4 | G4:2 F5+G5 | F5+G5:2 B4+F5 | B4+F5:2 B3 |
+          B3 D4 A4 | A4:2 F5+A5 | F5+A5:2 B4+F5 | B4+F5:2 B3 |
+          B3 D4 A4 | A4:2 E5+A5 | E5+A5:2 C5+E5 | C5+E5:2 C4 |
+          C4 E4 G4 | C5:2 G5+C6 | G5+C6:2 E5+G5 | E5+G5:2 C4 |
+          C4 E4 G4 | C5:2 A5+C6 | A5+C6:2 F5+A5 | F5+A5:2 D4 |
+          D4 F4 A4 | A4:3 | A4 F#4 G4 | E5:3 |
+          E5 C5 E4 | E4:2 D4 | A4:2 G4 | C4:1.5 C5:.5 C5 | C5 R C4`,
+    chords: `C:3 | C:3 | C:3 | C:3 | C:3 | G7:3 | G7:3 | G7:3 | G7:3 | G7:3 | G7:3 | G7:3 | G7:3 |
+             C:3 | C:3 | C:3 | C:3 | C:3 | C:3 | C:3 | C:3 | Dm7:3 | Dm7:3 | Dm:3 | Dm:3 |
+             G7:3 | G7:3 | C:3 | C:3 | F:3 | G:3 | C:3 | C:3` },
+  lullaby: { en: "Brahms' Lullaby", zh: '勃拉姆斯摇篮曲', bpm: 84, bar: 3, inst: 'harp', acc: 'lullaby', tr: 5,
+    intro: `E4:.5 E4:.5`,
+    mel: `G4:1.5 E4:.5 E4 | G4:2 E4:.5 G4:.5 | C5 B4:1.5 A4:.5 | A4 G4 D4:.5 E4:.5 |
+          F4 D4 D4:.5 E4:.5 | F4:2 D4:.5 F4:.5 | B4:.5 A4:.5 G4 B4 | C5:2 C4:.5 C4:.5 |
+          C5:2 A4:.5 F4:.5 | G4:2 E4:.5 C4:.5 | F4 G4 A4 | G4:2 C4:.5 C4:.5 |
+          C5:2 A4:.5 F4:.5 | G4:2 E4:.5 C4:.5 | F4 E4 D4 | C4:2 E4:.5 E4:.5`,
+    chords: `C:3 | C:3 | G7:3 | G7:3 | G7:3 | G7:3 | G7:3 | C:3 | F:3 | C:3 | G7:3 | C:3 | F:3 | C:3 | G7:3 | C:3` },
+  bonnie: { en: 'My Bonnie Lies over the Ocean', zh: '我的邦妮在海上', bpm: 126, bar: 3, inst: 'marimba', acc: 'sea',
+    perc: [[0, 'shaker', .1], [1, 'shaker', .06], [2, 'shaker', .06]],
+    intro: `G4`,
+    mel: `E5:1.5 D5:.5 C5 | D5 C5 A4 | G4 E4:2 | R:2 G4 |
+          E5:1.5 D5:.5 C5 | C5 B4 C5 | D5:3 | R:2 G4 |
+          E5:1.5 D5:.5 C5 | D5 C5 A4 | G4 E4:2 | R:2 G4 |
+          A4 D5 C5 | B4 A4 B4 | C5:3 | R:2 G4`,
+    chords: `C:3 | F:3 | C:3 | C:3 | C:3 | Am:3 | D7:3 | G7:3 | C:3 | F:3 | C:3 | C7:3 | F:3 | G7:3 | C:3 | C:3` },
+  minuet: { en: 'Minuet in G', zh: 'G大调小步舞曲', bpm: 116, bar: 3, inst: 'harpsi', acc: 'minuet',
+    mel: `D5 G4:.5 A4:.5 B4:.5 C5:.5 | D5 G4 G4 | E5 C5:.5 D5:.5 E5:.5 F#5:.5 | G5 G4 G4 |
+          C5 D5:.5 C5:.5 B4:.5 A4:.5 | B4 C5:.5 B4:.5 A4:.5 G4:.5 | F#4 G4:.5 A4:.5 B4:.5 G4:.5 | A4:3 |
+          D5 G4:.5 A4:.5 B4:.5 C5:.5 | D5 G4 G4 | E5 C5:.5 D5:.5 E5:.5 F#5:.5 | G5 G4 G4 |
+          C5 D5:.5 C5:.5 B4:.5 A4:.5 | B4 C5:.5 B4:.5 A4:.5 G4:.5 | A4 B4:.5 A4:.5 G4:.5 F#4:.5 | G4:3`,
+    chords: `G:3 | G:3 | C:3 | G:3 | C:3 | G:3 | D:3 | D:3 | G:3 | G:3 | C:3 | G:3 | C:3 | G:3 | D7:3 | G:3` },
+  desert: { en: 'Desert Moon (original)', zh: '沙漠之月（原创）', bpm: 104, bar: 4, inst: 'oud', acc: 'hijaz',
+    perc: [[0, 'dum', .45], [1, 'tek', .2], [1.5, 'tek', .16], [2, 'dum', .35], [3, 'tek', .2], [3.5, 'tek', .24]],
+    mel: `D4:.5 Eb4:.5 F#4:.5 G4:.5 A4 A4 | Bb4:.5 A4:.5 G4:.5 F#4:.5 G4:2 |
+          F#4:.5 G4:.5 A4:.5 Bb4:.5 C5 Bb4:.5 A4:.5 | G4:.5 F#4:.5 Eb4:.5 F#4:.5 D4:2 |
+          A4 D5 C5:.5 Bb4:.5 A4 | Bb4:.5 C5:.5 Bb4:.5 A4:.5 G4:2 |
+          F#4:.5 G4:.5 A4 G4:.5 F#4:.5 Eb4 | D4:3 R |
+          D5:.5 C5:.5 Bb4:.5 A4:.5 Bb4 A4 | G4:.5 A4:.5 Bb4:.5 A4:.5 G4 F#4 |
+          G4:.5 F#4:.5 Eb4:.5 F#4:.5 G4 A4 | F#4:.5 Eb4:.5 D4:.5 Eb4:.5 D4:2`,
+    chords: `D:4 | Gm:4 | Cm:4 | D:4 | D:4 | Gm:4 | Eb:4 | D:4 | Gm:4 | Gm:2 D:2 | Cm:2 D:2 | D:4` },
+  jasmineflower: { en: 'Jasmine Flower', zh: '茉莉花', bpm: 66, bar: 2, inst: 'zheng', acc: 'pent', tr: 7,
+    perc: [[0, 'block', .07]],
+    mel: `E4 E4:.5 G4:.5 | A4:.5 C5:.5 C5:.5 A4:.5 | G4 G4:.5 A4:.5 | G4:2 |
+          E4 E4:.5 G4:.5 | A4:.5 C5:.5 C5:.5 A4:.5 | G4 G4:.5 A4:.5 | G4:2 |
+          G4 G4:.5 G4:.5 | E4:.5 G4:.5 A4:.5 A4:.5 | G4:2 |
+          E4:.5 D4:.5 E4:.5 G4:.5 | E4:.5 D4:.5 C4:.5 C4:.25 D4:.25 | C4:2 |
+          E4:.5 D4:.5 C4:.5 E4:.5 | D4 E4:.5 G4:.5 | A4:.5 C5:.5 G4 |
+          D4:.5 E4:.5 G4:.5 D4:.5 | E4:.5 C4:.5 A3:.5 G3:.5 |
+          A3 C4:.5 D4:.5 | E4:.5 C4:.5 D4:.5 C4:.5 | A3:.5 G3:1.5 | R:2`,
+    chords: `C:2 | Am:2 | C:2 | C:2 | C:2 | Am:2 | C:2 | C:2 | C:2 | Am:2 | C:2 | C:2 | G:2 | C:2 |
+             C:2 | G:2 | Am:2 | G:2 | Am:2 | Am:2 | C:2 | G:2 | G:2` },
+  saints: { en: 'When the Saints Go Marching In', zh: '圣者进行曲', bpm: 138, bar: 4, inst: 'clarinet', acc: 'swing', swing: true,
+    perc: [[0, 'ride', .16], [1, 'ride', .16], [1, 'hat', .16], [1.5, 'ride', .1], [2, 'ride', .16], [3, 'ride', .16], [3, 'hat', .16], [3.5, 'ride', .1]],
+    intro: `C4 E4 F4`,
+    mel: `G4:4 | R C4 E4 F4 | G4:4 | R C4 E4 F4 | G4:2 E4:2 | C4:2 E4:2 | D4:4 | R E4 E4 D4 |
+          C4:3 C4 | E4:2 G4 G4 | F4:4 | R:2 E4 F4 | G4:2 E4:2 | C4:2 D4:2 | C4:4 | R C4 E4 F4`,
+    chords: `C:4 | C:4 | C:4 | C:4 | C:4 | C:4 | G7:4 | G7:4 | C:4 | C7:4 | F:4 | F:4 | C:4 | G7:4 | C:4 | C:4` },
+  morning: { en: 'Morning Mood', zh: '晨景', bpm: 92, bar: 3, inst: 'flute', acc: 'flow68', tr: 4,
+    mel: `G4 E4:.5 D4 C4:.5 | D4 E4:.5 G4 E4:.5 | D4 C4:.5 D4 E4:.5 | D4 E4:.5 G4 E4:.5 | G4 A4:.5 E4 A4:.5 | G4 E4:.5 D4 C4:.5 |
+          G4 E4:.5 D4 C4:.5 | D4 E4:.5 G4 E4:.5 | D4 C4:.5 D4 E4:.5 | D4 E4:.5 G4 E4:.5 | G4 A4:.5 E4 A4:.5 | G4 E4:.5 D4 E4:.5 | C4:3`,
+    chords: `C:3 | C:3 | G:3 | C:3 | Am:3 | C:3 | C:3 | C:3 | G:3 | C:3 | Am:3 | G:3 | C:3` },
+  elise: { en: 'Für Elise', zh: '致爱丽丝', bpm: 150, bar: 3, inst: 'piano', acc: 'elise', dbl: ['ice', 12, .07],
+    intro: `E5:.5 D#5:.5`,
+    mel: `E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 | A4 R:.5 C4:.5 E4:.5 A4:.5 | B4 R:.5 E4:.5 G#4:.5 B4:.5 | C5 R:.5 E4:.5 E5:.5 D#5:.5 |
+          E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 | A4 R:.5 C4:.5 E4:.5 A4:.5 | B4 R:.5 E4:.5 C5:.5 B4:.5 | A4 R E5:.5 D#5:.5 |
+          E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 | A4 R:.5 C4:.5 E4:.5 A4:.5 | B4 R:.5 E4:.5 G#4:.5 B4:.5 | C5 R:.5 E4:.5 E5:.5 D#5:.5 |
+          E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 | A4 R:.5 C4:.5 E4:.5 A4:.5 | B4 R:.5 E4:.5 C5:.5 B4:.5 | A4 R:.5 B4:.5 C5:.5 D5:.5 |
+          E5:1.5 G4:.5 F5:.5 E5:.5 | D5:1.5 F4:.5 E5:.5 D5:.5 | C5:1.5 E4:.5 D5:.5 C5:.5 | B4 R:.5 E4:.5 E5:.5 R:.5 |
+          R:.5 E5:.5 E6:.5 R:.5 R:.5 D#5:.5 | E5:.5 R:.5 R:.5 D#5:.5 E5:.5 D#5:.5 |
+          E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 | A4 R:.5 C4:.5 E4:.5 A4:.5 | B4 R:.5 E4:.5 G#4:.5 B4:.5 | C5 R:.5 E4:.5 E5:.5 D#5:.5 |
+          E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 | A4 R:.5 C4:.5 E4:.5 A4:.5 | B4 R:.5 E4:.5 C5:.5 B4:.5 | A4:1.5 R:.5 E5:.5 D#5:.5`,
+    chords: `R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3 |
+             C:3 | G:3 | Am:3 | E:3 | R:3 | R:3 |
+             R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3` }
+};
+const songName = id => SONGS[id][lang];
+
+/* ═══════════════════════  AUDIO ENGINE (Web Audio synth)  ═══════════════════════ */
+const PCL = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function toMidi(s) {
+  const m = /^([A-G])([#b]?)(-?\d)$/.exec(s);
+  if (!m) throw new Error('bad note ' + s);
+  return (parseInt(m[3], 10) + 1) * 12 + PCL[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+}
+const QUAL = { '': [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11], dim: [0, 3, 6], sus4: [0, 5, 7] };
+function parseSeq(str, chordMode) {
+  const items = [], bars = []; let t = 0, bar = 0;
+  for (const tok of (str || '').trim().split(/\s+/)) {
+    if (!tok) continue;
+    if (tok === '|') { bars.push(bar); bar = 0; continue; }
+    const [nm, ds] = tok.split(':');
+    const d = ds === undefined ? 1 : parseFloat(ds);
+    let v = null;
+    if (nm !== 'R') {
+      if (chordMode) {
+        const m = /^([A-G])([#b]?)(.*)$/.exec(nm);
+        if (!m || !QUAL[m[3]]) throw new Error('bad chord ' + nm);
+        v = { root: PCL[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0), ints: QUAL[m[3]] };
+      } else v = nm.split('+').map(toMidi);
+    }
+    items.push({ t, d, v }); t += d; bar += d;
+  }
+  if (bar > 0) bars.push(bar);
+  return { items, bars, total: t };
+}
+function voicing(c, tr) {
+  const pc = (((c.root + tr) % 12) + 12) % 12;
+  let bass = 36 + pc; if (bass < 40) bass += 12;
+  const tones = c.ints.map(iv => { let n = 48 + ((pc + iv) % 12); while (n < 53) n += 12; while (n > 66) n -= 12; return n; }).sort((a, b) => a - b);
+  return { bass, tones, pc };
+}
+const N = (i, t, d, m, v) => ({ i, t, d, m, v });
+const ACC = {
+  pluck4(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass, tones } = voicing(ch.v, tr);
+      out.push(N('bass', ch.t, Math.min(ch.d, 2) * .95, [bass], .26));
+      const pat = [tones[0], tones[2], tones[1], tones[2]];
+      let k = 0;
+      for (let b = 0; b < ch.d - 1e-6; b += .5, k++) out.push(N(s.accInst || 'pluck', ch.t + b, .5, [pat[k % 4] + 12], .085));
+    }
+  },
+  waltz(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass, tones } = voicing(ch.v, tr);
+      for (let b = 0; b < ch.d - 1e-6; b += 3) {
+        const bar = Math.round((ch.t + b) / 3);
+        const low = bar % 2 ? (bass + 7 > 55 ? bass - 5 : bass + 7) : bass;
+        out.push(N('bass', ch.t + b, 1, [low], .3));
+        out.push(N('pad', ch.t + b + 1, .5, tones, .075));
+        out.push(N('pad', ch.t + b + 2, .5, tones, .065));
+      }
+    }
+  },
+  lullaby(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass, tones } = voicing(ch.v, tr);
+      for (let b = 0; b < ch.d - 1e-6; b += 3) {
+        out.push(N('bass', ch.t + b, 2.8, [bass], .2));
+        [bass + 12, tones[0], tones[1], tones[2], tones[1], tones[0]].forEach((m, k) => out.push(N('harp', ch.t + b + k * .5, .5, [m], .085)));
+      }
+    }
+  },
+  sea(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass, tones } = voicing(ch.v, tr);
+      for (let b = 0; b < ch.d - 1e-6; b += 3) {
+        out.push(N('bass', ch.t + b, 1.2, [bass], .3));
+        out.push(N('marimba', ch.t + b + 1, .5, tones, .07));
+        out.push(N('marimba', ch.t + b + 2, .5, tones, .06));
+      }
+    }
+  },
+  minuet(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass } = voicing(ch.v, tr);
+      const lb = bass + 12;
+      for (let b = 0; b < ch.d - 1e-6; b += 3) {
+        out.push(N('harpsi', ch.t + b, 2, [lb], .16));
+        out.push(N('harpsi', ch.t + b + 2, 1, [lb + ch.v.ints[1]], .12));
+      }
+    }
+  },
+  hijaz(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass } = voicing(ch.v, tr);
+      out.push(N('pad', ch.t, ch.d, [bass + 12, bass + 19], .06));
+      for (let b = 0; b < ch.d - 1e-6; b += 2) {
+        out.push(N('oud', ch.t + b, .5, [bass + 12], .16));
+        out.push(N('oud', ch.t + b + 1.5, .5, [bass + 12], .11));
+      }
+    }
+  },
+  pent(chs, s, out, tr) {
+    const scale = [0, 2, 4, 7, 9];
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { pc } = voicing(ch.v, tr);
+      const start = 48 + pc, key = (((tr % 12) + 12) % 12), notes = [];
+      for (let m = start; notes.length < 6; m++) if (scale.includes((((m - key) % 12) + 12) % 12)) notes.push(m);
+      out.push(N('zheng', ch.t, ch.d, [notes[0] - 12], .14));
+      const pat = [0, 2, 3, 4, 5, 4, 3, 2];
+      let k = 0;
+      for (let b = 0; b < ch.d - 1e-6; b += .5, k++) out.push(N('zheng', ch.t + b, .5, [notes[pat[k % 8]]], .075));
+    }
+  },
+  swing(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass, tones } = voicing(ch.v, tr);
+      const iv = ch.v.ints, walk = [0, iv[1], 7, iv[3] != null ? iv[3] : 9];
+      for (let b = 0; b < ch.d - 1e-6; b += 4) {
+        walk.forEach((w, k) => out.push(N('bass', ch.t + b + k, .9, [bass + w], .3)));
+        out.push(N('pad', ch.t + b + 1, .45, tones, .07));
+        out.push(N('pad', ch.t + b + 3, .45, tones, .07));
+      }
+    }
+  },
+  flow68(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass, tones } = voicing(ch.v, tr);
+      for (let b = 0; b < ch.d - 1e-6; b += 3) {
+        out.push(N('bass', ch.t + b, 2.9, [bass], .18));
+        [tones[0], tones[1], tones[2], tones[0] + 12, tones[2], tones[1]].forEach((m, k) => out.push(N('harp', ch.t + b + k * .5, .5, [m], .07)));
+      }
+    }
+  },
+  elise(chs, s, out, tr) {
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass } = voicing(ch.v, tr);
+      [0, 7, 12].forEach((iv, k) => out.push(N('piano', ch.t + k * .5, .5, [bass + iv], .15)));
+    }
+  }
+};
+function compile(s) {
+  const tr = s.tr || 0, mo = s.mo || 0, MV = .3;
+  const intro = parseSeq(s.intro || '').items.filter(x => x.v).map(x => N(s.inst, x.t, x.d, x.v.map(m => m + tr + mo), MV));
+  const introLen = parseSeq(s.intro || '').total;
+  const mel = parseSeq(s.mel), body = [];
+  for (const x of mel.items) {
+    if (!x.v) continue;
+    body.push(N(s.inst, x.t, x.d, x.v.map(m => m + tr + mo), MV));
+    if (s.dbl) body.push(N(s.dbl[0], x.t, x.d, x.v.map(m => m + tr + mo + s.dbl[1]), s.dbl[2]));
+  }
+  ACC[s.acc](parseSeq(s.chords, true).items, s, body, tr);
+  if (s.perc) for (let b = 0; b < mel.total - 1e-6; b += s.bar) for (const [o, p, v] of s.perc) body.push({ p, t: b + o, v });
+  if (s.swing) for (const e of body) { const f = e.t - Math.floor(e.t); if (Math.abs(f - .5) < 1e-6) e.t += 1 / 6; }
+  body.sort((a, b) => a.t - b.t);
+  return { intro, introLen, body, bodyLen: mel.total, bpm: s.bpm };
+}
+
+const SND = (() => {
+  let ctx = null, master, musicGain, sfxGain, noise, cur = null, want = null;
+  let mode = store.get('sound', 2);            // 2 music+sfx · 1 sfx only · 0 off
+  const MUSIC_VOL = .55, SFX_VOL = .75, cache = {};
+  const SPEC = {
+    musicbox: { a: .004, decay: 1.4, parts: [[1, 1, 'sine'], [2, .3, 'sine', .25], [3, .12, 'sine', .12], [4.2, .05, 'sine', .08]] },
+    celesta: { a: .003, decay: 1.6, parts: [[1, 1, 'sine'], [4, .22, 'sine', .15], [2, .12, 'sine', .4]] },
+    harp: { a: .006, decay: 1.8, lp: 3200, parts: [[1, .8, 'triangle'], [2, .25, 'sine', .5], [3, .08, 'sine', .2]] },
+    marimba: { a: .004, decay: .7, parts: [[1, 1, 'sine'], [4, .35, 'sine', .06], [9.9, .08, 'sine', .03]] },
+    harpsi: { a: .002, decay: 1.1, damp: .06, lp: 3800, parts: [[1, .45, 'sawtooth'], [2, .15, 'square', .3]] },
+    oud: { a: .003, decay: .65, lpEnv: [3000, 800, .25], parts: [[1, .55, 'sawtooth'], [1.004, .3, 'triangle']] },
+    zheng: { a: .003, decay: 1.5, lp: 2600, slide: .035, vib: [5.5, .006], parts: [[1, .7, 'triangle'], [1, .18, 'sawtooth', .4], [2, .2, 'sine', .3]] },
+    clarinet: { a: .035, sus: .8, rel: .09, lp: 1700, vib: [5, .004], parts: [[1, .35, 'square'], [1, .4, 'sine']] },
+    flute: { a: .07, sus: .85, rel: .14, vib: [5, .006], parts: [[1, .8, 'sine'], [2, .1, 'sine'], [3, .04, 'sine']] },
+    piano: { a: .003, decay: 2.2, damp: .3, parts: [[1, .55, 'triangle'], [1, .45, 'sine'], [2, .22, 'sine', .6], [3, .09, 'sine', .3], [4, .04, 'sine', .15]] },
+    ice: { a: .002, decay: 1.1, parts: [[2, .6, 'sine'], [5.4, .12, 'sine', .2]] },
+    pluck: { a: .004, decay: .9, lp: 2400, parts: [[1, .7, 'triangle'], [2, .15, 'sine', .3]] },
+    pad: { a: .03, sus: .7, rel: .18, lp: 1400, parts: [[1, .5, 'triangle'], [2, .08, 'sine']] },
+    bass: { a: .008, sus: .6, rel: .12, parts: [[1, .8, 'sine'], [1, .25, 'triangle'], [2, .08, 'sine']] }
+  };
+
+  function impulse(sec, decay) {
+    const rate = ctx.sampleRate, len = Math.floor(rate * sec), b = ctx.createBuffer(2, len, rate);
+    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay); }
+    return b;
+  }
+  function init() {
+    if (ctx) return true;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    try { ctx = new AC(); } catch (e) { return false; }
+    master = ctx.createGain(); master.gain.value = .9;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 3.5; comp.attack.value = .004; comp.release.value = .2;
+    master.connect(comp); comp.connect(ctx.destination);
+    const rev = ctx.createConvolver(); rev.buffer = impulse(2.4, 2.6);
+    const revOut = ctx.createGain(); revOut.gain.value = .3; rev.connect(revOut); revOut.connect(master);
+    musicGain = ctx.createGain(); musicGain.gain.value = mode === 2 ? MUSIC_VOL : 0; musicGain.connect(master); musicGain.connect(rev);
+    sfxGain = ctx.createGain(); sfxGain.gain.value = mode >= 1 ? SFX_VOL : 0; sfxGain.connect(master);
+    const sfxRev = ctx.createGain(); sfxRev.gain.value = .5; sfxGain.connect(sfxRev); sfxRev.connect(rev);
+    noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    document.addEventListener('visibilitychange', () => { if (document.hidden) ctx.suspend(); else ctx.resume(); });
+    return true;
+  }
+  function unlock() {
+    if (!init()) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    if (want && !cur && mode === 2) start(want);
+  }
+
+  function note(name, midi, t, dur, v, out) {
+    const S = SPEC[name], f = 440 * Math.pow(2, (midi - 69) / 12);
+    const g = ctx.createGain(); let dest = g, end;
+    if (S.lp || S.lpEnv) {
+      const flt = ctx.createBiquadFilter(); flt.type = 'lowpass'; flt.Q.value = .7;
+      if (S.lpEnv) { flt.frequency.setValueAtTime(S.lpEnv[0], t); flt.frequency.exponentialRampToValueAtTime(S.lpEnv[1], t + S.lpEnv[2]); }
+      else flt.frequency.value = S.lp;
+      flt.connect(g); dest = flt;
+    }
+    let tail = g;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(v, t + S.a);
+    if (S.sus) {
+      g.gain.setTargetAtTime(v * S.sus, t + S.a, .08);
+      const off = t + Math.max(dur, S.a + .03);
+      g.gain.setTargetAtTime(0, off, S.rel / 3);
+      end = off + S.rel + .1;
+    } else {
+      end = t + S.a + S.decay;
+      g.gain.exponentialRampToValueAtTime(.0005, end);
+      if (S.damp && dur + S.damp < S.decay) {
+        const dm = ctx.createGain(); g.connect(dm); tail = dm;
+        const off = t + dur;
+        dm.gain.setValueAtTime(1, off); dm.gain.setTargetAtTime(0, off, S.damp / 3);
+        end = Math.min(end, off + S.damp + .05);
+      }
+    }
+    tail.connect(out);
+    let lfoGain = null;
+    if (S.vib && dur > .25) {
+      const lfo = ctx.createOscillator(); lfo.frequency.value = S.vib[0];
+      lfoGain = ctx.createGain(); lfoGain.gain.setValueAtTime(0, t); lfoGain.gain.linearRampToValueAtTime(f * S.vib[1], t + Math.min(.35, dur * .6));
+      lfo.connect(lfoGain); lfo.start(t); lfo.stop(end);
+    }
+    for (const [ratio, amp, type, pdec] of S.parts) {
+      const o = ctx.createOscillator(); o.type = type;
+      const fr = f * ratio;
+      if (S.slide) { o.frequency.setValueAtTime(fr * .97, t); o.frequency.exponentialRampToValueAtTime(fr, t + S.slide); }
+      else o.frequency.setValueAtTime(fr, t);
+      if (lfoGain) lfoGain.connect(o.frequency);
+      const pg = ctx.createGain(); pg.gain.setValueAtTime(amp, t);
+      if (pdec) pg.gain.exponentialRampToValueAtTime(amp * .001 + 1e-5, t + pdec);
+      o.connect(pg); pg.connect(dest); o.start(t); o.stop(end);
+    }
+  }
+  function nz(t, dur, v, out, type, freq, q) {
+    const s = ctx.createBufferSource(); s.buffer = noise;
+    const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q || .8;
+    const g = ctx.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
+    s.connect(f); f.connect(g); g.connect(out); s.start(t, Math.random() * .5); s.stop(t + dur + .02);
+  }
+  function tone(type, f1, f2, t, dur, v, out) {
+    const o = ctx.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(f1, t); if (f2 !== f1) o.frequency.exponentialRampToValueAtTime(f2, t + dur * .8);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .008); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
+    o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + .02);
+  }
+  const PERC = {
+    dum: (t, v, out) => tone('sine', 130, 58, t, .32, v, out),
+    tek: (t, v, out) => nz(t, .07, v, out, 'bandpass', 3200, 1.6),
+    hat: (t, v, out) => nz(t, .045, v, out, 'highpass', 7500),
+    ride: (t, v, out) => nz(t, .22, v * .6, out, 'bandpass', 8500, .7),
+    shaker: (t, v, out) => nz(t, .09, v, out, 'bandpass', 6000, 1.2),
+    block: (t, v, out) => tone('sine', 1250, 1250, t, .08, v, out)
+  };
+
+  function play(id) {
+    want = id;
+    if (!ctx || mode < 2) return;
+    if (cur && cur.id === id) return;
+    stop(); start(id);
+  }
+  function start(id) {
+    const s = cache[id] || (cache[id] = compile(SONGS[id]));
+    const bus = ctx.createGain(); bus.connect(musicGain);
+    cur = { id, s, bus, spb: 60 / s.bpm, t0: ctx.currentTime + .15, idx: 0, loop: 0, intro: s.intro.length > 0 };
+    cur.timer = setInterval(pump, 50); pump();
+  }
+  function stop(fade) {
+    if (!cur) return;
+    const c = cur; cur = null; clearInterval(c.timer);
+    const now = ctx.currentTime, f = fade == null ? .35 : fade;
+    c.bus.gain.setValueAtTime(1, now); c.bus.gain.linearRampToValueAtTime(0, now + f);
+    setTimeout(() => { try { c.bus.disconnect(); } catch (e) {} }, f * 1000 + 2500);
+  }
+  function pump() {
+    const c = cur; if (!c) return;
+    const s = c.s, horizon = ctx.currentTime + .4;
+    for (let guard = 0; guard < 600; guard++) {
+      let ev, base;
+      if (c.intro) {
+        if (c.idx >= s.intro.length) { c.intro = false; c.idx = 0; continue; }
+        ev = s.intro[c.idx]; base = 0;
+      } else {
+        if (c.idx >= s.body.length) { c.loop++; c.idx = 0; }
+        ev = s.body[c.idx]; base = s.introLen + c.loop * s.bodyLen;
+      }
+      const when = c.t0 + (base + ev.t) * c.spb;
+      if (when > horizon) break;
+      if (when >= ctx.currentTime - .02) {
+        if (ev.p) PERC[ev.p](when, ev.v, c.bus);
+        else for (const m of ev.m) note(ev.i, m, when, ev.d * c.spb, ev.v, c.bus);
+      }
+      c.idx++;
+    }
+  }
+  function setMode(m) {
+    mode = m; store.set('sound', m);
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    musicGain.gain.setTargetAtTime(m === 2 ? MUSIC_VOL : 0, now, .1);
+    sfxGain.gain.setTargetAtTime(m >= 1 ? SFX_VOL : 0, now, .05);
+    if (m === 2 && !cur && want) start(want);
+    if (m < 2 && cur) stop(.3);
+  }
+
+  const ok = () => init() && mode >= 1;
+  const now = () => ctx.currentTime + .01;
+  const STEPS = [0, 2, 4, 7, 9, 12, 14, 16];
+  const sfx = {
+    select() { if (!ok()) return; note('musicbox', 84, now(), .2, .16, sfxGain); },
+    tap() { if (!ok()) return; note('pluck', 72, now(), .12, .14, sfxGain); },
+    match(k) {
+      if (!ok()) return;
+      const t = now(), base = 72 + STEPS[(k || 0) % 8];
+      [0, 4, 7, 12].forEach((iv, i) => note('celesta', base + iv, t + i * .06, .3, .17, sfxGain));
+      note('ice', base + 12, t + .25, .3, .06, sfxGain);
+    },
+    nope() { if (!ok()) return; const t = now(); tone('triangle', 330, 220, t, .22, .2, sfxGain); tone('triangle', 262, 196, t + .12, .25, .16, sfxGain); },
+    shuffle() {
+      if (!ok()) return;
+      const t = now(), s = ctx.createBufferSource(); s.buffer = noise;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3500, t + .45);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.35, t + .2); g.gain.exponentialRampToValueAtTime(.0005, t + .55);
+      s.connect(f); f.connect(g); g.connect(sfxGain); s.start(t); s.stop(t + .6);
+      [79, 84, 88, 91].forEach((m, i) => note('musicbox', m, t + .1 + i * .07, .2, .07, sfxGain));
+    },
+    hint() { if (!ok()) return; const t = now(); note('musicbox', 88, t, .2, .12, sfxGain); note('musicbox', 93, t + .12, .3, .12, sfxGain); },
+    win() {
+      if (!ok()) return;
+      const t = now();
+      [[72, 0], [76, .14], [79, .28], [84, .42]].forEach(([m, d]) => { note('piano', m, t + d, .16, .26, sfxGain); note('celesta', m + 12, t + d, .16, .08, sfxGain); });
+      [72, 76, 79, 84].forEach(m => note('piano', m, t + .62, 1.4, .2, sfxGain));
+      [67, 72].forEach(m => note('pad', m - 12, t + .62, 1.4, .1, sfxGain));
+      for (let i = 0; i < 10; i++) note('musicbox', 84 + [0, 2, 4, 7, 9, 12, 14, 16][rnd(8)], t + .9 + i * .09, .2, .07, sfxGain);
+    }
+  };
+  return { unlock, play, stop, setMode, get mode() { return mode; }, get state() { return ctx ? ctx.state : 'none'; }, get song() { return cur && cur.id; }, sfx };
+})();
+
+/* ═══════════════════════  BOARD LOGIC  ═══════════════════════ */
+function emptyGrid(R, C) { return Array.from({ length: R + 2 }, () => Array(C + 2).fill(null)); }
+function clearLine(g, r1, c1, r2, c2) {
+  if (r1 === r2) { const a = Math.min(c1, c2), b = Math.max(c1, c2); for (let c = a + 1; c < b; c++) if (g[r1][c]) return false; return true; }
+  if (c1 === c2) { const a = Math.min(r1, r2), b = Math.max(r1, r2); for (let r = a + 1; r < b; r++) if (g[r][c1]) return false; return true; }
+  return false;
+}
+// Shortest connecting path with at most two turns, through empty cells or the empty border ring; null if none.
+function findPath(g, R, C, a, b) {
+  const [r1, c1] = a, [r2, c2] = b, e = (r, c) => !g[r][c];
+  if ((r1 === r2 || c1 === c2) && clearLine(g, r1, c1, r2, c2)) return [a, b];
+  if (e(r1, c2) && clearLine(g, r1, c1, r1, c2) && clearLine(g, r1, c2, r2, c2)) return [a, [r1, c2], b];
+  if (e(r2, c1) && clearLine(g, r1, c1, r2, c1) && clearLine(g, r2, c1, r2, c2)) return [a, [r2, c1], b];
+  let best = null, bestLen = Infinity;
+  if (r1 !== r2) for (let c = 0; c <= C + 1; c++) {
+    if (c === c1 || c === c2 || !e(r1, c) || !e(r2, c)) continue;
+    if (clearLine(g, r1, c1, r1, c) && clearLine(g, r1, c, r2, c) && clearLine(g, r2, c, r2, c2)) {
+      const len = Math.abs(c - c1) + Math.abs(r2 - r1) + Math.abs(c2 - c);
+      if (len < bestLen) { bestLen = len; best = [a, [r1, c], [r2, c], b]; }
+    }
+  }
+  if (c1 !== c2) for (let r = 0; r <= R + 1; r++) {
+    if (r === r1 || r === r2 || !e(r, c1) || !e(r, c2)) continue;
+    if (clearLine(g, r1, c1, r, c1) && clearLine(g, r, c1, r, c2) && clearLine(g, r, c2, r2, c2)) {
+      const len = Math.abs(r - r1) + Math.abs(c2 - c1) + Math.abs(r2 - r);
+      if (len < bestLen) { bestLen = len; best = [a, [r, c1], [r, c2], b]; }
+    }
+  }
+  return best;
+}
+function findAnyPair(g, R, C) {
+  const groups = {};
+  for (let r = 1; r <= R; r++) for (let c = 1; c <= C; c++) { const v = g[r][c]; if (v) (groups[v] = groups[v] || []).push([r, c]); }
+  for (const k of shuffle(Object.keys(groups))) {
+    const ps = groups[k];
+    for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) if (findPath(g, R, C, ps[i], ps[j])) return [ps[i], ps[j]];
+  }
+  return null;
+}
+function solvable(g, R, C) {
+  const w = g.map(row => row.slice());
+  let n = 0; for (let r = 1; r <= R; r++) for (let c = 1; c <= C; c++) if (w[r][c]) n++;
+  while (n > 0) {
+    const p = findAnyPair(w, R, C);
+    if (!p) return false;
+    w[p[0][0]][p[0][1]] = null; w[p[1][0]][p[1][1]] = null; n -= 2;
+  }
+  return true;
+}
+function fillCells(g, R, C, cells, tiles) {
+  for (let tries = 0; tries < 400; tries++) {
+    shuffle(tiles);
+    cells.forEach(([r, c], k) => { g[r][c] = tiles[k]; });
+    if (solvable(g, R, C)) return true;
+  }
+  return false;
+}
+function buildTiles(L) {
+  const types = [L.p, ...L.friends].slice(0, L.types);
+  const pool = shuffle(ALL.filter(x => !types.includes(x)));
+  while (types.length < L.types) types.push(pool.pop());
+  const pairs = L.cols * L.rows / 2, base = Math.floor(pairs / L.types);
+  const counts = types.map(() => base);
+  let extra = pairs - base * L.types;
+  for (const i of [0, ...shuffle(types.map((_, k) => k).slice(1))]) { if (extra <= 0) break; counts[i]++; extra--; }
+  const tiles = [];
+  types.forEach((tp, i) => { for (let k = 0; k < counts[i]; k++) tiles.push(tp, tp); });
+  return tiles;
+}
+
+/* ═══════════════════════  GAME UI  ═══════════════════════ */
+const board = $('#board'), paths = $('#paths'), fx = $('#fx');
+const G = { li: 0, L: null, R: 0, C: 0, g: null, sel: null, left: 0, total: 0, hints: 0, matches: 0, over: true, busy: false, cell: 60, pad: 30, timers: {} };
+const key = (r, c) => r + ',' + c;
+let els = new Map();
+
+function stageBox() { const s = $('#stage').getBoundingClientRect(); return { w: Math.max(100, s.width - 8), h: Math.max(100, s.height - 8) }; }
+function wantTranspose() {
+  const { w, h } = stageBox();
+  return (h > w * 1.05 && G.C > G.R) || (w > h * 1.05 && G.R > G.C);
+}
+function transpose() {
+  const R = G.R, C = G.C, ng = emptyGrid(C, R);
+  for (let r = 0; r < R + 2; r++) for (let c = 0; c < C + 2; c++) ng[c][r] = G.g[r][c];
+  G.g = ng; G.R = C; G.C = R;
+  if (G.sel) G.sel = [G.sel[1], G.sel[0]];
+}
+const px = (i, n) => i === 0 ? G.pad * .45 : i === n + 1 ? G.pad + n * G.cell + G.pad * .55 : G.pad + (i - 1) * G.cell + G.cell / 2;
+
+function render(enter) {
+  const { w, h } = stageBox();
+  G.cell = Math.max(26, Math.floor(Math.min(w / (G.C + .7), h / (G.R + .7), 124)));
+  G.pad = G.cell * .35;
+  board.style.width = (G.C * G.cell + 2 * G.pad) + 'px';
+  board.style.height = (G.R * G.cell + 2 * G.pad) + 'px';
+  board.style.fontSize = (G.cell / 8) + 'px';
+  for (const el of els.values()) el.remove();
+  els = new Map();
+  const gap = G.cell * .08, size = G.cell - gap, frag = document.createDocumentFragment();
+  let k = 0;
+  for (let r = 1; r <= G.R; r++) for (let c = 1; c <= G.C; c++) {
+    const tp = G.g[r][c]; if (!tp) continue;
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'tile' + (enter ? ' enter' : '') + (G.sel && G.sel[0] === r && G.sel[1] === c ? ' sel' : '');
+    el.style.cssText = `left:${G.pad + (c - 1) * G.cell + gap / 2}px;top:${G.pad + (r - 1) * G.cell + gap / 2}px;width:${size}px;height:${size}px`;
+    if (enter) el.style.animationDelay = Math.min(k++ * 14, 650) + 'ms';
+    el.dataset.r = r; el.dataset.c = c;
+    el.setAttribute('aria-label', nameOf(tp));
+    el.innerHTML = `<span class="art" style="background:${A[tp].tint}">${art(tp)}</span>`;
+    frag.appendChild(el); els.set(key(r, c), el);
+  }
+  board.appendChild(frag);
+}
+function setHud() {
+  $('#g-left').textContent = G.left;
+  $('#g-prog').style.width = ((G.total - G.left) / G.total * 100) + '%';
+}
+function setLevelText() {
+  if (!G.L) return;
+  $('#g-title').innerHTML = `<span class="lv-long">${t('level', G.li + 1)} · </span><span class="lv-short">${G.li + 1} · </span>${nameOf(G.L.p)}`;
+  $('#g-song').textContent = '♪ ' + songName(G.L.song);
+  $('#g-mini').innerHTML = art(G.L.p);
+  for (const [id, k] of [['#g-home', 'home'], ['#g-hint', 'hint'], ['#g-shuffle', 'shuffle']]) { $(id).title = t(k); $(id).setAttribute('aria-label', t(k)); }
+  $('.pairs').title = t('pairs');
+}
+function theme(L) {
+  const bg = L ? L.bg : ['#ffe3f1', '#e9e2ff'];
+  document.body.style.setProperty('--bg1', bg[0]);
+  document.body.style.setProperty('--bg2', bg[1]);
+  const glyphs = [...(L ? L.deco : '✦♥✿✧')], d = $('#decor');
+  d.innerHTML = '';
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('span');
+    s.className = 'dc'; s.textContent = glyphs[i % glyphs.length];
+    s.style.left = (Math.random() * 96) + '%';
+    s.style.fontSize = (14 + Math.random() * 26) + 'px';
+    s.style.animationDuration = (14 + Math.random() * 14) + 's';
+    s.style.animationDelay = (-Math.random() * 22) + 's';
+    d.appendChild(s);
+  }
+}
+function clearTimers() { for (const k in G.timers) clearTimeout(G.timers[k]); G.timers = {}; $('#toast').classList.remove('show'); }
+function later(name, ms, fn) { clearTimeout(G.timers[name]); G.timers[name] = setTimeout(fn, ms); }
+
+function startLevel(i) {
+  clearTimers();
+  G.li = i; G.L = LEVELS[i]; G.R = G.L.rows; G.C = G.L.cols;
+  G.sel = null; G.hints = 0; G.matches = 0; G.over = false; G.busy = false;
+  $('#win').classList.add('hidden');
+  $('#home').classList.add('hidden'); $('#game').classList.remove('hidden');
+  theme(G.L); setLevelText();
+  const tiles = buildTiles(G.L);
+  G.total = G.left = tiles.length / 2;
+  if (wantTranspose()) { const x = G.R; G.R = G.C; G.C = x; }
+  G.g = emptyGrid(G.R, G.C);
+  const cells = [];
+  for (let r = 1; r <= G.R; r++) for (let c = 1; c <= G.C; c++) cells.push([r, c]);
+  fillCells(G.g, G.R, G.C, cells, tiles);
+  setHud(); render(true);
+  SND.play(G.L.song);
+  resetIdle();
+}
+function showHome() {
+  clearTimers(); G.over = true;
+  $('#win').classList.add('hidden'); $('#game').classList.add('hidden'); $('#home').classList.remove('hidden');
+  theme(null); renderHome();
+  SND.play('home');
+}
+function renderHome() {
+  const best = store.get('stars', {});
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  $('#h-title').textContent = t('title'); $('#h-sub').textContent = t('sub'); $('#h-rule').textContent = t('rule'); $('#h-foot').textContent = t('foot');
+  $('#h-lang').textContent = t('langBtn');
+  $('#levels').innerHTML = LEVELS.map((L, i) => {
+    const st = best[i] || 0;
+    return `<button class="lvl" type="button" data-i="${i}" style="--c1:${L.bg[0]};--c2:${L.bg[1]}">` +
+      `<span class="num">${i + 1}</span><span class="size">${L.cols}×${L.rows}</span>` +
+      `<span class="por">${art(L.p)}</span><span class="nm">${nameOf(L.p)}</span>` +
+      `<span class="st">${'★'.repeat(st)}<span class="off">${'★'.repeat(3 - st)}</span></span>` +
+      `<span class="song">♪ ${songName(L.song)}</span></button>`;
+  }).join('');
+}
+function soundIcons() {
+  const ic = ['🔇', '🔔', '🎵'][SND.mode], lbl = t('sound')[SND.mode];
+  for (const id of ['#h-sound', '#g-sound']) { const b = $(id); b.textContent = ic; b.title = lbl; b.setAttribute('aria-label', lbl); }
+}
+
+/* ── interaction ── */
+function tileEl(p) { return els.get(key(p[0], p[1])); }
+function select(p) { G.sel = p; const el = tileEl(p); if (el) el.classList.add('sel'); }
+function deselect() { if (G.sel) { const el = tileEl(G.sel); if (el) el.classList.remove('sel'); } G.sel = null; }
+function wobble(p) { const el = tileEl(p); if (!el) return; el.classList.remove('wobble'); void el.offsetWidth; el.classList.add('wobble'); }
+let lastBlockedToast = 0;
+
+function tap(r, c) {
+  resetIdle(); clearHint();
+  const tp = G.g[r][c]; if (!tp) return;
+  const s = G.sel;
+  if (!s) { select([r, c]); SND.sfx.select(); return; }
+  if (s[0] === r && s[1] === c) { deselect(); SND.sfx.tap(); return; }
+  if (G.g[s[0]][s[1]] !== tp) { wobble(s); deselect(); select([r, c]); SND.sfx.select(); return; }
+  const path = findPath(G.g, G.R, G.C, s, [r, c]);
+  if (!path) {
+    wobble(s); wobble([r, c]); deselect(); select([r, c]); SND.sfx.nope();
+    if (Date.now() - lastBlockedToast > 6000) { lastBlockedToast = Date.now(); toast(t('blocked')); }
+    return;
+  }
+  deselect();
+  doMatch(s, [r, c], path, tp);
+}
+function doMatch(a, b, path, tp) {
+  G.g[a[0]][a[1]] = null; G.g[b[0]][b[1]] = null;
+  G.left--; G.matches++;
+  const ea = tileEl(a), eb = tileEl(b);
+  els.delete(key(a[0], a[1])); els.delete(key(b[0], b[1]));
+  drawPath(path);
+  [ea, eb].forEach(el => { if (!el) return; el.classList.add('gone'); setTimeout(() => { burst(el); }, 150); setTimeout(() => el.remove(), 650); });
+  if (ea && eb) namePop(tp, ea, eb);
+  SND.sfx.match(G.matches - 1);
+  setHud();
+  if (G.left === 0) { G.over = true; later('win', 800, win); return; }
+  if (!findAnyPair(G.g, G.R, G.C)) { G.busy = true; later('auto', 750, () => { toast(t('shuffling')); reshuffle(); }); }
+}
+function drawPath(path) {
+  const d = path.map(([r, c], i) => (i ? 'L' : 'M') + px(c, G.C).toFixed(1) + ' ' + px(r, G.R).toFixed(1)).join('');
+  const w = Math.max(4, G.cell * .1);
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.innerHTML = `<path class="p1" d="${d}" pathLength="1" stroke-width="${w * 2.2}"/><path class="p2" d="${d}" pathLength="1" stroke-width="${w}"/><path class="p3" d="${d}" pathLength="1" stroke-width="${w * .38}"/>`;
+  paths.appendChild(g);
+  setTimeout(() => g.classList.add('fade'), 300);
+  setTimeout(() => g.remove(), 750);
+}
+function center(el) { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.width]; }
+function burst(el) {
+  const [x, y, w] = center(el);
+  const glyphs = ['✦', '★', '♥', '✿', '✧'], colors = ['#ffcf3f', '#ff5fa2', '#a78bfa', '#5ec1ec', '#ff8cc0'];
+  for (let i = 0; i < 9; i++) {
+    const s = document.createElement('span');
+    s.className = 'pt'; s.textContent = glyphs[rnd(5)];
+    const a = Math.random() * Math.PI * 2, dist = w * (.6 + Math.random() * .8);
+    s.style.cssText = `left:${x}px;top:${y}px;color:${colors[rnd(5)]};font-size:${w * .22 + 7}px;--dx:${Math.cos(a) * dist}px;--dy:${Math.sin(a) * dist}px`;
+    fx.appendChild(s); setTimeout(() => s.remove(), 900);
+  }
+}
+function namePop(tp, ea, eb) {
+  const [x1, y1] = center(ea), [x2, y2] = center(eb);
+  const s = document.createElement('div');
+  s.className = 'namepop'; s.textContent = nameOf(tp);
+  const x = Math.min(window.innerWidth - 80, Math.max(80, (x1 + x2) / 2));
+  s.style.left = x + 'px'; s.style.top = ((y1 + y2) / 2) + 'px';
+  fx.appendChild(s); setTimeout(() => s.remove(), 1250);
+}
+function toast(msg) {
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  later('toast', 2200, () => el.classList.remove('show'));
+}
+function reshuffle() {
+  const cells = [], tiles = [];
+  for (let r = 1; r <= G.R; r++) for (let c = 1; c <= G.C; c++) if (G.g[r][c]) { cells.push([r, c]); tiles.push(G.g[r][c]); }
+  deselect(); clearHint();
+  fillCells(G.g, G.R, G.C, cells, tiles);
+  SND.sfx.shuffle();
+  render(true);
+  G.busy = true; later('busy', 500, () => { G.busy = false; });
+  resetIdle();
+}
+function clearHint() { clearTimeout(G.timers.hint); document.querySelectorAll('.tile.hint').forEach(e => e.classList.remove('hint')); }
+function showHint(manual) {
+  if (G.over || G.busy) return;
+  const p = findAnyPair(G.g, G.R, G.C); if (!p) return;
+  if (manual) G.hints++;
+  clearHint();
+  p.forEach(q => { const el = tileEl(q); if (el) el.classList.add('hint'); });
+  SND.sfx.hint();
+  later('hint', 3200, clearHint);
+}
+function resetIdle() { later('idle', 20000, () => showHint(false)); }
+
+function win() {
+  clearTimers();
+  const stars = G.hints <= 1 ? 3 : G.hints <= 3 ? 2 : 1;
+  const best = store.get('stars', {});
+  if ((best[G.li] || 0) < stars) { best[G.li] = stars; store.set('stars', best); }
+  const last = G.li === LEVELS.length - 1;
+  $('#w-por').innerHTML = art(G.L.p);
+  $('#w-title').textContent = last ? t('allDone') : t('win');
+  $('#w-sub').textContent = t('winSub', nameOf(G.L.p));
+  $('#w-home').textContent = t('levels'); $('#w-again').textContent = t('again'); $('#w-next').textContent = t('next');
+  $('#w-next').classList.toggle('hidden', last);
+  const sp = $('#w-stars').children;
+  for (let i = 0; i < 3; i++) { sp[i].className = ''; if (i < stars) { sp[i].style.animationDelay = (.35 + i * .25) + 's'; sp[i].className = 'on'; } }
+  $('#win').classList.remove('hidden');
+  SND.stop(.4); SND.sfx.win(); confetti();
+  later('resume', 2800, () => { if (!$('#win').classList.contains('hidden')) SND.play(G.L.song); });
+}
+function confetti() {
+  const colors = ['#ff5fa2', '#ffcf3f', '#a78bfa', '#5ec1ec', '#7fdc8f', '#ff8cc0'];
+  for (let i = 0; i < 70; i++) {
+    const c = document.createElement('div');
+    c.className = 'cf';
+    const dur = 2.2 + Math.random() * 1.8;
+    c.style.cssText = `left:${Math.random() * 100}vw;background:${colors[rnd(6)]};animation-duration:${dur}s;animation-delay:${Math.random() * .6}s;` +
+      `--dx:${(Math.random() - .5) * 160}px;--rot:${(Math.random() - .5) * 1080}deg;border-radius:${Math.random() < .4 ? '50%' : '3px'}`;
+    fx.appendChild(c); setTimeout(() => c.remove(), (dur + .7) * 1000);
+  }
+}
+
+/* ── wiring ── */
+document.addEventListener('pointerdown', () => SND.unlock(), { capture: true });
+document.addEventListener('keydown', () => SND.unlock(), { capture: true });
+board.addEventListener('click', e => {
+  const el = e.target.closest('.tile');
+  if (!el || G.over || G.busy || el.classList.contains('gone')) return;
+  tap(+el.dataset.r, +el.dataset.c);
+});
+$('#levels').addEventListener('click', e => { const b = e.target.closest('.lvl'); if (b) { SND.sfx.tap(); startLevel(+b.dataset.i); } });
+$('#g-home').addEventListener('click', () => { SND.sfx.tap(); showHome(); });
+$('#g-hint').addEventListener('click', () => showHint(true));
+$('#g-shuffle').addEventListener('click', () => { if (!G.over && !G.busy) reshuffle(); });
+const cycleSound = () => { SND.setMode((SND.mode + 2) % 3); soundIcons(); SND.sfx.tap(); };
+$('#h-sound').addEventListener('click', cycleSound);
+$('#g-sound').addEventListener('click', cycleSound);
+$('#h-lang').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); renderHome(); soundIcons(); setLevelText(); SND.sfx.tap(); });
+$('#w-home').addEventListener('click', showHome);
+$('#w-again').addEventListener('click', () => startLevel(G.li));
+$('#w-next').addEventListener('click', () => startLevel(Math.min(G.li + 1, LEVELS.length - 1)));
+let rsz = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(rsz);
+  rsz = setTimeout(() => {
+    if ($('#game').classList.contains('hidden') || !G.g) return;
+    if (wantTranspose()) transpose();
+    render(false);
+  }, 150);
+});
+
+buildSprite();
+$('#h-crown').innerHTML = art('crown');
+soundIcons();
+showHome();
+
+/* debug / test hooks */
+window.PM = {
+  G, A, LEVELS, SONGS, SND, startLevel, findAnyPair, findPath, solvable, render, tap,
+  validate() {
+    const issues = [];
+    for (const [id, s] of Object.entries(SONGS)) {
+      try {
+        const m = parseSeq(s.mel), c = parseSeq(s.chords, true);
+        m.bars.forEach((b, i) => { if (Math.abs(b - s.bar) > 1e-6) issues.push(`${id} melody bar ${i + 1} = ${b}`); });
+        c.bars.forEach((b, i) => { if (Math.abs(b - s.bar) > 1e-6) issues.push(`${id} chord bar ${i + 1} = ${b}`); });
+        if (Math.abs(m.total - c.total) > 1e-6) issues.push(`${id} melody ${m.total} vs chords ${c.total}`);
+        if (m.bars.length !== c.bars.length) issues.push(`${id} bars: melody ${m.bars.length} vs chords ${c.bars.length}`);
+        compile(s);
+      } catch (e) { issues.push(id + ': ' + e.message); }
+    }
+    return issues;
+  },
+  autoStep() { const p = findAnyPair(G.g, G.R, G.C); if (p) { tap(p[0][0], p[0][1]); tap(p[1][0], p[1][1]); } return !!p; }
+};
+})();
+</script>
+</body>
+</html>
