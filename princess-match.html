@@ -63,6 +63,15 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 .lvl .st{color:var(--gold);letter-spacing:2px;font-size:1.15rem;text-shadow:0 1px 0 #d4a017;line-height:1}
 .lvl .st .off{color:#ece2f3;text-shadow:none}
 .lvl .song{font-size:.76rem;color:var(--ink2);text-align:center;line-height:1.2;min-height:1.9em}
+.sect{grid-column:1/-1;text-align:center;font-weight:700;font-size:1.35rem;color:#fff;margin:14px 0 2px;
+  text-shadow:0 2px 0 var(--lilac),0 4px 12px rgba(167,139,250,.45)}
+.sect small{display:block;font-size:.85rem;color:var(--ink2);text-shadow:none;font-weight:600;margin-top:2px}
+.trio{position:relative;display:block;width:100%;height:100%}
+.por .trio svg,.wpor .trio svg{position:absolute;width:56%;height:56%}
+.por .trio svg:nth-child(1),.wpor .trio svg:nth-child(1){left:0;top:11%}
+.por .trio svg:nth-child(3),.wpor .trio svg:nth-child(3){right:0;top:11%}
+.por .trio svg:nth-child(2),.wpor .trio svg:nth-child(2){left:22%;top:38%;z-index:1}
+.lvl.mix{box-shadow:0 5px 0 #d7c6f5,0 10px 22px rgba(120,60,140,.16);background:linear-gradient(#fff,#fbf6ff)}
 .foot{margin-top:22px;font-size:.78rem;color:var(--ink2);opacity:.8;text-align:center;max-width:560px}
 
 /* ── game ── */
@@ -219,6 +228,7 @@ const STR = {
     foot: 'Every level plays its own tune 🎵 — classic and folk melodies played right in your browser. Characters are original fan-art drawings.',
     level: n => 'Level ' + n, langBtn: '中文',
     win: 'Hooray! You did it!', winSub: n => n + ' says thank you!', allDone: 'You finished every level! 👑',
+    winSubAll: 'All the princesses say thank you!', mixTitle: 'Princess Mix', mixSub: 'Every princess and all their friends, together!',
     next: 'Next level ▶', again: 'Play again', levels: 'All levels',
     hint: 'Hint', shuffle: 'Shuffle', home: 'All levels', pairs: 'Pairs left',
     sound: ['Sound off', 'Sound effects only', 'Music and sound on']
@@ -229,6 +239,7 @@ const STR = {
     foot: '每一关都有不同的音乐 🎵 —— 经典名曲和民歌，在浏览器里现场演奏。人物都是原创的同人画。',
     level: n => '第 ' + n + ' 关', langBtn: 'EN',
     win: '太棒啦！你完成了！', winSub: n => n + '说：谢谢你！', allDone: '全部通关啦！👑',
+    winSubAll: '公主们都说：谢谢你！', mixTitle: '公主大混合', mixSub: '所有公主和她们的小伙伴，全都在一起！',
     next: '下一关 ▶', again: '再玩一次', levels: '选关',
     hint: '提示', shuffle: '洗牌', home: '选关', pairs: '剩余',
     sound: ['声音关闭', '只有音效', '音乐和音效']
@@ -577,6 +588,333 @@ def('crown', 'Crown', '王冠', '#fff6d0',
   `<circle cx="15" cy="33" r="3.2" fill="#fff"/><circle cx="50" cy="25" r="3.6" fill="#fff"/><circle cx="85" cy="33" r="3.2" fill="#fff"/>` +
   `<path d="M50 42L55 50L50 58L45 50Z" fill="#ff5fa2"/><path d="M27 60L25 44" stroke="#fff3b0" stroke-width="2.4" stroke-linecap="round"/>`);
 
+/* ── story pictures (each belongs to one or more princess stories; see LEVELS[].story) ── */
+function starPath(cx, cy, R, r, n = 5) {
+  let d = '';
+  for (let i = 0; i < n * 2; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / n, rad = i % 2 ? r : R;
+    d += (i ? 'L' : 'M') + (cx + Math.cos(a) * rad).toFixed(1) + ' ' + (cy + Math.sin(a) * rad).toFixed(1);
+  }
+  return d + 'Z';
+}
+function burstRays(cx, cy, r, n, color, w) {
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    const a = i * 2 * Math.PI / n, x1 = cx + Math.cos(a) * r * .3, y1 = cy + Math.sin(a) * r * .3, x2 = cx + Math.cos(a) * r, y2 = cy + Math.sin(a) * r;
+    s += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>` +
+      `<circle cx="${(cx + Math.cos(a) * (r + w * 1.4)).toFixed(1)}" cy="${(cy + Math.sin(a) * (r + w * 1.4)).toFixed(1)}" r="${(w * .75).toFixed(1)}" fill="${color}"/>`;
+  }
+  return s + `<circle cx="${cx}" cy="${cy}" r="${(w * 1.1).toFixed(1)}" fill="${color}"/>`;
+}
+const cuteEyes = (x1, x2, y, r = 3.4) => [x1, x2].map(x =>
+  `<circle cx="${x}" cy="${y}" r="${r}" fill="#2a1d1a"/><circle cx="${x + r * .35}" cy="${y - r * .38}" r="${(r * .36).toFixed(2)}" fill="#fff"/>`).join('');
+const happyEyes = (x1, x2, y) => `<path d="M${x1 - 3.5} ${y}Q${x1} ${y - 3.5} ${x1 + 3.5} ${y}M${x2 - 3.5} ${y}Q${x2} ${y - 3.5} ${x2 + 3.5} ${y}" stroke="#3a2a20" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+const smile = (x, y, w = 4) => `<path d="M${x - w} ${y}Q${x} ${y + w * .9} ${x + w} ${y}" stroke="#3a2a20" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
+const blush = (x1, x2, y) => `<ellipse cx="${x1}" cy="${y}" rx="3.2" ry="2" fill="#ff8fab" opacity=".55"/><ellipse cx="${x2}" cy="${y}" rx="3.2" ry="2" fill="#ff8fab" opacity=".55"/>`;
+
+/* Snow White */
+def('dwarf', 'Dwarf', '小矮人', '#ffe8e0',
+  `<ellipse cx="30" cy="58" rx="4" ry="5.5" fill="#f9c9ad"/><ellipse cx="70" cy="58" rx="4" ry="5.5" fill="#f9c9ad"/>` +
+  `<ellipse cx="50" cy="58" rx="20" ry="15" fill="#fcd9c0"/>` +
+  `<path d="M27 47C29 25 45 8 63 9C58 17 67 31 73 47Z" fill="#e8402f"/><path d="M24 48Q50 38 76 48V53Q50 44 24 53Z" fill="#b8321f"/>` +
+  `<path d="M30 60C30 78 40 92 50 94C60 92 70 78 70 60C64 67 58 70 50 70C42 70 36 67 30 60Z" fill="#f7f7fb" stroke="#dcdce8" stroke-width="1.2"/>` +
+  `<path d="M39.5 67Q45 61.5 50 65.5Q55 61.5 60.5 67Q55 70.5 50 68.5Q45 70.5 39.5 67Z" fill="#fff" stroke="#dcdce8" stroke-width=".9"/>` +
+  happyEyes(42.5, 57.5, 57) + `<path d="M38 52Q42.5 49.5 47 52M53 52Q57.5 49.5 62 52" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+  `<circle cx="50" cy="61.5" r="5.2" fill="#f49a84"/>` + blush(37.5, 62.5, 62));
+def('mirror', 'Magic Mirror', '魔镜', '#f3ecff',
+  `<path d="M44 80H56L61 92H39Z" fill="#e8b520" stroke="#c99212" stroke-width="1.5" stroke-linejoin="round"/>` +
+  `<path d="M41 17Q50 5 59 17Q50 13 41 17Z" fill="#ffd54a" stroke="#d4a017" stroke-width="1.5"/>` +
+  `<ellipse cx="50" cy="48" rx="27" ry="33" fill="#ffd54a" stroke="#d4a017" stroke-width="2"/><ellipse cx="50" cy="48" rx="20" ry="26" fill="#aee0ff" stroke="#e0a400" stroke-width="1.2"/>` +
+  `<path d="M37 40Q39 29 48 24" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M39 57L50 38" stroke="#fff" stroke-width="2" opacity=".55" stroke-linecap="round"/>` +
+  [[50, 18.5, '#e53950'], [26.5, 48, '#2f7de1'], [73.5, 48, '#2f7de1'], [50, 77.5, '#e53950'], [33.4, 27.1, '#2fbf71'], [66.6, 27.1, '#2fbf71'], [33.4, 68.9, '#2fbf71'], [66.6, 68.9, '#2fbf71']]
+    .map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="2.3" fill="${c}"/>`).join('') +
+  `<circle cx="50" cy="13.5" r="2.6" fill="#e53950"/>` + sparkle(62, 62, 4, '#fff') + sparkle(82, 18, 4, '#c9a2ff'));
+def('gem', 'Gem', '宝石', '#e8f4ff',
+  `<path d="M30 34H70L85 50L50 86L15 50Z" fill="#6fcdf7" stroke="#2f9fd8" stroke-width="2" stroke-linejoin="round"/>` +
+  `<path d="M30 34L40 50H15Z" fill="#a7e4ff"/><path d="M50 34L60 50H40Z" fill="#c4eeff"/><path d="M70 34L85 50H60Z" fill="#8fd9fb"/>` +
+  `<path d="M15 50L50 86L40 50Z" fill="#4fbbf0"/><path d="M60 50L50 86L85 50Z" fill="#3aa6e0"/>` +
+  `<path d="M30 34L40 50L50 34L60 50L70 34M15 50H85M40 50L50 86L60 50" stroke="#e8f8ff" stroke-width="1.4" fill="none" stroke-linejoin="round"/>` +
+  `<path d="M14 78L21 71L28 78L21 87Z" fill="#ff6f9a" stroke="#e0457a" stroke-width="1"/>` + sparkle(80, 24, 6, '#fff') + sparkle(66, 80, 4, '#fff'));
+def('bunny', 'Bunny', '小兔子', '#f1f8e8',
+  `<ellipse cx="38" cy="28" rx="8" ry="21" fill="#fff" stroke="#e3d9e6" stroke-width="1.5" transform="rotate(-12 38 28)"/><ellipse cx="62" cy="28" rx="8" ry="21" fill="#fff" stroke="#e3d9e6" stroke-width="1.5" transform="rotate(12 62 28)"/>` +
+  `<ellipse cx="38" cy="29" rx="4" ry="15" fill="#ffc2d4" transform="rotate(-12 38 29)"/><ellipse cx="62" cy="29" rx="4" ry="15" fill="#ffc2d4" transform="rotate(12 62 29)"/>` +
+  `<ellipse cx="50" cy="63" rx="25" ry="22" fill="#fff" stroke="#e3d9e6" stroke-width="1.5"/>` + cuteEyes(41, 59, 60) +
+  `<path d="M47 67Q50 65 53 67Q50 71 47 67Z" fill="#ff8fab"/><path d="M50 69.5Q47 74 43.5 72M50 69.5Q53 74 56.5 72" stroke="#3a2a20" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
+  `<path d="M29 65H39M29 69L39 68M61 65H71M61 68L71 69" stroke="#cfc4d2" stroke-width="1.2" stroke-linecap="round"/>` + blush(36, 64, 66));
+
+/* Cinderella */
+def('mouse', 'Mouse', '小老鼠', '#fff2e2',
+  `<circle cx="27" cy="38" r="15" fill="#b9b3c6"/><circle cx="73" cy="38" r="15" fill="#b9b3c6"/><circle cx="27" cy="39" r="9" fill="#ffc2d4"/><circle cx="73" cy="39" r="9" fill="#ffc2d4"/>` +
+  `<ellipse cx="50" cy="61" rx="24" ry="22" fill="#c9c3d6"/><ellipse cx="50" cy="70" rx="13" ry="9" fill="#ece8f2"/>` + cuteEyes(41, 59, 57) +
+  `<ellipse cx="50" cy="65" rx="3.8" ry="2.9" fill="#ff7f9f"/>` + smile(50, 70, 4) +
+  `<path d="M24 64L37 66M24 70L37 69M76 64L63 66M76 70L63 69" stroke="#8f88a0" stroke-width="1.2" stroke-linecap="round"/>` + blush(36, 64, 64) +
+  `<path d="M40 40L44 30H56L60 40Z" fill="#e53950"/><path d="M38 40H62" stroke="#c62828" stroke-width="2.5" stroke-linecap="round"/>`);
+def('wand', 'Magic Wand', '魔法棒', '#f5ecff',
+  `<path d="M24 84L57 46" stroke="#c99bea" stroke-width="5.5" stroke-linecap="round"/><path d="M25 82L56 47" stroke="#f3e6ff" stroke-width="1.6" stroke-linecap="round"/>` +
+  `<path d="${starPath(64, 37, 17, 7.5)}" fill="#ffd54a" stroke="#f0a500" stroke-width="2" stroke-linejoin="round"/>` +
+  sparkle(34, 30, 5.5, '#ff8fc8') + sparkle(84, 62, 5, '#8fd3ff') + sparkle(82, 14, 3.5, '#ffffff') + sparkle(44, 62, 3, '#ffd54a'));
+def('clock', 'Clock', '时钟', '#fbefe2',
+  `<path d="M26 86V44C26 22 74 22 74 44V86Z" fill="#b5713d" stroke="#8a5228" stroke-width="2"/><rect x="21" y="84" width="58" height="7" rx="2.5" fill="#8a5228"/>` +
+  `<circle cx="50" cy="20" r="3.5" fill="#ffd54a"/><circle cx="50" cy="48" r="18" fill="#fff8e8" stroke="#e8b520" stroke-width="3"/>` +
+  Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<path d="M${(50 + Math.sin(a) * 13.5).toFixed(1)} ${(48 - Math.cos(a) * 13.5).toFixed(1)}L${(50 + Math.sin(a) * 15.5).toFixed(1)} ${(48 - Math.cos(a) * 15.5).toFixed(1)}" stroke="#8a5228" stroke-width="${i % 3 ? 1.2 : 2.2}" stroke-linecap="round"/>`; }).join('') +
+  `<path d="M50 48V37M50 48L48.6 33.5" stroke="#3a2a20" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="48" r="2" fill="#3a2a20"/>` +
+  `<rect x="40" y="70" width="20" height="12" rx="3" fill="#6b3a1c"/><path d="M50 70V77" stroke="#ffd54a" stroke-width="1.4"/><circle cx="50" cy="78" r="3.4" fill="#ffd54a"/>`);
+
+/* Aurora */
+def('spinwheel', 'Spinning Wheel', '纺纱车', '#f6eee4',
+  `<path d="M24 88L42 64M60 64L78 88M30 88H72" stroke="#8a5a2b" stroke-width="4" stroke-linecap="round"/><path d="M56 42L52 66" stroke="#8a5a2b" stroke-width="4"/>` +
+  `<circle cx="56" cy="40" r="25" fill="none" stroke="#b5713d" stroke-width="5"/>` +
+  Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `<path d="M${(56 + Math.cos(a) * 5).toFixed(1)} ${(40 + Math.sin(a) * 5).toFixed(1)}L${(56 + Math.cos(a) * 23).toFixed(1)} ${(40 + Math.sin(a) * 23).toFixed(1)}" stroke="#c98a4a" stroke-width="2.2"/>`; }).join('') +
+  `<circle cx="56" cy="40" r="5.5" fill="#8a5a2b"/><path d="M40 64L15 54" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/>` +
+  `<ellipse cx="25" cy="58" rx="6" ry="4" fill="#f2c14e" transform="rotate(22 25 58)"/><path d="M32 46Q22 50 16 54" stroke="#f2c14e" stroke-width="1.3" fill="none"/>` +
+  `<path d="M15 54L8 51" stroke="#d4a017" stroke-width="2" stroke-linecap="round"/>` + sparkle(8, 45, 3.5, '#c9a2ff'));
+def('fairy', 'Good Fairy', '小仙女', '#e6f0ff',
+  `<ellipse cx="31" cy="54" rx="14" ry="8.5" fill="#d9f2ff" fill-opacity=".9" stroke="#9fd3f5" stroke-width="1.5" transform="rotate(-28 31 54)"/>` +
+  `<ellipse cx="69" cy="54" rx="14" ry="8.5" fill="#d9f2ff" fill-opacity=".9" stroke="#9fd3f5" stroke-width="1.5" transform="rotate(28 69 54)"/>` +
+  `<path d="M50 54L69 91H31Z" fill="#6fa8ff"/><path d="M41 60Q50 67 59 60L57 56Q50 61 43 56Z" fill="#fff"/>` +
+  `<circle cx="50" cy="45" r="13" fill="#fde4d4"/><path d="M37.5 46Q36 38 42 34M62.5 46Q64 38 58 34" stroke="#ece6f4" stroke-width="4.5" fill="none" stroke-linecap="round"/>` +
+  `<path d="M35 37Q50 30 65 37L52 5Z" fill="#4f8fe8"/><path d="M34 37Q50 29 66 37" stroke="#3a6fd0" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+  happyEyes(45, 55, 46) + smile(50, 50.5, 3) + blush(42, 58, 50) +
+  `<path d="M64 74L79 54" stroke="#d4a017" stroke-width="2.2" stroke-linecap="round"/>` + sparkle(81, 50, 5.5, '#ffd54a') + sparkle(53, 5, 3, '#ffd54a'));
+def('owl', 'Owl', '猫头鹰', '#f3ece2',
+  `<path d="M14 90H86" stroke="#7a5230" stroke-width="4" stroke-linecap="round"/>` +
+  `<path d="M28 40L26 20L41 33Z" fill="#a97a4f"/><path d="M72 40L74 20L59 33Z" fill="#a97a4f"/>` +
+  `<ellipse cx="50" cy="58" rx="27" ry="29" fill="#a97a4f"/><ellipse cx="50" cy="69" rx="17" ry="16" fill="#e9d2b0"/>` +
+  `<path d="M42 65l3 3 3-3M52 65l3 3 3-3M47 73l3 3 3-3" stroke="#c9a77c" stroke-width="1.5" fill="none"/>` +
+  `<path d="M23 56C18 66 22 78 30 82C30 72 29 62 23 56Z" fill="#8a5f3a"/><path d="M77 56C82 66 78 78 70 82C70 72 71 62 77 56Z" fill="#8a5f3a"/>` +
+  `<circle cx="39" cy="46" r="11" fill="#f6e7cf"/><circle cx="61" cy="46" r="11" fill="#f6e7cf"/>` + cuteEyes(39, 61, 46, 6) +
+  `<path d="M46 52H54L50 59Z" fill="#ffb02e"/><path d="M42 86V91M47 86V91M53 86V91M58 86V91" stroke="#ffb02e" stroke-width="2.4" stroke-linecap="round"/>`);
+def('castle', 'Castle', '城堡', '#eaf2ff',
+  `<rect x="28" y="50" width="44" height="38" fill="#f6e9ff" stroke="#c9b3e6" stroke-width="1.5"/>` +
+  `<path d="M28 50V45H33V50H38V45H43V50M57 50V45H62V50H67V45H72V50" stroke="#c9b3e6" stroke-width="1.5" fill="#f6e9ff"/>` +
+  `<rect x="15" y="42" width="16" height="46" fill="#f1e2ff" stroke="#c9b3e6" stroke-width="1.5"/><rect x="69" y="42" width="16" height="46" fill="#f1e2ff" stroke="#c9b3e6" stroke-width="1.5"/>` +
+  `<rect x="41" y="30" width="18" height="24" fill="#f1e2ff" stroke="#c9b3e6" stroke-width="1.5"/>` +
+  `<path d="M13 43L23 17L33 43Z" fill="#6f9ef5"/><path d="M67 43L77 17L87 43Z" fill="#6f9ef5"/><path d="M39 31L50 6L61 31Z" fill="#ff8cc0"/>` +
+  `<path d="M50 6V0.5L57 3Z" fill="#ffd54a" stroke="#ffd54a" stroke-width="1" stroke-linejoin="round"/><path d="M23 17V12L29 14.5Z" fill="#ffd54a"/><path d="M77 17V12L83 14.5Z" fill="#ffd54a"/>` +
+  `<path d="M43 88V75Q50 66 57 75V88Z" fill="#a77ad6"/><circle cx="54" cy="81" r="1.2" fill="#ffd54a"/>` +
+  [[23, 55], [77, 55], [50, 41], [23, 70], [77, 70]].map(([x, y]) => `<path d="M${x - 2.5} ${y + 5}V${y}Q${x} ${y - 3.5} ${x + 2.5} ${y}V${y + 5}Z" fill="#a77ad6"/>`).join(''));
+def('cake', 'Birthday Cake', '生日蛋糕', '#fff0f5',
+  `<ellipse cx="50" cy="87" rx="35" ry="5" fill="#e3e9f5"/>` +
+  `<rect x="19" y="60" width="62" height="26" rx="5" fill="#ffc4dc"/>` +
+  `<path d="M19 65Q19 60 24 60H76Q81 60 81 65V67Q76 72 71 67Q66 73 61 67Q56 72 51 67Q46 73 41 67Q36 72 31 67Q26 73 19 67Z" fill="#fff"/>` +
+  `<rect x="30" y="40" width="40" height="21" rx="4" fill="#bfe3ff"/>` +
+  `<path d="M30 44Q30 40 34 40H66Q70 40 70 44V46Q66 50 62 46Q58 51 54 46Q50 50 46 46Q42 51 38 46Q34 50 30 46Z" fill="#fff"/>` +
+  [[40, '#ff8cc0'], [50, '#a78bfa'], [60, '#5ec1ec']].map(([x, c]) =>
+    `<rect x="${x - 1.6}" y="27" width="3.2" height="13" rx="1" fill="${c}"/><path d="M${x} 26C${x - 3} 22 ${x - 1} 19 ${x} 17C${x + 1} 19 ${x + 3} 22 ${x} 26Z" fill="#ffb02e"/>`).join('') +
+  [28, 40, 52, 64, 74].map(x => `<circle cx="${x}" cy="78" r="2.6" fill="#e8343a"/>`).join(''));
+
+/* Ariel */
+def('fork', 'Fork', '小叉子', '#e6f6ff',
+  `<g transform="rotate(32 50 52)"><rect x="46.5" y="48" width="7" height="44" rx="3.5" fill="#c3cbdb"/><rect x="48.5" y="52" width="2" height="36" rx="1" fill="#eef2f9"/>` +
+  `<path d="M39 30V42Q39 52 50 54Q61 52 61 42V30" fill="#c3cbdb"/>` +
+  [39, 45.2, 51.4, 57.6].map(x => `<rect x="${x}" y="10" width="3.4" height="30" rx="1.7" fill="#c3cbdb"/>`).join('') + `</g>` +
+  `<circle cx="22" cy="28" r="4" fill="none" stroke="#8fc8f5" stroke-width="1.6"/><circle cx="30" cy="16" r="2.5" fill="none" stroke="#8fc8f5" stroke-width="1.4"/>` + sparkle(72, 26, 5, '#fff'));
+def('trident', 'Trident', '三叉戟', '#e6f8ff',
+  `<g transform="rotate(18 50 50)"><rect x="47.5" y="42" width="5" height="54" rx="2.5" fill="#f2c230" stroke="#c99212" stroke-width="1"/>` +
+  `<path d="M30 38Q50 50 70 38" stroke="#f2c230" stroke-width="5" fill="none" stroke-linecap="round"/>` +
+  `<path d="M30 38V22M50 44V16M70 38V22" stroke="#f2c230" stroke-width="4.5" stroke-linecap="round"/>` +
+  `<path d="M30 10L36 24H24Z" fill="#f2c230" stroke="#c99212" stroke-width="1" stroke-linejoin="round"/><path d="M50 3L56.5 17H43.5Z" fill="#f2c230" stroke="#c99212" stroke-width="1" stroke-linejoin="round"/>` +
+  `<path d="M70 10L76 24H64Z" fill="#f2c230" stroke="#c99212" stroke-width="1" stroke-linejoin="round"/><circle cx="50" cy="46" r="4" fill="#4fd1c5" stroke="#c99212" stroke-width="1"/></g>` +
+  sparkle(20, 70, 5, '#fff') + sparkle(82, 78, 4, '#9fdcff'));
+def('seahorse', 'Seahorse', '海马', '#e2f4ff',
+  `<path d="M52 66C50 76 54 86 62 86C70 86 70 76 63 76C59 76 59 80 62 81" stroke="#ffb02e" stroke-width="7" fill="none" stroke-linecap="round"/>` +
+  `<path d="M61 42C71 43 73 54 63 58Z" fill="#ff8a1f"/>` +
+  `<path d="M46 36C39 46 41 60 50 67C56 71 61 64 63 56C65 46 63 38 58 33Z" fill="#ffb02e"/>` +
+  `<path d="M47 46Q52 47 56 45M46 53Q51 54 57 52M47 60Q51 61 56 59" stroke="#ff9a1f" stroke-width="1.6" fill="none" stroke-linecap="round"/>` +
+  `<path d="M46 28L28 30Q24 33 28 36L46 36Z" fill="#ffa62b"/><circle cx="53" cy="29" r="11" fill="#ffb02e"/>` +
+  `<path d="M49 19L53 13L56 20L61 16L61 24Z" fill="#ff8a1f"/>` + cuteEyes(52, 52, 28, 3) + `<ellipse cx="57" cy="34" rx="2.5" ry="1.6" fill="#ff7f9f" opacity=".6"/>` +
+  `<circle cx="22" cy="58" r="3.5" fill="none" stroke="#8fc8f5" stroke-width="1.6"/><circle cx="28" cy="48" r="2.2" fill="none" stroke="#8fc8f5" stroke-width="1.4"/>`);
+def('starfish', 'Starfish', '海星', '#ffeee6',
+  `<path d="${starPath(50, 54, 36, 16)}" fill="#ff9e6e" stroke="#ff9e6e" stroke-width="9" stroke-linejoin="round"/>` +
+  [[50, 26], [76, 46], [67, 77], [33, 77], [24, 46], [50, 34], [66, 49], [60, 69], [40, 69], [34, 49]].map(([x, y], i) =>
+    `<circle cx="${x}" cy="${y}" r="${i < 5 ? 2.2 : 1.6}" fill="#ffd0b5"/>`).join('') +
+  cuteEyes(44, 56, 52, 3) + smile(50, 58, 4) + blush(39, 61, 58));
+
+/* Belle */
+def('teapot', 'Teapot', '茶壶', '#eef3ff',
+  `<path d="M29 60C20 58 16 50 12 44L17 41.5C21 47 25 51 31 52Z" fill="#fff" stroke="#9db8e8" stroke-width="2" stroke-linejoin="round"/>` +
+  `<path d="M72 50C86 48 88 70 70 72" stroke="#9db8e8" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M72 50C86 48 88 70 70 72" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="50" cy="83" rx="15" ry="3.5" fill="#dfe8f8"/><ellipse cx="50" cy="62" rx="25" ry="22" fill="#fff" stroke="#9db8e8" stroke-width="2"/>` +
+  `<path d="M27 55Q50 61 73 55" stroke="#4a7fd4" stroke-width="3" fill="none"/>` +
+  `<path d="M34 42Q50 33 66 42Z" fill="#fff" stroke="#9db8e8" stroke-width="2" stroke-linejoin="round"/><circle cx="50" cy="34.5" r="4" fill="#4a7fd4"/>` +
+  cuteEyes(42, 58, 66, 2.8) + smile(50, 72, 4) + blush(36, 64, 71));
+def('candle', 'Candlestick', '烛台', '#fff6e0',
+  [[28, 47], [50, 41], [72, 47]].map(([x, y]) => `<circle cx="${x}" cy="${y - 22}" r="11" fill="url(#g-glow)"/>`).join('') +
+  `<path d="M38 89H62L58 83H42Z" fill="#e8b520" stroke="#c99212" stroke-width="1.5" stroke-linejoin="round"/><rect x="47" y="58" width="6" height="26" fill="#f2c230"/>` +
+  `<path d="M50 64C38 64 28 60 28 48M50 64C62 64 72 60 72 48" stroke="#f2c230" stroke-width="5" fill="none" stroke-linecap="round"/>` +
+  [[28, 47], [50, 41], [72, 47]].map(([x, y]) =>
+    `<ellipse cx="${x}" cy="${y + 1}" rx="7" ry="2.5" fill="#e8b520"/><rect x="${x - 4}" y="${y - 16}" width="8" height="16" rx="1.5" fill="#fffaf0" stroke="#eadfcb" stroke-width="1"/>` +
+    `<path d="M${x} ${y - 17}C${x - 3.5} ${y - 21} ${x - 1.5} ${y - 25} ${x} ${y - 27}C${x + 1.5} ${y - 25} ${x + 3.5} ${y - 21} ${x} ${y - 17}Z" fill="#ffb02e"/>`).join('') +
+  '');
+def('book', 'Storybook', '故事书', '#fff0e6',
+  `<path d="M11 32H89V86Q70 81 50 87Q30 81 11 86Z" fill="#d6336c"/>` +
+  `<path d="M50 32C40 26 26 26 15 30V82C26 78 40 78 50 84Z" fill="#fff" stroke="#e3d6c6" stroke-width="1.5"/>` +
+  `<path d="M50 32C60 26 74 26 85 30V82C74 78 60 78 50 84Z" fill="#fff" stroke="#e3d6c6" stroke-width="1.5"/>` +
+  `<path d="M21 40Q32 37 43 40M21 48Q32 45 43 48M21 56Q32 53 43 56M21 64Q32 61 43 64M21 72Q30 69 38 71" stroke="#c9bfb3" stroke-width="1.8" fill="none" stroke-linecap="round"/>` +
+  `<path d="M67 62C59 56 57 48 62 45C65 43 67 45 67 48C67 45 69 43 72 45C77 48 75 56 67 62Z" fill="#ff5f8a"/>` +
+  `<path d="M57 72Q67 70 78 72" stroke="#c9bfb3" stroke-width="1.8" fill="none" stroke-linecap="round"/>` +
+  `<path d="M48 84V97L51 94L54 97V84" fill="#ffd54a"/>` + sparkle(82, 16, 5, '#ffd54a') + sparkle(18, 18, 3.5, '#ff8fc8'));
+
+/* Jasmine */
+def('tiger', 'Tiger', '老虎', '#fff1dc',
+  `<circle cx="27" cy="31" r="10" fill="#f39a2b"/><circle cx="73" cy="31" r="10" fill="#f39a2b"/><circle cx="27" cy="32" r="5" fill="#ffe0c2"/><circle cx="73" cy="32" r="5" fill="#ffe0c2"/>` +
+  `<ellipse cx="50" cy="55" rx="30" ry="27" fill="#f39a2b"/>` +
+  `<ellipse cx="28" cy="63" rx="9" ry="8" fill="#fff5e8"/><ellipse cx="72" cy="63" rx="9" ry="8" fill="#fff5e8"/><ellipse cx="50" cy="67" rx="16" ry="12" fill="#fff5e8"/>` +
+  `<path d="M44 30L46 40M50 28V40M56 30L54 40M21 49L30 51M21 57L29 57M79 49L70 51M79 57L71 57" stroke="#3a2a20" stroke-width="3" stroke-linecap="round"/>` +
+  cuteEyes(40, 60, 50, 3.6) + `<path d="M45 61H55L50 66Z" fill="#ff8fab"/>` +
+  `<path d="M50 66V69M50 69Q46 72.5 43 70M50 69Q54 72.5 57 70" stroke="#3a2a20" stroke-width="1.6" fill="none" stroke-linecap="round"/>`);
+def('monkey', 'Monkey', '小猴子', '#fff3e0',
+  `<circle cx="22" cy="56" r="10" fill="#9b6a43"/><circle cx="22" cy="56" r="6" fill="#f2c9a0"/><circle cx="78" cy="56" r="10" fill="#9b6a43"/><circle cx="78" cy="56" r="6" fill="#f2c9a0"/>` +
+  `<ellipse cx="50" cy="56" rx="26" ry="25" fill="#9b6a43"/>` +
+  `<path d="M50 46C44 38 30 42 32 56C33 68 42 76 50 76C58 76 67 68 68 56C70 42 56 38 50 46Z" fill="#f2c9a0"/>` +
+  cuteEyes(42, 58, 54, 3.3) + `<circle cx="47.5" cy="62" r="1.2" fill="#6b4a2b"/><circle cx="52.5" cy="62" r="1.2" fill="#6b4a2b"/>` + smile(50, 67, 5) + blush(37, 63, 64) +
+  `<path d="M39 33L41.5 18H58.5L61 33Z" fill="#e53950"/><path d="M38 33H62" stroke="#b8202e" stroke-width="2.5" stroke-linecap="round"/><path d="M57 18Q66 20 64 30" stroke="#ffd54a" stroke-width="2" fill="none"/><circle cx="64" cy="31" r="2" fill="#ffd54a"/>`);
+def('carpet', 'Magic Carpet', '魔法飞毯', '#efe6ff',
+  `<path d="M14 50Q30 40 50 48Q70 56 86 46L82 68Q66 78 46 70Q28 62 18 72Z" fill="#7b4fd6"/>` +
+  `<path d="M20 52Q32 45 50 51Q68 58 81 50L78 65Q65 73 47 66Q31 59 22 67Z" fill="none" stroke="#ffd54a" stroke-width="2.2"/>` +
+  `<path d="M50 52L56 59L50 66L44 59Z" fill="#ffd54a"/><path d="M34 51L38 55L34 59L30 55Z" fill="#26b5a8"/><path d="M66 57L70 61L66 65L62 61Z" fill="#26b5a8"/>` +
+  [[14, 50, -1, -1], [86, 46, 1, -1], [82, 68, 1, 1], [18, 72, -1, 1]].map(([x, y, dx, dy]) =>
+    `<path d="M${x} ${y}l${dx * 5} ${dy * 4}" stroke="#ffd54a" stroke-width="2" stroke-linecap="round"/><circle cx="${x + dx * 6}" cy="${y + dy * 5}" r="2" fill="#ffd54a"/>`).join('') +
+  sparkle(30, 84, 4, '#fff6b0') + sparkle(60, 86, 3.5, '#ffffff') + sparkle(74, 24, 5, '#ffd54a'));
+def('parrot', 'Parrot', '鹦鹉', '#ffeef0',
+  `<path d="M14 82H70" stroke="#7a5230" stroke-width="4" stroke-linecap="round"/><path d="M46 78L40 98L52 97Z" fill="#2f7de1"/><path d="M50 78L50 98L58 95Z" fill="#ffd54a"/>` +
+  `<ellipse cx="48" cy="60" rx="18" ry="22" fill="#e8343a"/>` +
+  `<path d="M33 52C30 66 38 78 50 82C44 70 43 60 39 52Z" fill="#ffd54a"/><path d="M36 66C36 74 42 80 49 82C45 76 42 70 40 64Z" fill="#2f7de1"/>` +
+  `<circle cx="52" cy="35" r="15" fill="#e8343a"/><ellipse cx="57" cy="35" rx="7" ry="8" fill="#fff"/>` + cuteEyes(57, 57, 34, 3) +
+  `<path d="M64 32C75 32 77 43 71 47C70 42 67 40 63 40Z" fill="#ffd54a" stroke="#3a2a20" stroke-width="1" stroke-linejoin="round"/>` +
+  `<path d="M42 80V84M50 80V84" stroke="#9aa3b5" stroke-width="2.4" stroke-linecap="round"/>`);
+def('palace', 'Palace', '宫殿', '#fff6e2',
+  `<rect x="18" y="56" width="64" height="32" fill="#fffaf0" stroke="#e8d2a6" stroke-width="1.5"/>` +
+  `<rect x="11" y="46" width="12" height="42" fill="#fffaf0" stroke="#e8d2a6" stroke-width="1.5"/><rect x="77" y="46" width="12" height="42" fill="#fffaf0" stroke="#e8d2a6" stroke-width="1.5"/>` +
+  `<path d="M10 46C10 40 14 37 17 32C20 37 24 40 24 46Z" fill="#ffc93f" stroke="#e0a400" stroke-width="1.2"/><path d="M76 46C76 40 80 37 83 32C86 37 90 40 90 46Z" fill="#ffc93f" stroke="#e0a400" stroke-width="1.2"/>` +
+  `<path d="M35 57C35 44 44 38 50 29C56 38 65 44 65 57Z" fill="#ffc93f" stroke="#e0a400" stroke-width="1.5"/><path d="M50 29V19M17 32V27M83 32V27" stroke="#e0a400" stroke-width="2"/><circle cx="50" cy="18" r="2.4" fill="#e0a400"/>` +
+  `<path d="M44 88V75C44 69 56 69 56 75V88Z" fill="#26b5a8"/>` +
+  [[29, 66], [71, 66], [17, 60], [83, 60]].map(([x, y]) => `<path d="M${x - 3} ${y + 7}V${y}C${x - 3} ${y - 4} ${x + 3} ${y - 4} ${x + 3} ${y}V${y + 7}Z" fill="#26b5a8"/>`).join(''));
+
+/* Mulan */
+def('cricket', 'Lucky Cricket', '小蟋蟀', '#eef8e6',
+  `<path d="M58 66L76 50L86 76" stroke="#4e9a2e" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M38 72L32 84M48 74L46 86" stroke="#4e9a2e" stroke-width="3" stroke-linecap="round"/>` +
+  `<ellipse cx="54" cy="64" rx="22" ry="13" fill="#6cc04a"/><path d="M42 56C54 50 70 54 76 64C64 66 50 64 42 56Z" fill="#4e9a2e"/>` +
+  `<path d="M27 43C21 27 13 23 7 25M37 42C39 25 47 17 55 17" stroke="#4e9a2e" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+  `<circle cx="32" cy="55" r="14" fill="#7fd05a"/>` + cuteEyes(27, 38, 52, 3.6) + smile(32, 60, 4) + blush(24, 41, 59));
+def('horse', 'Horse', '小马', '#eef4ff',
+  `<path d="M66 90C66 72 70 58 66 46C62 34 52 26 42 26C34 26 30 32 26 38L16 54C13 59 16 65 22 65C28 65 32 62 36 60C40 68 42 80 40 90Z" fill="#fff" stroke="#cfd6e6" stroke-width="1.8" stroke-linejoin="round"/>` +
+  `<path d="M44 26C54 20 66 24 72 36C76 46 76 62 72 76C70 64 68 54 66 46C62 36 54 30 44 26Z" fill="#f2c14e"/>` +
+  `<path d="M51 26L55 13L59 28Z" fill="#fff" stroke="#cfd6e6" stroke-width="1.5" stroke-linejoin="round"/><path d="M41 27C37 20 43 15 48 19C50 15 57 17 54 24Z" fill="#f2c14e"/>` +
+  cuteEyes(40, 40, 40, 3.4) + `<path d="M37.5 36.5L35 34.5" stroke="#2a1d1a" stroke-width="1" stroke-linecap="round"/>` +
+  `<ellipse cx="20" cy="57" rx="1.8" ry="1.2" fill="#9aa3b5"/><path d="M18 62Q24 64 30 61" stroke="#9aa3b5" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
+  `<ellipse cx="33" cy="52" rx="3" ry="1.8" fill="#ff8fab" opacity=".5"/>`);
+def('redlantern', 'Red Lantern', '红灯笼', '#fff0e6',
+  `<path d="M50 5V17" stroke="#c99212" stroke-width="2"/><rect x="38" y="16" width="24" height="7" rx="2" fill="#f2c230"/>` +
+  `<ellipse cx="50" cy="48" rx="28" ry="26" fill="#e53935"/>` +
+  `<path d="M50 22V74M36 24C28 36 28 60 36 72M64 24C72 36 72 60 64 72" stroke="#c62828" stroke-width="1.8" fill="none"/>` +
+  `<ellipse cx="38" cy="40" rx="5" ry="10" fill="#fff" opacity=".22"/><path d="M50 40L58 48L50 56L42 48Z" fill="#ffd54a"/>` +
+  `<rect x="38" y="72" width="24" height="7" rx="2" fill="#f2c230"/><path d="M50 79V96M46 82V94M54 82V94" stroke="#f2c230" stroke-width="2" stroke-linecap="round"/>`);
+def('fan', 'Fan', '扇子', '#ffeef2',
+  `<path d="M13.7 63.1A40 40 0 0 1 86.3 63.1L60.9 74.9A12 12 0 0 0 39.1 74.9Z" fill="#ffb3c8" stroke="#d9617f" stroke-width="2" stroke-linejoin="round"/>` +
+  Array.from({ length: 11 }, (_, i) => { const a = (155 - i * 13) * Math.PI / 180; return `<path d="M${(50 + Math.cos(a) * 12).toFixed(1)} ${(80 - Math.sin(a) * 12).toFixed(1)}L${(50 + Math.cos(a) * 40).toFixed(1)} ${(80 - Math.sin(a) * 40).toFixed(1)}" stroke="#e07a98" stroke-width="1"/>`; }).join('') +
+  `<path d="M24 62C34 54 40 52 46 46M40 53C44 50 48 50 52 52" stroke="#7a4a2b" stroke-width="1.6" fill="none" stroke-linecap="round"/>` +
+  flower(46, 46, 3.4, '#ff5f8a', '#ffd54a') + flower(56, 52, 3, '#ffffff', '#ffd54a') + flower(30, 58, 2.6, '#ff5f8a', '#ffd54a') +
+  `<circle cx="50" cy="80" r="3" fill="#f2c230"/><path d="M50 83V95" stroke="#e53935" stroke-width="2.4" stroke-linecap="round"/>`);
+def('blossom', 'Plum Blossom', '梅花', '#fff0f4',
+  `<path d="M14 88C30 76 40 64 48 46C54 34 66 26 84 22M40 66C48 66 56 72 62 82M52 40C46 32 46 24 50 15" stroke="#7a4a2b" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+  flower(48, 45, 7, '#ff8fb1', '#ffd54a') + flower(71, 25, 6, '#ffb0c8', '#ffd54a') + flower(62, 80, 6, '#ff8fb1', '#ffd54a') + flower(50, 16, 5, '#ffb0c8', '#ffd54a') +
+  `<circle cx="28" cy="77" r="3" fill="#ff8fb1"/><circle cx="84" cy="22" r="2.6" fill="#ff8fb1"/>`);
+def('firework', 'Fireworks', '烟花', '#ecebff',
+  burstRays(42, 40, 24, 12, '#ff5f8a', 2.6) + burstRays(70, 64, 16, 10, '#ffc928', 2.2) + burstRays(26, 74, 11, 8, '#5ec1ec', 1.8) +
+  sparkle(80, 20, 4, '#a78bfa') + sparkle(16, 22, 3, '#ffc928'));
+
+/* Tiana */
+def('firefly', 'Firefly', '萤火虫', '#eef0ff',
+  `<circle cx="38" cy="66" r="26" fill="url(#g-glow)"/>` +
+  `<ellipse cx="54" cy="38" rx="13" ry="8" fill="#e6f0ff" fill-opacity=".9" stroke="#b9c9ea" stroke-width="1.4" transform="rotate(-35 54 38)"/>` +
+  `<ellipse cx="64" cy="44" rx="12" ry="7" fill="#e6f0ff" fill-opacity=".9" stroke="#b9c9ea" stroke-width="1.4" transform="rotate(-5 64 44)"/>` +
+  `<ellipse cx="40" cy="65" rx="14" ry="11" fill="#ffe45c"/><ellipse cx="54" cy="53" rx="10" ry="9" fill="#8a6a4f"/>` +
+  `<path d="M64 34C64 24 70 20 74 18M70 37C74 30 80 28 86 28" stroke="#6b4a2b" stroke-width="1.8" fill="none" stroke-linecap="round"/>` +
+  `<circle cx="66" cy="44" r="10.5" fill="#9b7a5a"/>` + cuteEyes(63, 71, 42, 2.6) + smile(67, 48, 3) + sparkle(18, 46, 3.5, '#fff6b0') + sparkle(28, 88, 3, '#fff6b0'));
+def('gator', 'Alligator', '鳄鱼', '#e8f6e6',
+  `<path d="M14 62C14 47 28 41 42 43H74C84 43 90 49 88 56C86 62 80 64 72 64H40C30 70 14 72 14 62Z" fill="#62b54f"/>` +
+  `<path d="M20 67C30 77 46 75 54 71H80C84 71 86 67 82 64H40Z" fill="#8fd17a"/>` +
+  [44, 52, 60, 68, 76].map(x => `<path d="M${x} 64L${x + 3} 68.5L${x + 6} 64Z" fill="#fff"/>`).join('') +
+  `<circle cx="34" cy="42" r="9" fill="#62b54f"/><circle cx="50" cy="42" r="8" fill="#62b54f"/>` + cuteEyes(34, 50, 41, 4) +
+  `<circle cx="84" cy="50" r="1.6" fill="#2f6b22"/><circle cx="79" cy="49" r="1.6" fill="#2f6b22"/>` +
+  `<path d="M18 52Q22 46 26 52Q30 46 34 52" stroke="#4e9a3e" stroke-width="2" fill="none"/>` + blush(42, 58, 54) +
+  `<path d="M70 26V12L78 10V22" stroke="#7b4fd6" stroke-width="2" fill="none"/><circle cx="68" cy="26" r="2.6" fill="#7b4fd6"/><circle cx="76" cy="22" r="2.6" fill="#7b4fd6"/>`);
+def('trumpet', 'Trumpet', '小号', '#fff6dc',
+  `<path d="M26 52V64H54V52" stroke="#e8b520" stroke-width="5" fill="none" stroke-linejoin="round"/><path d="M14 52H60" stroke="#f2c230" stroke-width="6" stroke-linecap="round"/>` +
+  `<path d="M60 49L84 36V68L60 55Z" fill="#f7cf45" stroke="#d4a017" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="84" cy="52" rx="4" ry="16" fill="#ffe27a" stroke="#d4a017" stroke-width="1.5"/>` +
+  [33, 41, 49].map(x => `<rect x="${x - 2.5}" y="39" width="5" height="11" rx="1" fill="#e8b520"/><rect x="${x - 3.5}" y="36" width="7" height="3.5" rx="1.5" fill="#d4a017"/>`).join('') +
+  `<rect x="7" y="49" width="7" height="6" rx="2" fill="#d4a017"/>` +
+  `<path d="M70 26V14L78 12V24" stroke="#ff5fa2" stroke-width="2" fill="none"/><circle cx="68" cy="26" r="2.6" fill="#ff5fa2"/><circle cx="76" cy="24" r="2.6" fill="#ff5fa2"/>`);
+def('pot', 'Gumbo Pot', '汤锅', '#fff0e2',
+  `<path d="M38 34C34 28 42 24 38 16M50 32C46 26 54 22 50 14M62 34C58 28 66 24 62 16" stroke="#e3d6c6" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
+  `<path d="M60 44L74 18" stroke="#c98a4a" stroke-width="4" stroke-linecap="round"/>` +
+  `<path d="M18 52H11V61H20M82 52H89V61H80" stroke="#5d6f92" stroke-width="4" fill="none" stroke-linejoin="round"/>` +
+  `<path d="M20 46H80V68C80 80 69 86 50 86C31 86 20 80 20 68Z" fill="#4a5a78"/>` +
+  `<ellipse cx="50" cy="46" rx="31" ry="7" fill="#5d6f92"/><ellipse cx="50" cy="45.5" rx="27" ry="5" fill="#d0702e"/>` +
+  `<circle cx="40" cy="45" r="2" fill="#6cc04a"/><circle cx="54" cy="44" r="2" fill="#ffb02e"/><circle cx="62" cy="46.5" r="1.8" fill="#6cc04a"/>` +
+  happyEyes(42, 58, 64) + smile(50, 70, 4) + blush(36, 64, 70));
+def('star', 'Wishing Star', '许愿星', '#e9e8ff',
+  `<circle cx="56" cy="42" r="38" fill="url(#g-glow)"/>` +
+  `<path d="${starPath(56, 42, 27, 12)}" fill="#ffd54a" stroke="#f0a500" stroke-width="3" stroke-linejoin="round"/>` +
+  happyEyes(50, 62, 42) + smile(56, 47, 3.5) + blush(46, 66, 47) +
+  sparkle(26, 70, 5, '#fff6b0') + sparkle(15, 84, 3.5, '#ffffff') + `<circle cx="34" cy="62" r="1.6" fill="#fff6b0"/><circle cx="20" cy="76" r="1.3" fill="#fff6b0"/>`);
+def('lily', 'Water Lily', '睡莲', '#e6f6f0',
+  `<ellipse cx="50" cy="74" rx="38" ry="13" fill="#5cb85c"/><path d="M50 74L86 66L88 74Z" fill="#e6f6f0"/>` +
+  `<path d="M50 74L22 70M50 74L30 82M50 74L66 84M50 74L80 80" stroke="#7fd07a" stroke-width="1.6"/>` +
+  [-70, 70, -38, 38].map(r => `<path d="M50 70C42 60 41 46 50 34C59 46 58 60 50 70Z" fill="${Math.abs(r) > 50 ? '#ffc6dc' : '#ffaacb'}" transform="rotate(${r} 50 70)"/>`).join('') +
+  `<path d="M50 70C42 60 41 46 50 34C59 46 58 60 50 70Z" fill="#ff8fbb"/><circle cx="50" cy="64" r="4" fill="#ffd54a"/>`);
+
+/* Rapunzel */
+def('pan', 'Frying Pan', '平底锅', '#f3eee6',
+  `<path d="M64 66L88 88" stroke="#6b4a2b" stroke-width="8" stroke-linecap="round"/><path d="M60 62L68 70" stroke="#4a4f5c" stroke-width="6"/>` +
+  `<circle cx="44" cy="46" r="29" fill="#4a4f5c"/><circle cx="44" cy="46" r="23" fill="#5d6372"/>` +
+  `<path d="M27 38Q31 27 42 24" stroke="#9aa2b5" stroke-width="3.2" fill="none" stroke-linecap="round"/>` + sparkle(80, 22, 5, '#ffd54a') + sparkle(14, 82, 4, '#fff'));
+def('tower', 'Tower', '高高的塔楼', '#eef0ff',
+  `<ellipse cx="50" cy="91" rx="36" ry="6" fill="#7fcf7a"/><path d="M38 90V40H62V90Z" fill="#d9cdbf" stroke="#b8a896" stroke-width="1.5"/>` +
+  `<path d="M38 52H62M38 64H62M38 76H62M46 40V52M54 52V64M46 64V76M54 76V88" stroke="#c3b4a3" stroke-width="1.2"/>` +
+  `<path d="M31 43H69V27H31Z" fill="#e8dccf" stroke="#b8a896" stroke-width="1.5"/><path d="M27 28L50 5L73 28Z" fill="#8f6ad6"/><path d="M50 5V0.5L56 2.8Z" fill="#ffd54a"/>` +
+  `<path d="M44 41V33Q50 27 56 33V41Z" fill="#5a3f8f"/>` +
+  `<path d="M49 41C46 56 55 66 51 80C49 86 53 89 58 90" stroke="#f8d34a" stroke-width="5" fill="none" stroke-linecap="round"/>` +
+  [[40, 58], [59, 70], [41, 82], [60, 47]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="3" ry="2" fill="#6cc04a" transform="rotate(30 ${x} ${y})"/>`).join(''));
+def('goldflower', 'Golden Flower', '魔法金花', '#fff7dc',
+  `<circle cx="50" cy="40" r="34" fill="url(#g-glow)"/>` +
+  `<path d="M50 52V90" stroke="#4caf50" stroke-width="3.5"/><path d="M50 74C40 70 34 62 36 58C42 60 48 66 50 74Z" fill="#5cbf5c"/><path d="M50 80C60 76 66 68 64 64C58 66 52 72 50 80Z" fill="#5cbf5c"/>` +
+  Array.from({ length: 6 }, (_, i) => `<ellipse cx="50" cy="27" rx="7" ry="13" fill="#ffcf3f" stroke="#f0a500" stroke-width="1" transform="rotate(${i * 60} 50 40)"/>`).join('') +
+  `<circle cx="50" cy="40" r="7" fill="#ff9a1f"/>` + sparkle(18, 22, 4, '#fff6b0') + sparkle(84, 30, 4.5, '#fff6b0') + sparkle(80, 70, 3, '#ffd54a'));
+def('brush', 'Paintbrush', '画笔', '#fff2ea',
+  `<path d="M50 22C72 22 88 36 86 54C84 66 72 66 66 62C60 58 54 62 56 70C58 80 48 86 38 84C22 80 12 66 14 50C16 34 30 22 50 22Z" fill="#e8c08a" stroke="#c99a5e" stroke-width="2"/>` +
+  `<circle cx="38" cy="71" r="5" fill="#fff2ea" stroke="#c99a5e" stroke-width="1.5"/>` +
+  [[32, 42, '#e8343a'], [46, 33, '#ffd54a'], [62, 34, '#2f7de1'], [74, 45, '#4caf50'], [26, 56, '#a78bfa']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="5.5" fill="${c}"/>`).join('') +
+  `<path d="M58 88L80 60" stroke="#8a5a2b" stroke-width="4.5" stroke-linecap="round"/><path d="M80 60L84 55" stroke="#c3cbdb" stroke-width="5"/>` +
+  `<path d="M84 55C86 50 90 47 92 46C91 49 89 54 86 57Z" fill="#ff5fa2"/>`);
+
+/* Elsa & Anna */
+def('icecastle', 'Ice Palace', '冰雪城堡', '#e3f3ff',
+  `<path d="M20 88L26 58H74L80 88Z" fill="#bfe9ff" stroke="#6cc4f0" stroke-width="1.5" stroke-linejoin="round"/>` +
+  `<path d="M19 72L24 44L29 72Z" fill="#a8e2ff" stroke="#5bb8f0" stroke-width="1.3" stroke-linejoin="round"/><path d="M71 72L76 44L81 72Z" fill="#a8e2ff" stroke="#5bb8f0" stroke-width="1.3" stroke-linejoin="round"/>` +
+  `<path d="M29 62L35 24L41 62Z" fill="#9fdcff" stroke="#5bb8f0" stroke-width="1.4" stroke-linejoin="round"/><path d="M59 62L65 24L71 62Z" fill="#9fdcff" stroke="#5bb8f0" stroke-width="1.4" stroke-linejoin="round"/>` +
+  `<path d="M43 60L50 6L57 60Z" fill="#8fd6ff" stroke="#4fb3ea" stroke-width="1.5" stroke-linejoin="round"/>` +
+  `<path d="M50 10V56M35 28V58M65 28V58" stroke="#e8f8ff" stroke-width="1.3"/>` +
+  `<path d="M44 88V76Q50 69 56 76V88Z" fill="#5bb8f0"/>` +
+  `<g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M50 64V72M46.5 66L53.5 70M46.5 70L53.5 66"/></g>` + sparkle(16, 30, 4, '#fff') + sparkle(86, 22, 5, '#fff'));
+def('carrot', 'Carrot', '胡萝卜', '#fff2e2',
+  `<g transform="rotate(28 50 55)"><path d="M50 30C44 16 44 9 47 6C51 11 52 19 51 28Z" fill="#4caf50"/><path d="M52 30C56 17 63 12 67 13C65 20 59 26 54 31Z" fill="#5cbf5c"/>` +
+  `<path d="M48 31C39 20 32 18 28 20C32 26 39 30 46 32Z" fill="#5cbf5c"/>` +
+  `<path d="M37 32Q50 25 63 32L53 90Q50 95 47 90Z" fill="#ff8a1f"/>` +
+  `<path d="M42 44H50M53 54H60M43 64H49M52 74H57" stroke="#e5701a" stroke-width="2" stroke-linecap="round"/></g>`);
+def('sled', 'Sled', '雪橇', '#e9f6ff',
+  `<path d="M8 84Q50 74 92 84V96H8Z" fill="#fff"/>` +
+  `<path d="M28 64V74M48 64V74M66 64V74" stroke="#8a5a2b" stroke-width="3"/>` +
+  `<path d="M12 74H74C84 74 90 68 88 60" stroke="#d4a017" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+  `<path d="M16 46H70C80 46 84 56 79 64H20Z" fill="#c0392b"/><path d="M16 46V30Q16 26 20 26H27V46Z" fill="#a93226"/>` +
+  `<path d="M22 54H72" stroke="#ffd54a" stroke-width="2.2" stroke-linecap="round"/>` + sparkle(80, 22, 4, '#bfe9ff') + sparkle(46, 18, 3, '#bfe9ff'));
+def('glove', 'Glove', '手套', '#e6f4ff',
+  `<path d="M43 76H61L64 98H40Z" fill="#7fd6f2"/>` +
+  `<path d="M35 52V27Q35 22 39.5 22Q44 22 44 27V46V19Q44 14 48.5 14Q53 14 53 19V46V21Q53 16 57.5 16Q62 16 62 21V48V30Q62 26 66 26Q70 26 70 30V60Q70 72 61 77H43Q33 73 31 62L23 49Q21 45 25 43Q29 42 31 46Z" fill="#4fc3e8" stroke="#2fa3cf" stroke-width="1.4" stroke-linejoin="round"/>` +
+  `<path d="M44 46V54M53 46V54M62 48V55" stroke="#2fa3cf" stroke-width="1.2" stroke-linecap="round"/>` +
+  `<g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M52 60V70M47.7 62.5L56.3 67.5M47.7 67.5L56.3 62.5"/></g>` + sparkle(80, 80, 4, '#fff') + sparkle(20, 22, 3.5, '#fff'));
+
 function buildSprite() {
   const defs = `<defs><radialGradient id="g-glow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".95"/>` +
     `<stop offset=".55" stop-color="#ffd27a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>`;
@@ -588,18 +926,28 @@ function buildSprite() {
 const art = id => `<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#a-${id}"/></svg>`;
 
 /* ═══════════════════════  LEVELS  ═══════════════════════ */
+// Princess levels use only pictures from that princess's own story (`story`; `types` of them are picked each game).
+// Mixed levels (`mix`) throw every princess and story picture together.
 const LEVELS = [
-  { p: 'snowwhite', cols: 4, rows: 4, types: 4, friends: ['apple', 'bird'], song: 'twinkle', bg: ['#ffe3ec', '#fff2d6'], deco: '♥✿✦' },
-  { p: 'cinderella', cols: 5, rows: 4, types: 5, friends: ['slipper', 'pumpkin'], song: 'danube', bg: ['#dcecff', '#f2e6ff'], deco: '✦✧♥' },
-  { p: 'aurora', cols: 6, rows: 4, types: 6, friends: ['crown', 'bird', 'rose'], song: 'lullaby', bg: ['#ffe0f1', '#ece2ff'], deco: '✿♥✧' },
-  { p: 'ariel', cols: 6, rows: 5, types: 8, friends: ['crab', 'fish', 'shell'], song: 'bonnie', bg: ['#cff3ee', '#d9e6ff'], deco: '○◦✦' },
-  { p: 'belle', cols: 6, rows: 6, types: 9, friends: ['rose', 'teacup', 'crown'], song: 'minuet', bg: ['#fff0c2', '#ffe0d6'], deco: '✿✦♥' },
-  { p: 'jasmine', cols: 7, rows: 6, types: 10, friends: ['lamp', 'crown', 'bird'], song: 'desert', bg: ['#d5f2f7', '#eadfff'], deco: '✦✧☾' },
-  { p: 'mulan', cols: 8, rows: 6, types: 12, friends: ['dragon', 'lantern', 'bird'], song: 'jasmineflower', bg: ['#ffe4d6', '#ffd9e6'], deco: '✿❀✦' },
-  { p: 'tiana', cols: 8, rows: 7, types: 14, friends: ['frog', 'crown', 'lantern'], song: 'saints', bg: ['#e1f5d8', '#fff1c4'], deco: '✦✿♥' },
-  { p: 'rapunzel', cols: 8, rows: 8, types: 16, friends: ['lantern', 'chameleon', 'crown'], song: 'morning', bg: ['#efe2ff', '#ffe8c6'], deco: '✦✧✿' },
-  { p: 'elsa', cols: 9, rows: 8, types: 18, friends: ['snowman', 'reindeer', 'snowflake', 'anna'], song: 'elise', bg: ['#dcf2ff', '#ebe4ff'], deco: '❄❅✦' }
+  { p: 'snowwhite', cols: 4, rows: 4, types: 4, story: ['apple', 'dwarf', 'mirror', 'bird', 'gem', 'bunny'], song: 'twinkle', bg: ['#ffe3ec', '#fff2d6'], deco: '♥✿✦' },
+  { p: 'cinderella', cols: 5, rows: 4, types: 5, story: ['slipper', 'pumpkin', 'mouse', 'wand', 'clock', 'bird'], song: 'danube', bg: ['#dcecff', '#f2e6ff'], deco: '✦✧♥' },
+  { p: 'aurora', cols: 6, rows: 4, types: 6, story: ['spinwheel', 'fairy', 'owl', 'castle', 'cake', 'crown', 'bird'], song: 'lullaby', bg: ['#ffe0f1', '#ece2ff'], deco: '✿♥✧' },
+  { p: 'ariel', cols: 6, rows: 5, types: 8, story: ['crab', 'fish', 'shell', 'fork', 'trident', 'seahorse', 'starfish'], song: 'bonnie', bg: ['#cff3ee', '#d9e6ff'], deco: '○◦✦' },
+  { p: 'belle', cols: 6, rows: 6, types: 9, story: ['rose', 'teacup', 'teapot', 'candle', 'clock', 'book', 'mirror', 'castle'], song: 'minuet', bg: ['#fff0c2', '#ffe0d6'], deco: '✿✦♥' },
+  { p: 'jasmine', cols: 7, rows: 6, types: 9, story: ['lamp', 'tiger', 'monkey', 'carpet', 'parrot', 'palace', 'gem', 'crown'], song: 'desert', bg: ['#d5f2f7', '#eadfff'], deco: '✦✧☾' },
+  { p: 'mulan', cols: 8, rows: 6, types: 8, story: ['dragon', 'cricket', 'horse', 'redlantern', 'fan', 'blossom', 'firework'], song: 'jasmineflower', bg: ['#ffe4d6', '#ffd9e6'], deco: '✿❀✦' },
+  { p: 'tiana', cols: 8, rows: 7, types: 8, story: ['frog', 'firefly', 'gator', 'trumpet', 'pot', 'star', 'lily'], song: 'saints', bg: ['#e1f5d8', '#fff1c4'], deco: '✦✿♥' },
+  { p: 'rapunzel', cols: 8, rows: 8, types: 9, story: ['lantern', 'chameleon', 'pan', 'tower', 'horse', 'goldflower', 'brush', 'crown'], song: 'morning', bg: ['#efe2ff', '#ffe8c6'], deco: '✦✧✿' },
+  { p: 'elsa', cols: 9, rows: 8, types: 9, story: ['anna', 'snowman', 'reindeer', 'snowflake', 'icecastle', 'carrot', 'sled', 'glove'], song: 'elise', bg: ['#dcf2ff', '#ebe4ff'], deco: '❄❅✦' },
+  { mix: 'princesses', trio: ['ariel', 'elsa', 'belle'], en: 'All the Princesses', zh: '公主大聚会', cols: 6, rows: 4, song: 'nacht', bg: ['#ffe3f1', '#e2ecff'], deco: '♛✦♥' },
+  { mix: 'all', trio: ['cinderella', 'jasmine', 'snowwhite'], en: 'Princess Party', zh: '公主派对', cols: 6, rows: 6, types: 18, minP: 6, song: 'entertainer', bg: ['#fff0c9', '#ffd9ec'], deco: '♛✿✦' },
+  { mix: 'all', trio: ['mulan', 'rapunzel', 'tiana'], en: 'Magic Kingdom', zh: '魔法王国', cols: 8, rows: 6, types: 24, minP: 8, song: 'turca', bg: ['#e4e0ff', '#d6f4f0'], deco: '♛✧✦' },
+  { mix: 'all', trio: ['aurora', 'moana', 'anna'], en: 'Grand Finale', zh: '大团圆', cols: 8, rows: 8, types: 32, minP: 12, song: 'jingle', bg: ['#ffe0ec', '#fff3c4'], deco: '♛❄✦♥' }
 ];
+const PRINCESSES = ALL.filter(id => A[id].p);
+const levelName = L => L.p ? nameOf(L.p) : L[lang];
+const levelFace = L => L.p || L.trio[1];
+const portrait = L => L.p ? art(L.p) : `<span class="trio">${L.trio.map(art).join('')}</span>`;
 
 /* ═══════════════════════  MUSIC (all public-domain tunes except "Desert Moon", composed for this game)  ═══════════════════════
    Notation: NOTE[:beats] — e.g. E5:.5, R = rest, A+B = chord, | = bar line (checked by PM.validate()). */
@@ -691,7 +1039,62 @@ const SONGS = {
           E5:.5 D#5:.5 E5:.5 B4:.5 D5:.5 C5:.5 | A4 R:.5 C4:.5 E4:.5 A4:.5 | B4 R:.5 E4:.5 C5:.5 B4:.5 | A4:1.5 R:.5 E5:.5 D#5:.5`,
     chords: `R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3 |
              C:3 | G:3 | Am:3 | E:3 | R:3 | R:3 |
-             R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3` }
+             R:3 | Am:3 | E:3 | Am:3 | R:3 | Am:3 | E:3 | Am:3` },
+  // mixed levels — Nachtmusik, Entertainer and Rondo alla Turca transcribed from Mutopia Project public-domain scores
+  nacht: { en: 'Eine kleine Nachtmusik', zh: '小夜曲', bpm: 116, bar: 4, inst: 'violin', acc: 'pluck4', accInst: 'pluck', mo: -12,
+    mel: `G5 R:.5 D5:.5 G5 R:.5 D5:.5 | G5:.5 D5:.5 G5:.5 B5:.5 D6 R |
+          C6 R:.5 A5:.5 C6 R:.5 A5:.5 | C6:.5 A5:.5 F#5:.5 A5:.5 D5 R |
+          G5:.5 R:.5 G5:1.5 B5:.5 A5:.5 G5:.5 | G5:.5 F#5:.5 F#5:1.5 A5:.5 C6:.5 F#5:.5 |
+          A5:.5 G5:.5 G5:1.5 B5:.5 A5:.5 G5:.5 | G5:.5 F#5:.5 F#5:1.5 A5:.5 C6:.5 F#5:.5 |
+          G5:.5 G5:.5 F#5:.5 E5:.25 F#5:.25 G5:.5 G5:.5 A5:.5 G5:.25 A5:.25 | B5:.5 B5:.5 C6:.5 B5:.25 C6:.25 D6 R |
+          D5:2 E5:2 | C5 C5 B4 B4 | A4 A4 G4:.5 F#4:.5 E4:.5 F#4:.5 | G4:.5 R:.5 A4:.5 R:.5 B4:.5 R:1.5 |
+          D5:2 E5:2 | D5:.5 C5:.5 C5:.5 C5:.5 C5:.5 B4:.5 B4:.5 B4:.5 | B4:.5 A4:.5 A4:.5 A4:.5 G4:.5 F#4:.5 E4:.5 F#4:.5 | G4:2 R:2`,
+    chords: `G:4 | G:4 | D7:4 | D7:4 | G:4 | D7:4 | G:4 | D7:4 | G:4 | G:4 |
+             G:2 C:2 | D7:2 G:2 | D7:4 | G:4 | G:2 C:2 | D7:2 G:2 | G:2 D7:2 | G:4` },
+  entertainer: { en: 'The Entertainer', zh: '演艺人', bpm: 84, bar: 2, inst: 'piano', acc: 'stride', accInst: 'pluck',
+    intro: `D4:.25 D#4:.25`,
+    mel: `E4:.25 C5:.5 E4:.25 C5:.5 E4:.25 C5:.25~ | C5:1.25 C6:.25 D6:.25 D#6:.25 |
+          E6:.25 C6:.25 D6:.25 E6:.25~ E6:.25 B5:.25 D6:.5 | C6:1.5 D4:.25 D#4:.25 |
+          E4:.25 C5:.5 E4:.25 C5:.5 E4:.25 C5:.25~ | C5:1.5 A5:.25 G5:.25 |
+          F#5:.25 A5:.25 C6:.25 E6:.25~ E6:.25 D6:.25 C6:.25 A5:.25 | D6:1.5 D4:.25 D#4:.25 |
+          E4:.25 C5:.5 E4:.25 C5:.5 E4:.25 C5:.25~ | C5:1.25 C6:.25 D6:.25 D#6:.25 |
+          E6:.25 C6:.25 D6:.25 E6:.25~ E6:.25 B5:.25 D6:.5 | C6:1.5 C6:.25 D6:.25 |
+          E6:.25 C6:.25 D6:.25 E6:.25~ E6:.25 C6:.25 D6:.25 C6:.25 | E6:.25 C6:.25 D6:.25 E6:.25~ E6:.25 C6:.25 D6:.25 C6:.25 |
+          E6:.25 C6:.25 D6:.25 E6:.25~ E6:.25 B5:.25 D6:.5 | C6:1.5 D4:.25 D#4:.25`,
+    chords: `C:1 C7:1 | F:1 C:1 | C:1 G7:1 | C:2 | C:1 C7:1 | F:1 C:1 | D7:2 | G:2 |
+             C:1 C7:1 | F:1 C:1 | C:1 G7:1 | C:2 | C:1 C7:1 | F:1 Fm:1 | C:1 G7:1 | C:2` },
+  turca: { en: 'Rondo alla Turca', zh: '土耳其进行曲', bpm: 116, bar: 2, inst: 'harpsi', acc: 'stride', accInst: 'harpsi',
+    intro: `B4:.25 A4:.25 G#4:.25 A4:.25`,
+    mel: `C5:.5 R:.5 D5:.25 C5:.25 B4:.25 C5:.25 | E5:.5 R:.5 F5:.25 E5:.25 D#5:.25 E5:.25 |
+          B5:.25 A5:.25 G#5:.25 A5:.25 B5:.25 A5:.25 G#5:.25 A5:.25 | C6 A5:.5 C6:.5 |
+          B5:.5 F#5+A5:.5 E5+G5:.5 F#5+A5:.5 | B5:.5 F#5+A5:.5 E5+G5:.5 F#5+A5:.5 |
+          B5:.5 F#5+A5:.5 E5+G5:.5 D#5+F#5:.5 | E5 B4:.25 A4:.25 G#4:.25 A4:.25 |
+          C5:.5 R:.5 D5:.25 C5:.25 B4:.25 C5:.25 | E5:.5 R:.5 F5:.25 E5:.25 D#5:.25 E5:.25 |
+          B5:.25 A5:.25 G#5:.25 A5:.25 B5:.25 A5:.25 G#5:.25 A5:.25 | C6:.5 R:.5 A5:.5 B5:.5 |
+          C6:.5 B5:.5 A5:.5 G#5:.5 | A5:.5 E5:.5 F5:.5 D5:.5 | C5 B4:.75 A4:.125 B4:.125 | A4 C5+E5:.5 D5+F5:.5 |
+          E5+G5:.5 E5+G5:.5 A5:.25 G5:.25 F5:.25 E5:.25 | D5 C5+E5:.5 D5+F5:.5 |
+          E5+G5:.5 E5+G5:.5 A5:.25 G5:.25 F5:.25 E5:.25 | B4+D5 A4+C5:.5 B4+D5:.5 |
+          C5+E5:.5 C5+E5:.5 F5:.25 E5:.25 D5:.25 C5:.25 | B4 A4+C5:.5 B4+D5:.5 |
+          C5+E5:.5 C5+E5:.5 F5:.25 E5:.25 D5:.25 C5:.25 | G#4+B4 B4:.25 A4:.25 G#4:.25 A4:.25 |
+          C5:.5 R:.5 D5:.25 C5:.25 B4:.25 C5:.25 | E5:.5 R:.5 F5:.25 E5:.25 D#5:.25 E5:.25 |
+          B5:.25 A5:.25 G#5:.25 A5:.25 B5:.25 A5:.25 G#5:.25 A5:.25 | C6:.5 R:.5 A5:.5 B5:.5 |
+          C6:.5 B5:.5 A5:.5 G#5:.5 | A5:.5 E5:.5 F5:.5 D5:.5 | C5 B4:.75 A4:.125 B4:.125 | A4 B4:.25 A4:.25 G#4:.25 A4:.25`,
+    chords: `Am:2 | Am:2 | Am:2 | Am:2 | Em:2 | Em:2 | B7:2 | E:2 |
+             Am:2 | Am:2 | Am:2 | Am:2 | Am:1 E:1 | Am:1 Dm:1 | Am:1 E:1 | Am:2 |
+             C:2 | G7:1 C:1 | C:2 | G:2 | Am:2 | E:2 | Am:2 | E:2 |
+             Am:2 | Am:2 | Am:2 | Am:2 | Am:1 E:1 | Am:1 Dm:1 | Am:1 E:1 | Am:2` },
+  jingle: { en: 'Jingle Bells', zh: '铃儿响叮当', bpm: 138, bar: 4, inst: 'celesta', acc: 'pluck4', accInst: 'pluck', mo: 12,
+    perc: [[0, 'shaker', .1], [1, 'shaker', .07], [1, 'hat', .07], [2, 'shaker', .1], [3, 'shaker', .07], [3, 'hat', .07]],
+    mel: `G3 E4 D4 C4 | G3:3 G3:.5 G3:.5 | G3 E4 D4 C4 | A3:4 |
+          A3 F4 E4 D4 | B3:4 | G4 G4 F4 D4 | E4:4 |
+          G3 E4 D4 C4 | G3:4 | G3 E4 D4 C4 | A3:3 A3 |
+          A3 F4 E4 D4 | G4 G4 G4 G4 | A4 G4 F4 D4 | C4:2 G4:2 |
+          E4 E4 E4:2 | E4 E4 E4:2 | E4 G4 C4:1.5 D4:.5 | E4:4 |
+          F4 F4 F4:1.5 F4:.5 | F4 E4 E4 E4:.5 E4:.5 | E4 D4 D4 E4 | D4:2 G4:2 |
+          E4 E4 E4:2 | E4 E4 E4:2 | E4 G4 C4:1.5 D4:.5 | E4:4 |
+          F4 F4 F4:1.5 F4:.5 | F4 E4 E4 E4:.5 E4:.5 | G4 G4 F4 D4 | C4:4`,
+    chords: `C:4 | C:4 | C:4 | F:4 | F:4 | G:4 | G7:4 | C:4 | C:4 | C:4 | C:4 | F:4 | F:4 | G7:4 | G7:4 | C:2 G7:2 |
+             C:4 | C:4 | C:4 | C:4 | F:4 | C:4 | D7:4 | G7:4 | C:4 | C:4 | C:4 | C:4 | F:4 | C:4 | G7:4 | C:4` }
 };
 const songName = id => SONGS[id][lang];
 
@@ -709,7 +1112,7 @@ function parseSeq(str, chordMode) {
     if (!tok) continue;
     if (tok === '|') { bars.push(bar); bar = 0; continue; }
     const [nm, ds] = tok.split(':');
-    const d = ds === undefined ? 1 : parseFloat(ds);
+    const d = ds === undefined ? 1 : parseFloat(ds), tie = !!ds && ds.endsWith('~');   // "C5:.25~" ties into the next same note
     let v = null;
     if (nm !== 'R') {
       if (chordMode) {
@@ -718,7 +1121,7 @@ function parseSeq(str, chordMode) {
         v = { root: PCL[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0), ints: QUAL[m[3]] };
       } else v = nm.split('+').map(toMidi);
     }
-    items.push({ t, d, v }); t += d; bar += d;
+    items.push({ t, d, v, tie }); t += d; bar += d;
   }
   if (bar > 0) bars.push(bar);
   return { items, bars, total: t };
@@ -832,6 +1235,17 @@ const ACC = {
       }
     }
   },
+  stride(chs, s, out, tr) {       // ragtime / Alberti-ish: bass on the beat, chord on the off-beat
+    for (const ch of chs) {
+      if (!ch.v) continue;
+      const { bass, tones } = voicing(ch.v, tr);
+      let k = 0;
+      for (let b = 0; b < ch.d - 1e-6; b += 1, k++) {
+        out.push(N('bass', ch.t + b, .45, [k % 2 ? (bass + 7 > 55 ? bass - 5 : bass + 7) : bass], .3));
+        out.push(N(s.accInst || 'pluck', ch.t + b + .5, .4, tones, .085));
+      }
+    }
+  },
   elise(chs, s, out, tr) {
     for (const ch of chs) {
       if (!ch.v) continue;
@@ -845,10 +1259,16 @@ function compile(s) {
   const intro = parseSeq(s.intro || '').items.filter(x => x.v).map(x => N(s.inst, x.t, x.d, x.v.map(m => m + tr + mo), MV));
   const introLen = parseSeq(s.intro || '').total;
   const mel = parseSeq(s.mel), body = [];
+  let prev = null;
   for (const x of mel.items) {
-    if (!x.v) continue;
-    body.push(N(s.inst, x.t, x.d, x.v.map(m => m + tr + mo), MV));
-    if (s.dbl) body.push(N(s.dbl[0], x.t, x.d, x.v.map(m => m + tr + mo + s.dbl[1]), s.dbl[2]));
+    if (!x.v) { prev = null; continue; }
+    if (prev && prev.tie && prev.v.join() === x.v.join()) {          // tied note: lengthen instead of re-striking
+      prev.evs.forEach(e => { e.d += x.d; }); prev.tie = x.tie; continue;
+    }
+    const evs = [N(s.inst, x.t, x.d, x.v.map(m => m + tr + mo), MV)];
+    if (s.dbl) evs.push(N(s.dbl[0], x.t, x.d, x.v.map(m => m + tr + mo + s.dbl[1]), s.dbl[2]));
+    body.push(...evs);
+    prev = { v: x.v, tie: x.tie, evs };
   }
   ACC[s.acc](parseSeq(s.chords, true).items, s, body, tr);
   if (s.perc) for (let b = 0; b < mel.total - 1e-6; b += s.bar) for (const [o, p, v] of s.perc) body.push({ p, t: b + o, v });
@@ -870,6 +1290,7 @@ const SND = (() => {
     oud: { a: .003, decay: .65, lpEnv: [3000, 800, .25], parts: [[1, .55, 'sawtooth'], [1.004, .3, 'triangle']] },
     zheng: { a: .003, decay: 1.5, lp: 2600, slide: .035, vib: [5.5, .006], parts: [[1, .7, 'triangle'], [1, .18, 'sawtooth', .4], [2, .2, 'sine', .3]] },
     clarinet: { a: .035, sus: .8, rel: .09, lp: 1700, vib: [5, .004], parts: [[1, .35, 'square'], [1, .4, 'sine']] },
+    violin: { a: .05, sus: .85, rel: .12, lp: 2400, vib: [5.5, .007], parts: [[1, .32, 'sawtooth'], [1, .3, 'triangle'], [2, .05, 'sine']] },
     flute: { a: .07, sus: .85, rel: .14, vib: [5, .006], parts: [[1, .8, 'sine'], [2, .1, 'sine'], [3, .04, 'sine']] },
     piano: { a: .003, decay: 2.2, damp: .3, parts: [[1, .55, 'triangle'], [1, .45, 'sine'], [2, .22, 'sine', .6], [3, .09, 'sine', .3], [4, .04, 'sine', .15]] },
     ice: { a: .002, decay: 1.1, parts: [[2, .6, 'sine'], [5.4, .12, 'sine', .2]] },
@@ -1158,12 +1579,15 @@ function fillCells(g, R, C, cells, tiles) {
   cells.forEach(([r, c], k) => { g[r][c] = tiles[k]; });
 }
 function buildTiles(L) {
-  const types = [L.p, ...L.friends].slice(0, L.types);
-  const pool = shuffle(ALL.filter(x => !types.includes(x)));
-  while (types.length < L.types) types.push(pool.pop());
-  const pairs = L.cols * L.rows / 2, base = Math.floor(pairs / L.types);
+  let types;
+  if (L.mix === 'princesses') types = shuffle(PRINCESSES.slice());
+  else if (L.mix) {
+    const ps = shuffle(PRINCESSES.slice()).slice(0, L.minP);
+    types = [...ps, ...shuffle(ALL.filter(x => !ps.includes(x)))].slice(0, L.types);
+  } else types = [L.p, ...shuffle(L.story.slice())].slice(0, L.types);
+  const pairs = L.cols * L.rows / 2, base = Math.floor(pairs / types.length);
   const counts = types.map(() => base);
-  let extra = pairs - base * L.types;
+  let extra = pairs - base * types.length;
   for (const i of [0, ...shuffle(types.map((_, k) => k).slice(1))]) { if (extra <= 0) break; counts[i]++; extra--; }
   const tiles = [];
   types.forEach((tp, i) => { for (let k = 0; k < counts[i]; k++) tiles.push(tp, tp); });
@@ -1220,9 +1644,9 @@ function setHud() {
 }
 function setLevelText() {
   if (!G.L) return;
-  $('#g-title').innerHTML = `<span class="lv-long">${t('level', G.li + 1)} · </span><span class="lv-short">${G.li + 1} · </span>${nameOf(G.L.p)}`;
+  $('#g-title').innerHTML = `<span class="lv-long">${t('level', G.li + 1)} · </span><span class="lv-short">${G.li + 1} · </span>${levelName(G.L)}`;
   $('#g-song').textContent = '♪ ' + songName(G.L.song);
-  $('#g-mini').innerHTML = art(G.L.p);
+  $('#g-mini').innerHTML = art(levelFace(G.L));
   for (const [id, k] of [['#g-home', 'home'], ['#g-hint', 'hint'], ['#g-shuffle', 'shuffle']]) { $(id).title = t(k); $(id).setAttribute('aria-label', t(k)); }
   $('.pairs').title = t('pairs');
 }
@@ -1277,9 +1701,10 @@ function renderHome() {
   $('#h-lang').textContent = t('langBtn');
   $('#levels').innerHTML = LEVELS.map((L, i) => {
     const st = best[i] || 0;
-    return `<button class="lvl" type="button" data-i="${i}" style="--c1:${L.bg[0]};--c2:${L.bg[1]}">` +
+    const head = L.mix && !LEVELS[i - 1].mix ? `<div class="sect">✨ ${t('mixTitle')} ✨<small>${t('mixSub')}</small></div>` : '';
+    return head + `<button class="lvl${L.mix ? ' mix' : ''}" type="button" data-i="${i}" style="--c1:${L.bg[0]};--c2:${L.bg[1]}">` +
       `<span class="num">${i + 1}</span><span class="size">${L.cols}×${L.rows}</span>` +
-      `<span class="por">${art(L.p)}</span><span class="nm">${nameOf(L.p)}</span>` +
+      `<span class="por">${portrait(L)}</span><span class="nm">${levelName(L)}</span>` +
       `<span class="st">${'★'.repeat(st)}<span class="off">${'★'.repeat(3 - st)}</span></span>` +
       `<span class="song">♪ ${songName(L.song)}</span></button>`;
   }).join('');
@@ -1380,9 +1805,9 @@ function win() {
   const best = store.get('stars', {});
   if ((best[G.li] || 0) < stars) { best[G.li] = stars; store.set('stars', best); }
   const last = G.li === LEVELS.length - 1;
-  $('#w-por').innerHTML = art(G.L.p);
+  $('#w-por').innerHTML = portrait(G.L);
   $('#w-title').textContent = last ? t('allDone') : t('win');
-  $('#w-sub').textContent = t('winSub', nameOf(G.L.p));
+  $('#w-sub').textContent = G.L.p ? t('winSub', nameOf(G.L.p)) : t('winSubAll');
   $('#w-home').textContent = t('levels'); $('#w-again').textContent = t('again'); $('#w-next').textContent = t('next');
   $('#w-next').classList.toggle('hidden', last);
   const sp = $('#w-stars').children;
