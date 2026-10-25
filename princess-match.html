@@ -989,12 +989,11 @@ const keyOf = id => A[id].key || id;
 const GLYPH_COLORS = ['#ff4f8b', '#ff8a1f', '#e0a400', '#3fae4a', '#18a596', '#2f7de1', '#7b4fd6', '#d6336c', '#e8543a', '#9b5de5'];
 const GLYPH_TINTS = ['#ffe6ee', '#fff0dc', '#fff7d6', '#e8f6e6', '#ddf5f2', '#e2eeff', '#efe6ff', '#ffe3ee', '#ffe8e2', '#f2e8ff'];
 const NUM_FONT = "Fredoka, 'Segoe UI', 'PingFang SC', sans-serif", ABC_FONT = "Andika, 'Comic Sans MS', 'Segoe UI', sans-serif";
-const NUM_EN = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen',
-  'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
-const NUM_ZH = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'];
-for (let n = 1; n <= 20; n++) {
-  defGlyph('n' + n, NUM_EN[n - 1], NUM_ZH[n - 1], GLYPH_TINTS[(n - 1) % 10],
-    { txt: String(n), color: GLYPH_COLORS[(n - 1) % 10], font: NUM_FONT, size: n < 10 ? 4.5 : 3.6, spark: true }, 'num' + n);
+// user rule: only the single digits 0-9 ever appear
+const NUM_EN = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+const NUM_ZH = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+for (let n = 0; n <= 9; n++) {
+  defGlyph('n' + n, NUM_EN[n], NUM_ZH[n], GLYPH_TINTS[n], { txt: String(n), color: GLYPH_COLORS[n], font: NUM_FONT, size: 4.6, spark: true }, 'num' + n);
 }
 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((L, i) => {
   const color = GLYPH_COLORS[i % 10], tint = GLYPH_TINTS[i % 10];
@@ -1040,26 +1039,26 @@ const LEVELS = [
 // kind: num / abc = two identical tiles; case = big + little letter.
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const NUM_LEVELS = [
-  { p: 'snowwhite', kind: 'num', set: range(1, 4), cols: 4, rows: 4, song: 'twinkle', en: '1–4', zh: '1–4', bg: ['#ffe3ec', '#fff2d6'] },
-  { p: 'cinderella', kind: 'num', set: range(1, 6), cols: 6, rows: 4, song: 'danube', en: '1–6', zh: '1–6', bg: ['#dcecff', '#f2e6ff'] },
-  { p: 'aurora', kind: 'num', set: range(1, 8), cols: 8, rows: 4, song: 'lullaby', en: '1–8', zh: '1–8', bg: ['#ffe0f1', '#ece2ff'] },
-  { p: 'ariel', kind: 'num', set: range(1, 10), cols: 6, rows: 6, song: 'bonnie', en: '1–10', zh: '1–10', bg: ['#cff3ee', '#d9e6ff'] },
-  { p: 'belle', kind: 'num', set: range(5, 10), cols: 6, rows: 4, song: 'minuet', en: '5–10', zh: '5–10', bg: ['#fff0c2', '#ffe0d6'] },
-  { p: 'jasmine', kind: 'num', set: range(1, 12), cols: 6, rows: 5, song: 'desert', en: '1–12', zh: '1–12', bg: ['#d5f2f7', '#eadfff'] },
-  { p: 'mulan', kind: 'num', set: range(11, 20), cols: 6, rows: 6, song: 'jasmineflower', en: '11–20', zh: '11–20', bg: ['#ffe4d6', '#ffd9e6'] },
-  { p: 'tiana', kind: 'num', set: range(1, 15), cols: 8, rows: 5, song: 'saints', en: '1–15', zh: '1–15', bg: ['#e1f5d8', '#fff1c4'] },
-  { p: 'elsa', with: ['anna'], kind: 'num', set: range(1, 20), cols: 8, rows: 8, song: 'elise', en: '1–20', zh: '1–20', bg: ['#dcf2ff', '#ebe4ff'], deco: '❄123' }
+  { p: 'snowwhite', kind: 'num', set: range(1, 3), cols: 4, rows: 4, song: 'twinkle', en: '1–3', zh: '1–3', bg: ['#ffe3ec', '#fff2d6'] },
+  { p: 'cinderella', kind: 'num', set: range(4, 6), cols: 4, rows: 4, song: 'danube', en: '4–6', zh: '4–6', bg: ['#dcecff', '#f2e6ff'] },
+  { p: 'aurora', kind: 'num', set: range(7, 9), cols: 4, rows: 4, song: 'lullaby', en: '7–9', zh: '7–9', bg: ['#ffe0f1', '#ece2ff'] },
+  { p: 'ariel', kind: 'num', set: range(0, 3), cols: 5, rows: 4, song: 'bonnie', en: '0–3', zh: '0–3', bg: ['#cff3ee', '#d9e6ff'] },
+  { p: 'belle', kind: 'num', set: range(1, 5), cols: 5, rows: 4, song: 'minuet', en: '1–5', zh: '1–5', bg: ['#fff0c2', '#ffe0d6'] },
+  { p: 'jasmine', kind: 'num', set: range(4, 9), cols: 6, rows: 4, song: 'desert', en: '4–9', zh: '4–9', bg: ['#d5f2f7', '#eadfff'] },
+  { p: 'mulan', kind: 'num', set: range(0, 5), cols: 6, rows: 4, song: 'jasmineflower', en: '0–5', zh: '0–5', bg: ['#ffe4d6', '#ffd9e6'] },
+  { p: 'tiana', kind: 'num', set: range(3, 9), cols: 6, rows: 4, song: 'saints', en: '3–9', zh: '3–9', bg: ['#e1f5d8', '#fff1c4'] },
+  { p: 'elsa', with: ['anna'], kind: 'num', set: range(0, 9), cols: 6, rows: 5, song: 'elise', en: '0–9', zh: '0–9', bg: ['#dcf2ff', '#ebe4ff'], deco: '❄123' }
 ];
 const letters = (a, b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(a.charCodeAt(0) - 65, b.charCodeAt(0) - 64).split('');
 const ABC_LEVELS = [
-  { p: 'rapunzel', kind: 'abc', set: letters('A', 'F'), cols: 6, rows: 4, song: 'morning', en: 'A–F', zh: 'A–F', bg: ['#efe2ff', '#ffe8c6'] },
-  { p: 'elsa', kind: 'abc', set: letters('G', 'L'), cols: 6, rows: 4, song: 'elise', en: 'G–L', zh: 'G–L', bg: ['#dcf2ff', '#ebe4ff'] },
-  { p: 'anna', kind: 'abc', set: letters('M', 'R'), cols: 6, rows: 4, song: 'jingle', en: 'M–R', zh: 'M–R', bg: ['#ffe3ee', '#e6f2ff'] },
-  { p: 'moana', kind: 'abc', set: letters('S', 'Z'), cols: 8, rows: 4, song: 'bonnie', en: 'S–Z', zh: 'S–Z', bg: ['#fff0d6', '#d6f2ee'] },
-  { p: 'aurora', kind: 'case', set: letters('A', 'H'), cols: 6, rows: 4, song: 'lullaby', en: 'Aa–Hh', zh: 'Aa–Hh', bg: ['#ffe0f1', '#ece2ff'] },
-  { p: 'jasmine', kind: 'case', set: letters('I', 'P'), cols: 6, rows: 4, song: 'desert', en: 'Ii–Pp', zh: 'Ii–Pp', bg: ['#d5f2f7', '#eadfff'] },
-  { p: 'cinderella', kind: 'case', set: letters('Q', 'Z'), cols: 6, rows: 5, song: 'danube', en: 'Qq–Zz', zh: 'Qq–Zz', bg: ['#dcecff', '#f2e6ff'] },
-  { trio: ['ariel', 'snowwhite', 'belle'], kind: 'abc', set: letters('A', 'Z'), cols: 8, rows: 8, song: 'turca', en: 'All A–Z', zh: '全部 A–Z', bg: ['#ffe3f1', '#e2ecff'] }
+  { p: 'rapunzel', kind: 'abc', set: letters('A', 'D'), cols: 4, rows: 4, song: 'morning', en: 'A–D', zh: 'A–D', bg: ['#efe2ff', '#ffe8c6'] },
+  { p: 'elsa', kind: 'abc', set: letters('E', 'H'), cols: 4, rows: 4, song: 'elise', en: 'E–H', zh: 'E–H', bg: ['#dcf2ff', '#ebe4ff'] },
+  { p: 'anna', kind: 'abc', set: letters('I', 'L'), cols: 4, rows: 4, song: 'jingle', en: 'I–L', zh: 'I–L', bg: ['#ffe3ee', '#e6f2ff'] },
+  { p: 'moana', kind: 'abc', set: letters('M', 'P'), cols: 4, rows: 4, song: 'bonnie', en: 'M–P', zh: 'M–P', bg: ['#fff0d6', '#d6f2ee'] },
+  { p: 'aurora', kind: 'abc', set: letters('Q', 'U'), cols: 5, rows: 4, song: 'lullaby', en: 'Q–U', zh: 'Q–U', bg: ['#ffe0f1', '#ece2ff'] },
+  { p: 'jasmine', kind: 'abc', set: letters('V', 'Z'), cols: 5, rows: 4, song: 'desert', en: 'V–Z', zh: 'V–Z', bg: ['#d5f2f7', '#eadfff'] },
+  { p: 'cinderella', kind: 'case', set: letters('A', 'E'), cols: 5, rows: 4, song: 'danube', en: 'Aa–Ee', zh: 'Aa–Ee', bg: ['#dcecff', '#f2e6ff'] },
+  { trio: ['ariel', 'snowwhite', 'belle'], kind: 'abc', pick: 8, cols: 6, rows: 5, song: 'turca', en: 'ABC mix', zh: '字母大混合', bg: ['#ffe3f1', '#e2ecff'] }
 ];
 NUM_LEVELS.forEach(L => { L.deco = L.deco || '123✦'; });
 ABC_LEVELS.forEach(L => { L.deco = 'ABC✦'; });
@@ -1716,7 +1715,8 @@ function fillCells(g, R, C, cells, tiles) {
 // least once; a few pairs of the other kind are mixed in (letters on a number board, numbers on a letter board); and
 // princess pairs — the level's host(s) and always at least one pair of Elsa.
 function buildGlyphTiles(L) {
-  const P = L.cols * L.rows / 2, keys = shuffle(L.set.slice()), spare = P - keys.length;
+  const P = L.cols * L.rows / 2, spare0 = P - (L.pick || L.set.length);
+  const keys = L.pick ? shuffle(letters('A', 'Z')).slice(0, L.pick) : shuffle(L.set.slice()), spare = spare0;
   const hosts = [...new Set([...(L.p ? [L.p] : L.trio), ...(L.with || []), 'elsa'])];
   let xp = Math.max(1, Math.round(P * .15)), pp = Math.max(2, hosts.length, Math.round(P * .2));
   while (xp + pp > spare && xp > 1) xp--;
@@ -1725,7 +1725,7 @@ function buildGlyphTiles(L) {
   const ptypes = [...hosts, ...shuffle(PRINCESSES.filter(x => !hosts.includes(x)))].slice(0, nP);
   const isNum = L.kind === 'num';
   const cross = isNum ? shuffle(letters('A', 'Z')).slice(0, xp).map(k => 'u' + k)
-    : shuffle(range(1, 20)).slice(0, xp).map(k => 'n' + k);
+    : shuffle(range(0, 9)).slice(0, xp).map(k => 'n' + k);
   const gp = P - pp - xp, base = Math.floor(gp / keys.length);
   let extra = gp - base * keys.length;
   const first = isNum ? k => 'n' + k : k => 'u' + k;
