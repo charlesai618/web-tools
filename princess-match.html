@@ -106,6 +106,10 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
   box-shadow:0 .3em 0 var(--edge),0 .45em .8em rgba(110,50,130,.18);transition:transform .14s ease,box-shadow .14s}
 .tile .art{display:block;width:100%;height:100%;border-radius:16%;overflow:hidden}
 .tile svg{display:block;width:100%;height:100%;pointer-events:none}
+.tile .gl{display:flex;align-items:center;justify-content:center;position:relative;pointer-events:none}
+.tile .gl b{font-weight:700;line-height:1;letter-spacing:-.02em;
+  text-shadow:.045em .045em 0 #fff,-.045em .045em 0 #fff,.045em -.045em 0 #fff,-.045em -.045em 0 #fff,0 .08em .12em rgba(80,40,100,.15)}
+.tile .gl i{position:absolute;top:5%;right:8%;color:#ffd54a;font-style:normal;font-size:1.3em;line-height:1}
 .tile:hover{transform:translateY(-3%)}
 .tile.sel{transform:translateY(-7%) scale(1.08);z-index:3;
   box-shadow:0 0 0 .24em var(--gold),0 0 1.1em .4em rgba(255,207,63,.9),0 .36em 0 var(--edge)}
@@ -277,9 +281,9 @@ const STR = {
     sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two of the same number, letter or princess and tap them!',
     sub_abc: 'Find two of the same letter, number or princess and tap them!',
     rule_pics: 'Any two that are the same will disappear — no matter where they are!',
-    rule_nums: 'In the Count levels, match each number with the same number of stars ⭐',
+    rule_nums: 'Two of the same number, letter or princess disappear — no matter where they are!',
     rule_abc: 'In the Big & little levels, match each big letter with its little letter: A + a',
-    countHint: 'Match each number with the same number of stars! ⭐', snowHint: 'Match each number with the same number of snowflakes! ❄', caseHint: 'Match each big letter with its little letter! A + a',
+    caseHint: 'Match each big letter with its little letter! A + a',
     rw_kiss: n => n + ' blows you a kiss! 😘', rw_wink: n => n + ' gives you a wink! 😉', rw_glance: n => n + ' flashes you a sparkly look! 😍'
   },
   zh: {
@@ -295,9 +299,9 @@ const STR = {
     mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母',
     sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字、字母或公主，点一点它们！', sub_abc: '找到两个一样的字母、数字或公主，点一点它们！',
     rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
-    rule_nums: '「数一数」关卡：把数字和一样多的星星配成一对 ⭐',
+    rule_nums: '两个一样的数字、字母或公主就能消除，不管它们在哪里！',
     rule_abc: '「大小写」关卡：把大写字母和它的小写字母配成一对，比如 A 和 a',
-    countHint: '把数字和一样多的星星配对！⭐', snowHint: '把数字和一样多的雪花配对！❄', caseHint: '把大写字母和小写字母配对！A + a',
+    caseHint: '把大写字母和小写字母配对！A + a',
     rw_kiss: n => n + '送你一个飞吻！😘', rw_wink: n => n + '对你眨眨眼！😉', rw_glance: n => n + '向你抛了个媚眼！😍'
   }
 };
@@ -977,52 +981,31 @@ def('glove', 'Glove', '手套', '#e6f4ff',
   `<g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M52 60V70M47.7 62.5L56.3 67.5M47.7 67.5L56.3 62.5"/></g>` + sparkle(80, 80, 4, '#fff') + sparkle(20, 22, 3.5, '#fff'));
 
 /* ── number & letter tiles (not in ALL, so they never show up in the picture game) ──
-   A tile's `key` decides what it matches: n3 (numeral) and d3 (three stars) both have key num3; uA and la share letA. */
-function defGlyph(id, en, zh, tint, svg, key, vlang) { A[id] = { id, en, zh, tint, svg, key, vkey: key, vlang }; }
+   Drawn as ordinary HTML text, not SVG: SVG <text> reused through <use> showed up as blank tiles on the user's device.
+   A tile's `key` decides what it matches: uA and lA share letA (big + little letter levels); numbers only match
+   the same number (user rule: never pair a number with a picture). */
+function defGlyph(id, en, zh, tint, gl, key, vlang) { A[id] = { id, en, zh, tint, svg: '', gl, key, vkey: key, vlang }; }
 const keyOf = id => A[id].key || id;
 const GLYPH_COLORS = ['#ff4f8b', '#ff8a1f', '#e0a400', '#3fae4a', '#18a596', '#2f7de1', '#7b4fd6', '#d6336c', '#e8543a', '#9b5de5'];
 const GLYPH_TINTS = ['#ffe6ee', '#fff0dc', '#fff7d6', '#e8f6e6', '#ddf5f2', '#e2eeff', '#efe6ff', '#ffe3ee', '#ffe8e2', '#f2e8ff'];
-const glyphText = (s, color, font, size, y = 52) =>
-  `<text x="50" y="${y}" text-anchor="middle" dominant-baseline="central" font-family="${font}" font-weight="700" font-size="${size}" fill="${color}" ` +
-  `stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke">${s}</text>`;
+const NUM_FONT = "Fredoka, 'Segoe UI', 'PingFang SC', sans-serif", ABC_FONT = "Andika, 'Comic Sans MS', 'Segoe UI', sans-serif";
 const NUM_EN = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen',
   'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
 const NUM_ZH = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'];
-// star layouts for 1..10 (dice / ten-frame style so little ones can count at a glance)
-const DOTS = [[], [[50, 50]], [[30, 50], [70, 50]], [[28, 66], [50, 32], [72, 66]], [[31, 31], [69, 31], [31, 69], [69, 69]],
-  [[27, 27], [73, 27], [50, 50], [27, 73], [73, 73]], [[30, 26], [70, 26], [30, 50], [70, 50], [30, 74], [70, 74]],
-  [[20, 34], [40, 34], [60, 34], [80, 34], [30, 66], [50, 66], [70, 66]], [[20, 34], [40, 34], [60, 34], [80, 34], [20, 66], [40, 66], [60, 66], [80, 66]],
-  [[27, 25], [50, 25], [73, 25], [27, 50], [50, 50], [73, 50], [27, 75], [50, 75], [73, 75]],
-  [[13, 34], [31.5, 34], [50, 34], [68.5, 34], [87, 34], [13, 66], [31.5, 66], [50, 66], [68.5, 66], [87, 66]]];
 for (let n = 1; n <= 20; n++) {
-  const c = GLYPH_COLORS[(n - 1) % 10], tint = GLYPH_TINTS[(n - 1) % 10];
-  defGlyph('n' + n, NUM_EN[n - 1], NUM_ZH[n - 1], tint,
-    glyphText(n, c, "Fredoka, 'Segoe UI', sans-serif", n < 10 ? 68 : 54) + sparkle(84, 16, 5, '#ffd54a'), 'num' + n);
-  if (n <= 10) {
-    const R = n <= 4 ? 14 : n <= 6 ? 11.5 : n <= 9 ? 10 : 8.4;
-    defGlyph('d' + n, NUM_EN[n - 1], NUM_ZH[n - 1], tint,
-      DOTS[n].map(([x, y]) => `<path d="${starPath(x, y, R, R * .48)}" fill="${c}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>`).join(''), 'num' + n);
-    // Elsa's level counts snowflakes instead of stars (f1..f10)
-    defGlyph('f' + n, NUM_EN[n - 1], NUM_ZH[n - 1], tint, DOTS[n].map(([x, y]) => snowflakeMini(x, y, R * 1.05, c)).join(''), 'num' + n);
-  }
-}
-function snowflakeMini(x, y, r, c) {
-  let d = '';
-  for (let i = 0; i < 6; i++) {
-    const a = i * Math.PI / 3, ex = x + Math.cos(a) * r, ey = y + Math.sin(a) * r;
-    const bx = x + Math.cos(a) * r * .58, by = y + Math.sin(a) * r * .58, w = r * .3;
-    d += `M${x.toFixed(1)} ${y.toFixed(1)}L${ex.toFixed(1)} ${ey.toFixed(1)}` +
-      `M${bx.toFixed(1)} ${by.toFixed(1)}L${(bx + Math.cos(a + .9) * w).toFixed(1)} ${(by + Math.sin(a + .9) * w).toFixed(1)}` +
-      `M${bx.toFixed(1)} ${by.toFixed(1)}L${(bx + Math.cos(a - .9) * w).toFixed(1)} ${(by + Math.sin(a - .9) * w).toFixed(1)}`;
-  }
-  return `<path d="${d}" stroke="#fff" stroke-width="${(r * .34).toFixed(2)}" stroke-linecap="round" fill="none"/>` +
-    `<path d="${d}" stroke="${c}" stroke-width="${(r * .2).toFixed(2)}" stroke-linecap="round" fill="none"/>`;
+  defGlyph('n' + n, NUM_EN[n - 1], NUM_ZH[n - 1], GLYPH_TINTS[(n - 1) % 10],
+    { txt: String(n), color: GLYPH_COLORS[(n - 1) % 10], font: NUM_FONT, size: n < 10 ? 4.5 : 3.6, spark: true }, 'num' + n);
 }
 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((L, i) => {
-  const c = GLYPH_COLORS[i % 10], tint = GLYPH_TINTS[i % 10], font = "Andika, 'Comic Sans MS', 'Segoe UI', sans-serif";
-  defGlyph('u' + L, L, L, tint, glyphText(L, c, font, 70) + sparkle(84, 16, 5, '#ffd54a'), 'let' + L, 'en');
-  defGlyph('l' + L, L.toLowerCase(), L.toLowerCase(), tint, glyphText(L.toLowerCase(), c, font, 74, 46), 'let' + L, 'en');
+  const color = GLYPH_COLORS[i % 10], tint = GLYPH_TINTS[i % 10];
+  defGlyph('u' + L, L, L, tint, { txt: L, color, font: ABC_FONT, size: 4.4, spark: true }, 'let' + L, 'en');
+  defGlyph('l' + L, L.toLowerCase(), L.toLowerCase(), tint, { txt: L.toLowerCase(), color, font: ABC_FONT, size: 4.8, lower: true }, 'let' + L, 'en');
 });
+const glyphHtml = id => {
+  const g = A[id].gl;
+  return `<span class="art gl" style="background:${A[id].tint}"><b style="color:${g.color};font-family:${g.font};font-size:${g.size}em` +
+    `${g.lower ? ';margin-top:-.18em' : ''}">${g.txt}</b>${g.spark ? '<i>✦</i>' : ''}</span>`;
+};
 
 function buildSprite() {
   const defs = `<defs><radialGradient id="g-glow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".95"/>` +
@@ -1054,18 +1037,18 @@ const LEVELS = [
   { mix: 'all', trio: ['aurora', 'moana', 'anna'], en: 'Grand Finale', zh: '大团圆', cols: 8, rows: 8, types: 32, minP: 12, song: 'jingle', bg: ['#ffe0ec', '#fff3c4'], deco: '♛❄✦♥' }
 ];
 // Number and letter games: each level is hosted by a princess (portrait, colours, her song, her win-screen reward).
-// kind: num / abc = two identical tiles; count = numeral + the same number of stars; case = big + little letter.
+// kind: num / abc = two identical tiles; case = big + little letter.
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const NUM_LEVELS = [
   { p: 'snowwhite', kind: 'num', set: range(1, 4), cols: 4, rows: 4, song: 'twinkle', en: '1–4', zh: '1–4', bg: ['#ffe3ec', '#fff2d6'] },
   { p: 'cinderella', kind: 'num', set: range(1, 6), cols: 6, rows: 4, song: 'danube', en: '1–6', zh: '1–6', bg: ['#dcecff', '#f2e6ff'] },
   { p: 'aurora', kind: 'num', set: range(1, 8), cols: 8, rows: 4, song: 'lullaby', en: '1–8', zh: '1–8', bg: ['#ffe0f1', '#ece2ff'] },
   { p: 'ariel', kind: 'num', set: range(1, 10), cols: 6, rows: 6, song: 'bonnie', en: '1–10', zh: '1–10', bg: ['#cff3ee', '#d9e6ff'] },
-  { p: 'belle', kind: 'count', set: range(1, 5), cols: 5, rows: 4, song: 'minuet', en: 'Count 1–5', zh: '数一数 1–5', bg: ['#fff0c2', '#ffe0d6'] },
-  { p: 'jasmine', kind: 'count', set: range(1, 10), cols: 6, rows: 5, song: 'desert', en: 'Count 1–10', zh: '数一数 1–10', bg: ['#d5f2f7', '#eadfff'] },
+  { p: 'belle', kind: 'num', set: range(5, 10), cols: 6, rows: 4, song: 'minuet', en: '5–10', zh: '5–10', bg: ['#fff0c2', '#ffe0d6'] },
+  { p: 'jasmine', kind: 'num', set: range(1, 12), cols: 6, rows: 5, song: 'desert', en: '1–12', zh: '1–12', bg: ['#d5f2f7', '#eadfff'] },
   { p: 'mulan', kind: 'num', set: range(11, 20), cols: 6, rows: 6, song: 'jasmineflower', en: '11–20', zh: '11–20', bg: ['#ffe4d6', '#ffd9e6'] },
-  { p: 'tiana', kind: 'num', set: range(1, 20), cols: 8, rows: 8, song: 'saints', en: '1–20', zh: '1–20', bg: ['#e1f5d8', '#fff1c4'] },
-  { p: 'elsa', with: ['anna'], kind: 'count', faces: 'snow', set: range(1, 10), cols: 6, rows: 5, song: 'elise', en: 'Snowflakes 1–10', zh: '数雪花 1–10', bg: ['#dcf2ff', '#ebe4ff'] }
+  { p: 'tiana', kind: 'num', set: range(1, 15), cols: 8, rows: 5, song: 'saints', en: '1–15', zh: '1–15', bg: ['#e1f5d8', '#fff1c4'] },
+  { p: 'elsa', with: ['anna'], kind: 'num', set: range(1, 20), cols: 8, rows: 8, song: 'elise', en: '1–20', zh: '1–20', bg: ['#dcf2ff', '#ebe4ff'], deco: '❄123' }
 ];
 const letters = (a, b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(a.charCodeAt(0) - 65, b.charCodeAt(0) - 64).split('');
 const ABC_LEVELS = [
@@ -1078,7 +1061,7 @@ const ABC_LEVELS = [
   { p: 'cinderella', kind: 'case', set: letters('Q', 'Z'), cols: 6, rows: 5, song: 'danube', en: 'Qq–Zz', zh: 'Qq–Zz', bg: ['#dcecff', '#f2e6ff'] },
   { trio: ['ariel', 'snowwhite', 'belle'], kind: 'abc', set: letters('A', 'Z'), cols: 8, rows: 8, song: 'turca', en: 'All A–Z', zh: '全部 A–Z', bg: ['#ffe3f1', '#e2ecff'] }
 ];
-NUM_LEVELS.forEach(L => { L.deco = L.faces === 'snow' ? '❄123' : '123✦'; });
+NUM_LEVELS.forEach(L => { L.deco = L.deco || '123✦'; });
 ABC_LEVELS.forEach(L => { L.deco = 'ABC✦'; });
 const MODES = { pics: LEVELS, nums: NUM_LEVELS, abc: ABC_LEVELS };
 const PRINCESSES = ALL.filter(id => A[id].p);
@@ -1740,13 +1723,13 @@ function buildGlyphTiles(L) {
   while (xp + pp > spare && pp > hosts.length) pp--;
   const nP = Math.min(pp, Math.max(hosts.length, Math.ceil(pp / 2)));
   const ptypes = [...hosts, ...shuffle(PRINCESSES.filter(x => !hosts.includes(x)))].slice(0, nP);
-  const isNum = L.kind === 'num' || L.kind === 'count';
+  const isNum = L.kind === 'num';
   const cross = isNum ? shuffle(letters('A', 'Z')).slice(0, xp).map(k => 'u' + k)
     : shuffle(range(1, 20)).slice(0, xp).map(k => 'n' + k);
   const gp = P - pp - xp, base = Math.floor(gp / keys.length);
   let extra = gp - base * keys.length;
   const first = isNum ? k => 'n' + k : k => 'u' + k;
-  const second = L.kind === 'count' ? k => (L.faces === 'snow' ? 'f' : 'd') + k : L.kind === 'case' ? k => 'l' + k : first;
+  const second = L.kind === 'case' ? k => 'l' + k : first;
   const tiles = [];
   keys.forEach(k => { const n = base + (extra-- > 0 ? 1 : 0); for (let i = 0; i < n; i++) tiles.push(first(k), second(k)); });
   cross.forEach(id => tiles.push(id, id));
@@ -1814,7 +1797,7 @@ function render(enter) {
     if (enter) el.style.animationDelay = Math.min(k++ * 14, 650) + 'ms';
     el.dataset.r = r; el.dataset.c = c;
     el.setAttribute('aria-label', nameOf(tp));
-    el.innerHTML = `<span class="art" style="background:${A[tp].tint}">${art(tp)}</span>`;
+    el.innerHTML = A[tp].gl ? glyphHtml(tp) : `<span class="art" style="background:${A[tp].tint}">${art(tp)}</span>`;
     frag.appendChild(el); els.set(key(r, c), el);
   }
   board.appendChild(frag);
@@ -1868,7 +1851,7 @@ function startLevel(i) {
   setHud(); render(true);
   SND.play(G.L.song);
   resetIdle();
-  if (G.L.kind === 'count' || G.L.kind === 'case') later('kindHint', 900, () => toast(t(G.L.faces === 'snow' ? 'snowHint' : G.L.kind + 'Hint')));
+  if (G.L.kind === 'case') later('kindHint', 900, () => toast(t('caseHint')));
 }
 function showHome() {
   clearTimers(); G.over = true;
