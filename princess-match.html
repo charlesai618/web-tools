@@ -7,7 +7,7 @@
 <title>Princess Match · 公主连连看</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg1:#ffe3f1; --bg2:#e9e2ff;
@@ -150,9 +150,48 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 .wcard{background:#fff;border-radius:32px;padding:20px 22px 24px;width:min(420px,100%);text-align:center;margin-top:70px;
   box-shadow:0 8px 0 var(--edge),0 20px 50px rgba(120,60,140,.3);animation:cardIn .55s cubic-bezier(.3,1.4,.6,1)}
 @keyframes cardIn{from{transform:scale(.6) translateY(40px);opacity:0}}
-.wpor{width:150px;height:150px;margin:-92px auto 10px;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,var(--bg1),var(--bg2));
+.wpor{width:150px;height:150px;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,var(--bg1),var(--bg2));
   box-shadow:0 0 0 6px #fff,0 0 0 11px var(--gold),0 10px 30px rgba(255,180,0,.45);animation:bob 2.4s ease-in-out infinite}
 .wpor svg{width:100%;height:100%;display:block}
+.wpor-wrap{position:relative;width:150px;height:150px;margin:-92px auto 10px}
+/* win reward: the host princess blows a kiss / winks / glances (face parts are grouped in face()) */
+.rw .eL,.rw .eR,.rw .br,.rw .kiss,.rw .lidL,.rw .lidR,.rw .spk,.rw .blx{transform-box:fill-box;transform-origin:center}
+.rw .lidL,.rw .lidR,.rw .kiss,.rw .spk,.rw .blx{opacity:0}
+.rw-wink .eR{animation:rwShut 3.2s infinite}.rw-wink .lidR{animation:rwLid 3.2s infinite}
+.rw-wink .spk{animation:rwSpk 3.2s infinite}.rw-wink .br{animation:rwBrow 3.2s infinite}.rw-wink .blx{animation:rwBlx 3.2s infinite}
+.rw-kiss .eL,.rw-kiss .eR{animation:rwShutLong 3.2s infinite}.rw-kiss .lidL,.rw-kiss .lidR{animation:rwLidLong 3.2s infinite}
+.rw-kiss .mo{animation:rwMoOff 3.2s infinite}.rw-kiss .kiss{animation:rwKiss 3.2s infinite}.rw-kiss .blx{animation:rwBlx 3.2s infinite}
+.rw-glance{animation:rwTilt 3.2s infinite;transform-origin:50% 85%}
+.rw-glance .eL{animation:rwLook 3.2s infinite}.rw-glance .eR{animation:rwLookWink 3.2s infinite}
+.rw-glance .lidR{animation:rwLidG 3.2s infinite}.rw-glance .br{animation:rwBrowG 3.2s infinite}.rw-glance .blx{animation:rwBlx 3.2s infinite}
+@keyframes rwShut{0%,28%,52%,100%{transform:none}34%,46%{transform:scaleY(.08)}}
+@keyframes rwLid{0%,30%,50%,100%{opacity:0}34%,46%{opacity:1}}
+@keyframes rwSpk{0%,32%,74%,100%{opacity:0;transform:scale(0)}42%{opacity:1;transform:scale(1.5) rotate(45deg)}60%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes rwBrow{0%,26%,54%,100%{transform:none}32%,48%{transform:translateY(-1.2px)}}
+@keyframes rwBlx{0%,22%,66%,100%{opacity:0}32%,56%{opacity:1}}
+@keyframes rwShutLong{0%,16%,66%,100%{transform:none}22%,60%{transform:scaleY(.08)}}
+@keyframes rwLidLong{0%,18%,64%,100%{opacity:0}22%,60%{opacity:1}}
+@keyframes rwMoOff{0%,18%,64%,100%{opacity:1}22%,60%{opacity:0}}
+@keyframes rwKiss{0%,18%,64%,100%{opacity:0;transform:scale(.5)}22%{opacity:1;transform:scale(1)}30%{opacity:1;transform:scale(1.35)}38%,60%{opacity:1;transform:scale(1)}}
+@keyframes rwTilt{0%,8%,70%,100%{transform:rotate(0)}18%,60%{transform:rotate(-7deg)}}
+@keyframes rwLook{0%,8%,64%,100%{transform:none}16%,58%{transform:translateX(1.5px)}}
+@keyframes rwLookWink{0%,8%,64%,100%{transform:none}16%,30%{transform:translateX(1.5px)}36%,48%{transform:translateX(1.5px) scaleY(.08)}54%,58%{transform:translateX(1.5px)}}
+@keyframes rwLidG{0%,32%,52%,100%{opacity:0;transform:translateX(1.5px)}36%,48%{opacity:1;transform:translateX(1.5px)}}
+@keyframes rwBrowG{0%,8%,64%,100%{transform:none}16%,58%{transform:translateY(-1.3px)}}
+.fxh{position:absolute;color:#ff4f8b;font-size:26px;line-height:1;opacity:0;pointer-events:none;z-index:3;transform:translate(-50%,-50%);text-shadow:0 2px 8px rgba(255,79,139,.45)}
+.fxh-m1,.fxh-m2{left:75px;top:89px}.is-trio .fxh-m1,.is-trio .fxh-m2{top:107px}
+.fxh-e{left:87px;top:74px}.is-trio .fxh-e{left:82px;top:99px}
+.rwk-kiss .fxh-m1{animation:fxKiss1 3.2s infinite}.rwk-kiss .fxh-m2{animation:fxKiss2 3.2s infinite}.rwk-glance .fxh-e{animation:fxEye 3.2s infinite}
+@keyframes fxKiss1{0%,26%{opacity:0;transform:translate(-50%,-50%) scale(.3)}32%{opacity:1;transform:translate(-50%,-50%) scale(.7)}
+  74%{opacity:1;transform:translate(calc(-50% + 78px),calc(-50% - 70px)) scale(1.7) rotate(12deg)}88%,100%{opacity:0;transform:translate(calc(-50% + 96px),calc(-50% - 86px)) scale(2)}}
+@keyframes fxKiss2{0%,36%{opacity:0;transform:translate(-50%,-50%) scale(.3)}42%{opacity:1;transform:translate(-50%,-50%) scale(.5)}
+  80%{opacity:1;transform:translate(calc(-50% - 74px),calc(-50% - 78px)) scale(1.3) rotate(-12deg)}92%,100%{opacity:0;transform:translate(calc(-50% - 88px),calc(-50% - 92px)) scale(1.5)}}
+@keyframes fxEye{0%,40%{opacity:0;transform:translate(-50%,-50%) scale(.3)}46%{opacity:1;transform:translate(-50%,-50%) scale(.7)}
+  82%{opacity:1;transform:translate(calc(-50% + 84px),calc(-50% - 40px)) scale(1.6) rotate(15deg)}94%,100%{opacity:0;transform:translate(calc(-50% + 100px),calc(-50% - 48px)) scale(1.8)}}
+/* mode tabs */
+.modes{display:flex;gap:4px;margin:12px 0 2px;background:rgba(255,255,255,.6);padding:5px;border-radius:999px;box-shadow:0 3px 0 var(--edge)}
+.modes button{border:0;border-radius:999px;padding:9px 15px;font-weight:700;font-size:1rem;background:transparent;color:var(--ink2);white-space:nowrap}
+.modes button.on{background:#fff;color:var(--pink);box-shadow:0 2px 8px rgba(120,60,140,.18)}
 .wcard h2{font-size:1.9rem;color:var(--pink);line-height:1.15}
 .wcard p{color:var(--ink2);margin:6px 0 6px;font-weight:600}
 .wstars{font-size:2.8rem;letter-spacing:6px;margin:2px 0 16px}
@@ -160,7 +199,7 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 .wstars span.on{color:var(--gold);text-shadow:0 3px 0 #d4a017;animation:starIn .55s cubic-bezier(.3,1.8,.6,1) both}
 @keyframes starIn{from{transform:scale(0) rotate(-120deg)}}
 .wbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-@media (prefers-reduced-motion:reduce){.dc,.crown,.wpor{animation:none}}
+@media (prefers-reduced-motion:reduce){.dc,.crown,.wpor,.rw,.rw *,.fxh{animation:none!important}}
 </style>
 </head>
 <body>
@@ -173,6 +212,7 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
   </div>
   <div class="crown" id="h-crown" aria-hidden="true"></div>
   <h1 class="title" id="h-title"></h1>
+  <div class="modes" id="h-modes" role="tablist"><button type="button" data-m="pics"></button><button type="button" data-m="nums"></button><button type="button" data-m="abc"></button></div>
   <p class="sub" id="h-sub"></p>
   <p class="rule" id="h-rule"></p>
   <div class="levels" id="levels"></div>
@@ -194,7 +234,8 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 
 <div id="win" class="hidden" role="dialog" aria-modal="true">
   <div class="wcard">
-    <div class="wpor" id="w-por"></div>
+    <div class="wpor-wrap" id="w-wrap"><div class="wpor" id="w-por"></div>
+      <span class="fxh fxh-m1">♥</span><span class="fxh fxh-m2">♥</span><span class="fxh fxh-e">♥</span></div>
     <h2 id="w-title"></h2>
     <p id="w-sub"></p>
     <div class="wstars" id="w-stars"><span>★</span><span>★</span><span>★</span></div>
@@ -231,7 +272,15 @@ const STR = {
     winSubAll: 'All the princesses say thank you!', mixTitle: 'Princess Mix', mixSub: 'Every princess and all their friends, together!',
     next: 'Next level ▶', again: 'Play again', levels: 'All levels',
     hint: 'Hint', shuffle: 'Shuffle', home: 'All levels', pairs: 'Pairs left',
-    sound: ['Sound off', 'Sound effects only', 'Music and sound on']
+    sound: ['Sound off', 'Sound effects only', 'Music and sound on'],
+    mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters',
+    sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two tiles with the same number and tap them!',
+    sub_abc: 'Find two tiles with the same letter and tap them!',
+    rule_pics: 'Any two that are the same will disappear — no matter where they are!',
+    rule_nums: 'In the Count levels, match each number with the same number of stars ⭐',
+    rule_abc: 'In the Big & little levels, match each big letter with its little letter: A + a',
+    countHint: 'Match each number with the same number of stars! ⭐', caseHint: 'Match each big letter with its little letter! A + a',
+    rw_kiss: n => n + ' blows you a kiss! 😘', rw_wink: n => n + ' gives you a wink! 😉', rw_glance: n => n + ' flashes you a sparkly look! 😍'
   },
   zh: {
     title: '公主连连看', sub: '找到两个一样的图案，点一点它们！',
@@ -242,7 +291,14 @@ const STR = {
     winSubAll: '公主们都说：谢谢你！', mixTitle: '公主大混合', mixSub: '所有公主和她们的小伙伴，全都在一起！',
     next: '下一关 ▶', again: '再玩一次', levels: '选关',
     hint: '提示', shuffle: '洗牌', home: '选关', pairs: '剩余',
-    sound: ['声音关闭', '只有音效', '音乐和音效']
+    sound: ['声音关闭', '只有音效', '音乐和音效'],
+    mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母',
+    sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字，点一点它们！', sub_abc: '找到两个一样的字母，点一点它们！',
+    rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
+    rule_nums: '「数一数」关卡：把数字和一样多的星星配成一对 ⭐',
+    rule_abc: '「大小写」关卡：把大写字母和它的小写字母配成一对，比如 A 和 a',
+    countHint: '把数字和一样多的星星配对！⭐', caseHint: '把大写字母和小写字母配对！A + a',
+    rw_kiss: n => n + '送你一个飞吻！😘', rw_wink: n => n + '对你眨眨眼！😉', rw_glance: n => n + '向你抛了个媚眼！😍'
   }
 };
 const t = (k, ...a) => { const v = STR[lang][k]; return typeof v === 'function' ? v(...a) : v; };
@@ -252,6 +308,11 @@ const A = {};
 const ALL = [];
 function def(id, en, zh, tint, svg, isP) { A[id] = { id, en, zh, tint, svg, p: !!isP }; ALL.push(id); }
 const nameOf = id => A[id][lang];
+const popText = id => {          // number tiles pop "3 Three"; letter tiles pop "A a"
+  const k = A[id].key;
+  if (!k) return nameOf(id);
+  return k.startsWith('num') ? k.slice(3) + ' ' + nameOf(id) : k.slice(3) + ' ' + k.slice(3).toLowerCase();
+};
 const sparkle = (x, y, s, c) => `<path d="M${x} ${y - s}Q${x} ${y} ${x + s} ${y}Q${x} ${y} ${x} ${y + s}Q${x} ${y} ${x - s} ${y}Q${x} ${y} ${x} ${y - s}Z" fill="${c}"/>`;
 function flower(x, y, r, pc, cc) {
   let s = '';
@@ -266,18 +327,18 @@ const braid = (pts, fill, line) => pts.map(([x, y, r]) =>
   `<ellipse cx="${x}" cy="${y}" rx="5.4" ry="4.3" transform="rotate(${r} ${x} ${y})" fill="${fill}" stroke="${line}" stroke-width="1"/>`).join('');
 const TORSO = 'M17 101C17 86 30 76 50 76C70 76 83 86 83 101Z';
 
+// Eyes, brows, blush and mouth are grouped (eL/eR/br/bl/mo) so the win-screen reward can animate them.
 function face(o) {
   const b = o.blush == null ? .42 : o.blush;
+  const eye = (x, side, lash) => `<g class="e${side}"><ellipse cx="${x}" cy="49.5" rx="3.3" ry="4.3" fill="#2b1d1a"/>` +
+    `<ellipse cx="${x}" cy="50.7" rx="2.3" ry="2.8" fill="${o.eye}"/><circle cx="${x + 1.2}" cy="48" r="1.25" fill="#fff"/>` +
+    `<circle cx="${x - 1}" cy="52.3" r=".55" fill="#fff" opacity=".8"/><path d="${lash}" stroke="#2b1d1a" stroke-width="1" stroke-linecap="round"/></g>`;
   return `<ellipse cx="50" cy="47" rx="19.5" ry="20.5" fill="${o.skin}"/>` +
-    `<ellipse cx="42" cy="49.5" rx="3.3" ry="4.3" fill="#2b1d1a"/><ellipse cx="58" cy="49.5" rx="3.3" ry="4.3" fill="#2b1d1a"/>` +
-    `<ellipse cx="42" cy="50.7" rx="2.3" ry="2.8" fill="${o.eye}"/><ellipse cx="58" cy="50.7" rx="2.3" ry="2.8" fill="${o.eye}"/>` +
-    `<circle cx="43.2" cy="48" r="1.25" fill="#fff"/><circle cx="59.2" cy="48" r="1.25" fill="#fff"/>` +
-    `<circle cx="41" cy="52.3" r=".55" fill="#fff" opacity=".8"/><circle cx="57" cy="52.3" r=".55" fill="#fff" opacity=".8"/>` +
-    `<path d="M38.8 46.4l-1.9-1.4M61.2 46.4l1.9-1.4" stroke="#2b1d1a" stroke-width="1" stroke-linecap="round"/>` +
-    `<path d="M38.6 42.4Q42 40.8 45.4 42.2M54.6 42.2Q58 40.8 61.4 42.4" stroke="${o.brow}" stroke-width="1.25" fill="none" stroke-linecap="round"/>` +
-    `<ellipse cx="37.4" cy="55.6" rx="3.2" ry="1.9" fill="#ff7f9f" opacity="${b}"/><ellipse cx="62.6" cy="55.6" rx="3.2" ry="1.9" fill="#ff7f9f" opacity="${b}"/>` +
+    eye(42, 'L', 'M38.8 46.4l-1.9-1.4') + eye(58, 'R', 'M61.2 46.4l1.9-1.4') +
+    `<g class="br"><path d="M38.6 42.4Q42 40.8 45.4 42.2M54.6 42.2Q58 40.8 61.4 42.4" stroke="${o.brow}" stroke-width="1.25" fill="none" stroke-linecap="round"/></g>` +
+    `<g class="bl"><ellipse cx="37.4" cy="55.6" rx="3.2" ry="1.9" fill="#ff7f9f" opacity="${b}"/><ellipse cx="62.6" cy="55.6" rx="3.2" ry="1.9" fill="#ff7f9f" opacity="${b}"/></g>` +
     `<path d="M49.2 54.4Q50 55.2 50.8 54.4" stroke="#000" stroke-opacity=".22" stroke-width=".9" fill="none" stroke-linecap="round"/>` +
-    `<path d="M46.8 58.2Q50 62 53.2 58.2Q50 59.4 46.8 58.2Z" fill="${o.lip}" stroke="${o.lip}" stroke-width=".7" stroke-linejoin="round"/>`;
+    `<g class="mo"><path d="M46.8 58.2Q50 62 53.2 58.2Q50 59.4 46.8 58.2Z" fill="${o.lip}" stroke="${o.lip}" stroke-width=".7" stroke-linejoin="round"/></g>`;
 }
 function princess(o) {
   const neck = `<path d="M44.6 60V75.5Q50 78.5 55.4 75.5V60Z" fill="${o.skin}"/><path d="M44.6 63Q50 69 55.4 63V61H44.6Z" fill="#000" opacity=".07"/>`;
@@ -915,10 +976,44 @@ def('glove', 'Glove', '手套', '#e6f4ff',
   `<path d="M44 46V54M53 46V54M62 48V55" stroke="#2fa3cf" stroke-width="1.2" stroke-linecap="round"/>` +
   `<g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M52 60V70M47.7 62.5L56.3 67.5M47.7 67.5L56.3 62.5"/></g>` + sparkle(80, 80, 4, '#fff') + sparkle(20, 22, 3.5, '#fff'));
 
+/* ── number & letter tiles (not in ALL, so they never show up in the picture game) ──
+   A tile's `key` decides what it matches: n3 (numeral) and d3 (three stars) both have key num3; uA and la share letA. */
+function defGlyph(id, en, zh, tint, svg, key, vlang) { A[id] = { id, en, zh, tint, svg, key, vkey: key, vlang }; }
+const keyOf = id => A[id].key || id;
+const GLYPH_COLORS = ['#ff4f8b', '#ff8a1f', '#e0a400', '#3fae4a', '#18a596', '#2f7de1', '#7b4fd6', '#d6336c', '#e8543a', '#9b5de5'];
+const GLYPH_TINTS = ['#ffe6ee', '#fff0dc', '#fff7d6', '#e8f6e6', '#ddf5f2', '#e2eeff', '#efe6ff', '#ffe3ee', '#ffe8e2', '#f2e8ff'];
+const glyphText = (s, color, font, size, y = 52) =>
+  `<text x="50" y="${y}" text-anchor="middle" dominant-baseline="central" font-family="${font}" font-weight="700" font-size="${size}" fill="${color}" ` +
+  `stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke">${s}</text>`;
+const NUM_EN = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen',
+  'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
+const NUM_ZH = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'];
+// star layouts for 1..10 (dice / ten-frame style so little ones can count at a glance)
+const DOTS = [[], [[50, 50]], [[30, 50], [70, 50]], [[28, 66], [50, 32], [72, 66]], [[31, 31], [69, 31], [31, 69], [69, 69]],
+  [[27, 27], [73, 27], [50, 50], [27, 73], [73, 73]], [[30, 26], [70, 26], [30, 50], [70, 50], [30, 74], [70, 74]],
+  [[20, 34], [40, 34], [60, 34], [80, 34], [30, 66], [50, 66], [70, 66]], [[20, 34], [40, 34], [60, 34], [80, 34], [20, 66], [40, 66], [60, 66], [80, 66]],
+  [[27, 25], [50, 25], [73, 25], [27, 50], [50, 50], [73, 50], [27, 75], [50, 75], [73, 75]],
+  [[13, 34], [31.5, 34], [50, 34], [68.5, 34], [87, 34], [13, 66], [31.5, 66], [50, 66], [68.5, 66], [87, 66]]];
+for (let n = 1; n <= 20; n++) {
+  const c = GLYPH_COLORS[(n - 1) % 10], tint = GLYPH_TINTS[(n - 1) % 10];
+  defGlyph('n' + n, NUM_EN[n - 1], NUM_ZH[n - 1], tint,
+    glyphText(n, c, "Fredoka, 'Segoe UI', sans-serif", n < 10 ? 68 : 54) + sparkle(84, 16, 5, '#ffd54a'), 'num' + n);
+  if (n <= 10) {
+    const R = n <= 4 ? 14 : n <= 6 ? 11.5 : n <= 9 ? 10 : 8.4;
+    defGlyph('d' + n, NUM_EN[n - 1], NUM_ZH[n - 1], tint,
+      DOTS[n].map(([x, y]) => `<path d="${starPath(x, y, R, R * .48)}" fill="${c}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>`).join(''), 'num' + n);
+  }
+}
+'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((L, i) => {
+  const c = GLYPH_COLORS[i % 10], tint = GLYPH_TINTS[i % 10], font = "Andika, 'Comic Sans MS', 'Segoe UI', sans-serif";
+  defGlyph('u' + L, L, L, tint, glyphText(L, c, font, 70) + sparkle(84, 16, 5, '#ffd54a'), 'let' + L, 'en');
+  defGlyph('l' + L, L.toLowerCase(), L.toLowerCase(), tint, glyphText(L.toLowerCase(), c, font, 74, 46), 'let' + L, 'en');
+});
+
 function buildSprite() {
   const defs = `<defs><radialGradient id="g-glow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".95"/>` +
     `<stop offset=".55" stop-color="#ffd27a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>`;
-  const syms = ALL.map(id => `<symbol id="a-${id}" viewBox="0 0 100 100">${A[id].svg}</symbol>`).join('');
+  const syms = Object.keys(A).map(id => `<symbol id="a-${id}" viewBox="0 0 100 100">${A[id].svg}</symbol>`).join('');
   const holder = document.createElement('div');
   holder.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">${defs}${syms}</svg>`;
   document.body.prepend(holder.firstChild);
@@ -944,8 +1039,35 @@ const LEVELS = [
   { mix: 'all', trio: ['mulan', 'rapunzel', 'tiana'], en: 'Magic Kingdom', zh: '魔法王国', cols: 8, rows: 6, types: 24, minP: 8, song: 'turca', bg: ['#e4e0ff', '#d6f4f0'], deco: '♛✧✦' },
   { mix: 'all', trio: ['aurora', 'moana', 'anna'], en: 'Grand Finale', zh: '大团圆', cols: 8, rows: 8, types: 32, minP: 12, song: 'jingle', bg: ['#ffe0ec', '#fff3c4'], deco: '♛❄✦♥' }
 ];
+// Number and letter games: each level is hosted by a princess (portrait, colours, her song, her win-screen reward).
+// kind: num / abc = two identical tiles; count = numeral + the same number of stars; case = big + little letter.
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+const NUM_LEVELS = [
+  { p: 'snowwhite', kind: 'num', set: range(1, 4), cols: 4, rows: 4, song: 'twinkle', en: '1–4', zh: '1–4', bg: ['#ffe3ec', '#fff2d6'] },
+  { p: 'cinderella', kind: 'num', set: range(1, 6), cols: 6, rows: 4, song: 'danube', en: '1–6', zh: '1–6', bg: ['#dcecff', '#f2e6ff'] },
+  { p: 'aurora', kind: 'num', set: range(1, 8), cols: 8, rows: 4, song: 'lullaby', en: '1–8', zh: '1–8', bg: ['#ffe0f1', '#ece2ff'] },
+  { p: 'ariel', kind: 'num', set: range(1, 10), cols: 6, rows: 6, song: 'bonnie', en: '1–10', zh: '1–10', bg: ['#cff3ee', '#d9e6ff'] },
+  { p: 'belle', kind: 'count', set: range(1, 5), cols: 5, rows: 4, song: 'minuet', en: 'Count 1–5', zh: '数一数 1–5', bg: ['#fff0c2', '#ffe0d6'] },
+  { p: 'jasmine', kind: 'count', set: range(1, 10), cols: 5, rows: 4, song: 'desert', en: 'Count 1–10', zh: '数一数 1–10', bg: ['#d5f2f7', '#eadfff'] },
+  { p: 'mulan', kind: 'num', set: range(11, 20), cols: 6, rows: 6, song: 'jasmineflower', en: '11–20', zh: '11–20', bg: ['#ffe4d6', '#ffd9e6'] },
+  { p: 'tiana', kind: 'num', set: range(1, 20), cols: 8, rows: 6, song: 'saints', en: '1–20', zh: '1–20', bg: ['#e1f5d8', '#fff1c4'] }
+];
+const letters = (a, b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(a.charCodeAt(0) - 65, b.charCodeAt(0) - 64).split('');
+const ABC_LEVELS = [
+  { p: 'rapunzel', kind: 'abc', set: letters('A', 'F'), cols: 6, rows: 4, song: 'morning', en: 'A–F', zh: 'A–F', bg: ['#efe2ff', '#ffe8c6'] },
+  { p: 'elsa', kind: 'abc', set: letters('G', 'L'), cols: 6, rows: 4, song: 'elise', en: 'G–L', zh: 'G–L', bg: ['#dcf2ff', '#ebe4ff'] },
+  { p: 'anna', kind: 'abc', set: letters('M', 'R'), cols: 6, rows: 4, song: 'jingle', en: 'M–R', zh: 'M–R', bg: ['#ffe3ee', '#e6f2ff'] },
+  { p: 'moana', kind: 'abc', set: letters('S', 'Z'), cols: 8, rows: 4, song: 'bonnie', en: 'S–Z', zh: 'S–Z', bg: ['#fff0d6', '#d6f2ee'] },
+  { p: 'aurora', kind: 'case', set: letters('A', 'H'), cols: 4, rows: 4, song: 'lullaby', en: 'Aa–Hh', zh: 'Aa–Hh', bg: ['#ffe0f1', '#ece2ff'] },
+  { p: 'jasmine', kind: 'case', set: letters('I', 'P'), cols: 4, rows: 4, song: 'desert', en: 'Ii–Pp', zh: 'Ii–Pp', bg: ['#d5f2f7', '#eadfff'] },
+  { p: 'cinderella', kind: 'case', set: letters('Q', 'Z'), cols: 5, rows: 4, song: 'danube', en: 'Qq–Zz', zh: 'Qq–Zz', bg: ['#dcecff', '#f2e6ff'] },
+  { trio: ['ariel', 'snowwhite', 'belle'], kind: 'abc', set: letters('A', 'Z'), cols: 8, rows: 7, song: 'turca', en: 'All A–Z', zh: '全部 A–Z', bg: ['#ffe3f1', '#e2ecff'] }
+];
+NUM_LEVELS.forEach(L => { L.deco = '123✦'; });
+ABC_LEVELS.forEach(L => { L.deco = 'ABC✦'; });
+const MODES = { pics: LEVELS, nums: NUM_LEVELS, abc: ABC_LEVELS };
 const PRINCESSES = ALL.filter(id => A[id].p);
-const levelName = L => L.p ? nameOf(L.p) : L[lang];
+const levelName = L => L.kind ? L[lang] : L.p ? nameOf(L.p) : L[lang];
 const levelFace = L => L.p || L.trio[1];
 const portrait = L => L.p ? art(L.p) : `<span class="trio">${L.trio.map(art).join('')}</span>`;
 
@@ -1478,7 +1600,7 @@ const SND = (() => {
     u.lang = lg === 'zh' ? 'zh-CN' : 'en-US'; u.rate = .9; u.pitch = 1.15; u.volume = 1;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   }
-  function preloadVoices(lg, ids) { ids.forEach(id => getVoice(lg, id)); }
+  function preloadVoices(list) { list.forEach(([lg, id]) => getVoice(lg, id)); }   // [[lang, clip id], ...]
   function say(lg, id, text, delay) {
     if (!init() || mode < 1) return;
     const asked = ctx.currentTime;
@@ -1520,6 +1642,20 @@ const SND = (() => {
       [79, 84, 88, 91].forEach((m, i) => note('musicbox', m, t + .1 + i * .07, .2, .07, sfxGain));
     },
     hint() { if (!ok()) return; const t = now(); note('musicbox', 88, t, .2, .12, sfxGain); note('musicbox', 93, t + .12, .3, .12, sfxGain); },
+    reward(kind) {            // timed to the face animation (3.2 s loop; kiss at ~24%, wink at ~34%)
+      if (!ok()) return;
+      const t = now();
+      if (kind === 'kiss') {
+        tone('sine', 620, 1250, t + .7, .16, .2, sfxGain); nz(t + .7, .05, .12, sfxGain, 'bandpass', 2500, 1.2);
+        [84, 88, 91, 96].forEach((m, i) => note('celesta', m, t + .95 + i * .07, .25, .1, sfxGain));
+      } else if (kind === 'wink') {
+        note('musicbox', 96, t + 1.08, .3, .18, sfxGain); note('ice', 91, t + 1.12, .3, .08, sfxGain);
+        tone('triangle', 1600, 2400, t + 1.08, .12, .05, sfxGain);
+      } else {
+        [72, 74, 76, 79, 81, 84].forEach((m, i) => note('harp', m, t + .3 + i * .05, .3, .12, sfxGain));
+        note('musicbox', 96, t + 1.15, .3, .16, sfxGain); note('celesta', 91, t + 1.35, .3, .1, sfxGain);
+      }
+    },
     win() {
       if (!ok()) return;
       const t = now();
@@ -1566,7 +1702,7 @@ function findPath(g, R, C, a, b) {
 // For hints, pick a random picture and show its two closest copies.
 function findAnyPair(g, R, C) {
   const groups = {};
-  for (let r = 1; r <= R; r++) for (let c = 1; c <= C; c++) { const v = g[r][c]; if (v) (groups[v] = groups[v] || []).push([r, c]); }
+  for (let r = 1; r <= R; r++) for (let c = 1; c <= C; c++) { const v = g[r][c]; if (v) (groups[keyOf(v)] = groups[keyOf(v)] || []).push([r, c]); }
   const k = shuffle(Object.keys(groups).filter(x => groups[x].length >= 2))[0];
   if (!k) return null;
   const ps = groups[k], d = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
@@ -1578,7 +1714,17 @@ function fillCells(g, R, C, cells, tiles) {
   shuffle(tiles);
   cells.forEach(([r, c], k) => { g[r][c] = tiles[k]; });
 }
+function buildGlyphTiles(L) {
+  const pairs = L.cols * L.rows / 2, keys = shuffle(L.set.slice()), base = Math.floor(pairs / keys.length);
+  let extra = pairs - base * keys.length;
+  const first = L.kind === 'num' || L.kind === 'count' ? k => 'n' + k : k => 'u' + k;
+  const second = L.kind === 'count' ? k => 'd' + k : L.kind === 'case' ? k => 'l' + k : first;
+  const tiles = [];
+  keys.forEach(k => { const n = base + (extra-- > 0 ? 1 : 0); for (let i = 0; i < n; i++) tiles.push(first(k), second(k)); });
+  return tiles;
+}
 function buildTiles(L) {
+  if (L.kind) return buildGlyphTiles(L);
   let types;
   if (L.mix === 'princesses') types = shuffle(PRINCESSES.slice());
   else if (L.mix) {
@@ -1596,9 +1742,11 @@ function buildTiles(L) {
 
 /* ═══════════════════════  GAME UI  ═══════════════════════ */
 const board = $('#board'), paths = $('#paths'), fx = $('#fx');
-const G = { li: 0, L: null, R: 0, C: 0, g: null, sel: null, left: 0, total: 0, hints: 0, matches: 0, over: true, busy: false, cell: 60, pad: 30, timers: {} };
+const G = { mode: store.get('mode', 'pics'), li: 0, L: null, R: 0, C: 0, g: null, sel: null, left: 0, total: 0, hints: 0, matches: 0, over: true, busy: false, cell: 60, pad: 30, timers: {} };
 const key = (r, c) => r + ',' + c;
 let els = new Map();
+const curLevels = () => MODES[G.mode] || LEVELS;
+const starKey = () => G.mode === 'pics' ? 'stars' : 'stars_' + G.mode;   // picture-game stars keep their old key
 
 function stageBox() { const s = $('#stage').getBoundingClientRect(); return { w: Math.max(100, s.width - 8), h: Math.max(100, s.height - 8) }; }
 function wantTranspose() {
@@ -1671,14 +1819,14 @@ function later(name, ms, fn) { clearTimeout(G.timers[name]); G.timers[name] = se
 
 function startLevel(i) {
   clearTimers();
-  G.li = i; G.L = LEVELS[i]; G.R = G.L.rows; G.C = G.L.cols;
+  G.li = i; G.L = curLevels()[i]; G.R = G.L.rows; G.C = G.L.cols;
   G.sel = null; G.hints = 0; G.matches = 0; G.over = false; G.busy = false;
   $('#win').classList.add('hidden');
   $('#home').classList.add('hidden'); $('#game').classList.remove('hidden');
   theme(G.L); setLevelText();
   const tiles = buildTiles(G.L);
   G.total = G.left = tiles.length / 2;
-  SND.preloadVoices(lang, [...new Set(tiles)]);
+  SND.preloadVoices([...new Set(tiles)].map(id => [A[id].vlang || lang, A[id].vkey || id]));
   if (wantTranspose()) { const x = G.R; G.R = G.C; G.C = x; }
   G.g = emptyGrid(G.R, G.C);
   const cells = [];
@@ -1687,6 +1835,7 @@ function startLevel(i) {
   setHud(); render(true);
   SND.play(G.L.song);
   resetIdle();
+  if (G.L.kind === 'count' || G.L.kind === 'case') later('kindHint', 900, () => toast(t(G.L.kind + 'Hint')));
 }
 function showHome() {
   clearTimers(); G.over = true;
@@ -1695,13 +1844,16 @@ function showHome() {
   SND.play('home');
 }
 function renderHome() {
-  const best = store.get('stars', {});
+  const best = store.get(starKey(), {}), LV = curLevels();
   document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
-  $('#h-title').textContent = t('title'); $('#h-sub').textContent = t('sub'); $('#h-rule').textContent = t('rule'); $('#h-foot').textContent = t('foot');
+  $('#h-title').textContent = t('title'); $('#h-sub').textContent = t('sub_' + G.mode); $('#h-rule').textContent = t('rule_' + G.mode); $('#h-foot').textContent = t('foot');
   $('#h-lang').textContent = t('langBtn');
-  $('#levels').innerHTML = LEVELS.map((L, i) => {
+  document.querySelectorAll('#h-modes button').forEach(b => {
+    b.classList.toggle('on', b.dataset.m === G.mode); b.textContent = t('mode_' + b.dataset.m);
+  });
+  $('#levels').innerHTML = LV.map((L, i) => {
     const st = best[i] || 0;
-    const head = L.mix && !LEVELS[i - 1].mix ? `<div class="sect">✨ ${t('mixTitle')} ✨<small>${t('mixSub')}</small></div>` : '';
+    const head = L.mix && !LV[i - 1].mix ? `<div class="sect">✨ ${t('mixTitle')} ✨<small>${t('mixSub')}</small></div>` : '';
     return head + `<button class="lvl${L.mix ? ' mix' : ''}" type="button" data-i="${i}" style="--c1:${L.bg[0]};--c2:${L.bg[1]}">` +
       `<span class="num">${i + 1}</span><span class="size">${L.cols}×${L.rows}</span>` +
       `<span class="por">${portrait(L)}</span><span class="nm">${levelName(L)}</span>` +
@@ -1725,8 +1877,8 @@ function tap(r, c) {
   const s = G.sel;
   if (!s) { select([r, c]); SND.sfx.select(); return; }
   if (s[0] === r && s[1] === c) { deselect(); SND.sfx.tap(); return; }
-  if (G.g[s[0]][s[1]] !== tp) { wobble(s); deselect(); select([r, c]); SND.sfx.select(); return; }
-  // Same picture = match. Draw the tidy connecting route when one exists, otherwise a straight sparkle line.
+  if (keyOf(G.g[s[0]][s[1]]) !== keyOf(tp)) { wobble(s); deselect(); select([r, c]); SND.sfx.select(); return; }
+  // Same picture (or same number / letter) = match. Draw the tidy connecting route when one exists, otherwise a straight sparkle line.
   const path = findPath(G.g, G.R, G.C, s, [r, c]) || [s, [r, c]];
   deselect();
   doMatch(s, [r, c], path, tp);
@@ -1740,7 +1892,7 @@ function doMatch(a, b, path, tp) {
   [ea, eb].forEach(el => { if (!el) return; el.classList.add('gone'); setTimeout(() => { burst(el); }, 150); setTimeout(() => el.remove(), 650); });
   if (ea && eb) namePop(tp, ea, eb);
   SND.sfx.match(G.matches - 1);
-  SND.say(lang, tp, nameOf(tp), .22);
+  SND.say(A[tp].vlang || lang, A[tp].vkey || tp, nameOf(tp), .22);
   setHud();
   if (G.left === 0) { G.over = true; later('win', 800, win); }
 }
@@ -1768,7 +1920,7 @@ function burst(el) {
 function namePop(tp, ea, eb) {
   const [x1, y1] = center(ea), [x2, y2] = center(eb);
   const s = document.createElement('div');
-  s.className = 'namepop'; s.textContent = nameOf(tp);
+  s.className = 'namepop'; s.textContent = popText(tp);
   const x = Math.min(window.innerWidth - 80, Math.max(80, (x1 + x2) / 2));
   s.style.left = x + 'px'; s.style.top = ((y1 + y2) / 2) + 'px';
   fx.appendChild(s); setTimeout(() => s.remove(), 1250);
@@ -1802,10 +1954,13 @@ function resetIdle() { later('idle', 20000, () => showHint(false)); }
 function win() {
   clearTimers();
   const stars = G.hints <= 1 ? 3 : G.hints <= 3 ? 2 : 1;
-  const best = store.get('stars', {});
-  if ((best[G.li] || 0) < stars) { best[G.li] = stars; store.set('stars', best); }
-  const last = G.li === LEVELS.length - 1;
-  $('#w-por').innerHTML = portrait(G.L);
+  const best = store.get(starKey(), {});
+  if ((best[G.li] || 0) < stars) { best[G.li] = stars; store.set(starKey(), best); }
+  const last = G.li === curLevels().length - 1;
+  let k = rnd(3); if (k === lastReward) k = (k + 1) % 3; lastReward = k;
+  const kind = REWARDS[k], host = levelFace(G.L), wrap = $('#w-wrap');
+  wrap.className = 'wpor-wrap' + (G.L.p ? '' : ' is-trio');
+  $('#w-por').innerHTML = rewardPortrait(G.L);
   $('#w-title').textContent = last ? t('allDone') : t('win');
   $('#w-sub').textContent = G.L.p ? t('winSub', nameOf(G.L.p)) : t('winSubAll');
   $('#w-home').textContent = t('levels'); $('#w-again').textContent = t('again'); $('#w-next').textContent = t('next');
@@ -1815,7 +1970,26 @@ function win() {
   $('#win').classList.remove('hidden');
   SND.stop(.4); SND.sfx.win(); confetti();
   later('resume', 2800, () => { if (!$('#win').classList.contains('hidden')) SND.play(G.L.song); });
+  later('reward', 1300, () => {            // the host princess's reward starts once the card has popped in
+    if ($('#win').classList.contains('hidden')) return;
+    wrap.classList.add('rwk-' + kind);
+    const svg = $('#w-por .rw'); if (svg) svg.classList.add('rw-' + kind);
+    $('#w-sub').textContent = t('rw_' + kind, nameOf(host));
+    SND.sfx.reward(kind);
+  });
 }
+const REWARDS = ['kiss', 'wink', 'glance'];
+let lastReward = -1;
+// A live (inline) copy of the princess drawing plus closed-eye lids, puckered lips, blush and a sparkle, all hidden
+// until a .rw-<kind> class animates them.
+function rewardSvg(id) {
+  const lid = (x, s) => `<path class="lid${s}" d="M${x - 3.6} 49.6Q${x} 52.8 ${x + 3.6} 49.6" stroke="#2b1d1a" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 100 100" class="rw" aria-hidden="true">${A[id].svg}${lid(42, 'L')}${lid(58, 'R')}` +
+    `<g class="blx"><ellipse cx="37.4" cy="55.6" rx="3.8" ry="2.3" fill="#ff5f8a" opacity=".45"/><ellipse cx="62.6" cy="55.6" rx="3.8" ry="2.3" fill="#ff5f8a" opacity=".45"/></g>` +
+    `<path class="kiss" d="M50 62C47.4 60.2 47 58 48.5 57.4C49.4 57.1 50 57.7 50 58.4C50 57.7 50.6 57.1 51.5 57.4C53 58 52.6 60.2 50 62Z" fill="#e8506e"/>` +
+    `<g class="spk">${sparkle(67, 42, 4.5, '#ffd54a')}</g></svg>`;
+}
+const rewardPortrait = L => L.p ? rewardSvg(L.p) : `<span class="trio">${art(L.trio[0])}${rewardSvg(L.trio[1])}${art(L.trio[2])}</span>`;
 function confetti() {
   const colors = ['#ff5fa2', '#ffcf3f', '#a78bfa', '#5ec1ec', '#7fdc8f', '#ff8cc0'];
   for (let i = 0; i < 70; i++) {
@@ -1845,8 +2019,12 @@ $('#h-sound').addEventListener('click', cycleSound);
 $('#g-sound').addEventListener('click', cycleSound);
 $('#h-lang').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; store.set('lang', lang); renderHome(); soundIcons(); setLevelText(); SND.sfx.tap(); });
 $('#w-home').addEventListener('click', showHome);
+$('#h-modes').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.m === G.mode) return;
+  G.mode = b.dataset.m; store.set('mode', G.mode); SND.sfx.tap(); renderHome(); $('#home').scrollTop = 0;
+});
 $('#w-again').addEventListener('click', () => startLevel(G.li));
-$('#w-next').addEventListener('click', () => startLevel(Math.min(G.li + 1, LEVELS.length - 1)));
+$('#w-next').addEventListener('click', () => startLevel(Math.min(G.li + 1, curLevels().length - 1)));
 let rsz = 0;
 window.addEventListener('resize', () => {
   clearTimeout(rsz);
@@ -1864,7 +2042,7 @@ showHome();
 
 /* debug / test hooks */
 window.PM = {
-  G, A, LEVELS, SONGS, SND, startLevel, findAnyPair, findPath, render, tap,
+  G, A, LEVELS, MODES, SONGS, SND, startLevel, keyOf, rewardSvg, findAnyPair, findPath, render, tap,
   validate() {
     const issues = [];
     for (const [id, s] of Object.entries(SONGS)) {
