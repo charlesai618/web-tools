@@ -274,8 +274,8 @@ const STR = {
     hint: 'Hint', shuffle: 'Shuffle', home: 'All levels', pairs: 'Pairs left',
     sound: ['Sound off', 'Sound effects only', 'Music and sound on'],
     mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters',
-    sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two tiles with the same number and tap them!',
-    sub_abc: 'Find two tiles with the same letter and tap them!',
+    sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two of the same number — or the same princess — and tap them!',
+    sub_abc: 'Find two of the same letter — or the same princess — and tap them!',
     rule_pics: 'Any two that are the same will disappear — no matter where they are!',
     rule_nums: 'In the Count levels, match each number with the same number of stars ⭐',
     rule_abc: 'In the Big & little levels, match each big letter with its little letter: A + a',
@@ -293,7 +293,7 @@ const STR = {
     hint: '提示', shuffle: '洗牌', home: '选关', pairs: '剩余',
     sound: ['声音关闭', '只有音效', '音乐和音效'],
     mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母',
-    sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字，点一点它们！', sub_abc: '找到两个一样的字母，点一点它们！',
+    sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字（或者一样的公主），点一点它们！', sub_abc: '找到两个一样的字母（或者一样的公主），点一点它们！',
     rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
     rule_nums: '「数一数」关卡：把数字和一样多的星星配成一对 ⭐',
     rule_abc: '「大小写」关卡：把大写字母和它的小写字母配成一对，比如 A 和 a',
@@ -1048,7 +1048,7 @@ const NUM_LEVELS = [
   { p: 'aurora', kind: 'num', set: range(1, 8), cols: 8, rows: 4, song: 'lullaby', en: '1–8', zh: '1–8', bg: ['#ffe0f1', '#ece2ff'] },
   { p: 'ariel', kind: 'num', set: range(1, 10), cols: 6, rows: 6, song: 'bonnie', en: '1–10', zh: '1–10', bg: ['#cff3ee', '#d9e6ff'] },
   { p: 'belle', kind: 'count', set: range(1, 5), cols: 5, rows: 4, song: 'minuet', en: 'Count 1–5', zh: '数一数 1–5', bg: ['#fff0c2', '#ffe0d6'] },
-  { p: 'jasmine', kind: 'count', set: range(1, 10), cols: 5, rows: 4, song: 'desert', en: 'Count 1–10', zh: '数一数 1–10', bg: ['#d5f2f7', '#eadfff'] },
+  { p: 'jasmine', kind: 'count', set: range(1, 10), cols: 6, rows: 4, song: 'desert', en: 'Count 1–10', zh: '数一数 1–10', bg: ['#d5f2f7', '#eadfff'] },
   { p: 'mulan', kind: 'num', set: range(11, 20), cols: 6, rows: 6, song: 'jasmineflower', en: '11–20', zh: '11–20', bg: ['#ffe4d6', '#ffd9e6'] },
   { p: 'tiana', kind: 'num', set: range(1, 20), cols: 8, rows: 6, song: 'saints', en: '1–20', zh: '1–20', bg: ['#e1f5d8', '#fff1c4'] }
 ];
@@ -1058,10 +1058,10 @@ const ABC_LEVELS = [
   { p: 'elsa', kind: 'abc', set: letters('G', 'L'), cols: 6, rows: 4, song: 'elise', en: 'G–L', zh: 'G–L', bg: ['#dcf2ff', '#ebe4ff'] },
   { p: 'anna', kind: 'abc', set: letters('M', 'R'), cols: 6, rows: 4, song: 'jingle', en: 'M–R', zh: 'M–R', bg: ['#ffe3ee', '#e6f2ff'] },
   { p: 'moana', kind: 'abc', set: letters('S', 'Z'), cols: 8, rows: 4, song: 'bonnie', en: 'S–Z', zh: 'S–Z', bg: ['#fff0d6', '#d6f2ee'] },
-  { p: 'aurora', kind: 'case', set: letters('A', 'H'), cols: 4, rows: 4, song: 'lullaby', en: 'Aa–Hh', zh: 'Aa–Hh', bg: ['#ffe0f1', '#ece2ff'] },
-  { p: 'jasmine', kind: 'case', set: letters('I', 'P'), cols: 4, rows: 4, song: 'desert', en: 'Ii–Pp', zh: 'Ii–Pp', bg: ['#d5f2f7', '#eadfff'] },
-  { p: 'cinderella', kind: 'case', set: letters('Q', 'Z'), cols: 5, rows: 4, song: 'danube', en: 'Qq–Zz', zh: 'Qq–Zz', bg: ['#dcecff', '#f2e6ff'] },
-  { trio: ['ariel', 'snowwhite', 'belle'], kind: 'abc', set: letters('A', 'Z'), cols: 8, rows: 7, song: 'turca', en: 'All A–Z', zh: '全部 A–Z', bg: ['#ffe3f1', '#e2ecff'] }
+  { p: 'aurora', kind: 'case', set: letters('A', 'H'), cols: 5, rows: 4, song: 'lullaby', en: 'Aa–Hh', zh: 'Aa–Hh', bg: ['#ffe0f1', '#ece2ff'] },
+  { p: 'jasmine', kind: 'case', set: letters('I', 'P'), cols: 5, rows: 4, song: 'desert', en: 'Ii–Pp', zh: 'Ii–Pp', bg: ['#d5f2f7', '#eadfff'] },
+  { p: 'cinderella', kind: 'case', set: letters('Q', 'Z'), cols: 6, rows: 4, song: 'danube', en: 'Qq–Zz', zh: 'Qq–Zz', bg: ['#dcecff', '#f2e6ff'] },
+  { trio: ['ariel', 'snowwhite', 'belle'], kind: 'abc', set: letters('A', 'Z'), cols: 8, rows: 8, song: 'turca', en: 'All A–Z', zh: '全部 A–Z', bg: ['#ffe3f1', '#e2ecff'] }
 ];
 NUM_LEVELS.forEach(L => { L.deco = '123✦'; });
 ABC_LEVELS.forEach(L => { L.deco = 'ABC✦'; });
@@ -1714,13 +1714,21 @@ function fillCells(g, R, C, cells, tiles) {
   shuffle(tiles);
   cells.forEach(([r, c], k) => { g[r][c] = tiles[k]; });
 }
+// Number / letter boards: mostly numbers or letters (every one in the level appears at least once), plus about a
+// quarter of the pairs as princesses — the level's host first, then others on bigger boards.
 function buildGlyphTiles(L) {
-  const pairs = L.cols * L.rows / 2, keys = shuffle(L.set.slice()), base = Math.floor(pairs / keys.length);
-  let extra = pairs - base * keys.length;
+  const pairs = L.cols * L.rows / 2, keys = shuffle(L.set.slice());
+  const pp = Math.max(0, Math.min(pairs - keys.length, Math.max(2, Math.round(pairs * .25))));
+  const hosts = L.p ? [L.p] : L.trio.slice();
+  const nP = pp ? Math.max(Math.min(hosts.length, pp), Math.ceil(pp / 2)) : 0;
+  const ptypes = [...hosts, ...shuffle(PRINCESSES.filter(x => !hosts.includes(x)))].slice(0, nP);
+  const gp = pairs - pp, base = Math.floor(gp / keys.length);
+  let extra = gp - base * keys.length;
   const first = L.kind === 'num' || L.kind === 'count' ? k => 'n' + k : k => 'u' + k;
   const second = L.kind === 'count' ? k => 'd' + k : L.kind === 'case' ? k => 'l' + k : first;
   const tiles = [];
   keys.forEach(k => { const n = base + (extra-- > 0 ? 1 : 0); for (let i = 0; i < n; i++) tiles.push(first(k), second(k)); });
+  ptypes.forEach((p, i) => { const n = Math.floor(pp / nP) + (i < pp % nP ? 1 : 0); for (let j = 0; j < n; j++) tiles.push(p, p); });
   return tiles;
 }
 function buildTiles(L) {
