@@ -195,6 +195,21 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 /* mode tabs */
 .modes{display:flex;gap:4px;margin:12px 0 2px;background:rgba(255,255,255,.6);padding:5px;border-radius:999px;box-shadow:0 3px 0 var(--edge)}
 .modes button{border:0;border-radius:999px;padding:9px 15px;font-weight:700;font-size:1rem;background:transparent;color:var(--ink2);white-space:nowrap}
+.modes{flex-wrap:wrap;justify-content:center;max-width:100%}
+@media (max-width:440px){.modes{border-radius:22px}.modes button{padding:8px 9px;font-size:.88rem}}
+/* puzzle */
+#pboard{position:relative;border-radius:18px;background:rgba(255,255,255,.6);box-shadow:0 6px 0 var(--edge),0 14px 30px rgba(120,60,140,.2)}
+.ptile{position:absolute;border:0;padding:0;background:#fff;border-radius:9%;overflow:hidden;cursor:pointer;
+  transition:left .3s ease,top .3s ease,width .4s,height .4s,transform .15s,box-shadow .25s,border-radius .4s;box-shadow:0 2px 0 rgba(120,60,140,.2)}
+.ptile svg{display:block;width:100%;height:100%;pointer-events:none}
+.ptile.sel{transform:scale(1.07);z-index:3;box-shadow:0 0 0 4px var(--gold),0 0 18px 6px rgba(255,207,63,.85)}
+.ptile.ok{box-shadow:0 0 0 2px #fff,0 0 12px 3px rgba(255,207,63,.65)}
+.ptile.hintme{animation:hintPulse .6s ease-in-out infinite alternate;z-index:2}
+#pboard.solved .ptile{border-radius:0;box-shadow:none}
+#pboard.solved{box-shadow:0 0 0 6px #fff,0 0 0 11px var(--gold),0 14px 40px rgba(255,180,0,.45);transition:box-shadow .5s}
+.peek{position:absolute;inset:0;border-radius:18px;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .35s;z-index:8}
+.peek svg{display:block;width:100%;height:100%}
+.peek.show{opacity:1}
 .modes button.on{background:#fff;color:var(--pink);box-shadow:0 2px 8px rgba(120,60,140,.18)}
 .wcard h2{font-size:1.9rem;color:var(--pink);line-height:1.15}
 .wcard p{color:var(--ink2);margin:6px 0 6px;font-weight:600}
@@ -216,7 +231,7 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
   </div>
   <div class="crown" id="h-crown" aria-hidden="true"></div>
   <h1 class="title" id="h-title"></h1>
-  <div class="modes" id="h-modes" role="tablist"><button type="button" data-m="pics"></button><button type="button" data-m="nums"></button><button type="button" data-m="abc"></button></div>
+  <div class="modes" id="h-modes" role="tablist"><button type="button" data-m="pics"></button><button type="button" data-m="nums"></button><button type="button" data-m="abc"></button><button type="button" data-m="puzzle"></button></div>
   <p class="sub" id="h-sub"></p>
   <p class="rule" id="h-rule"></p>
   <div class="levels" id="levels"></div>
@@ -227,13 +242,13 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
   <header class="bar">
     <button id="g-home" class="ib" type="button">🏰</button>
     <div class="lvinfo"><span class="mini" id="g-mini"></span><span class="txt"><b id="g-title"></b><small id="g-song"></small></span></div>
-    <div class="pairs"><span aria-hidden="true">💖</span><b id="g-left">0</b></div>
+    <div class="pairs"><span aria-hidden="true" id="g-icon">💖</span><b id="g-left">0</b></div>
     <button id="g-hint" class="ib" type="button">💡</button>
     <button id="g-shuffle" class="ib" type="button">🔀</button>
     <button id="g-sound" class="ib" type="button"></button>
   </header>
   <div class="progress"><i id="g-prog"></i></div>
-  <main id="stage"><div id="board"><svg id="paths" xmlns="http://www.w3.org/2000/svg"></svg></div></main>
+  <main id="stage"><div id="board"><svg id="paths" xmlns="http://www.w3.org/2000/svg"></svg></div><div id="pboard" class="hidden"></div></main>
 </section>
 
 <div id="win" class="hidden" role="dialog" aria-modal="true">
@@ -277,7 +292,10 @@ const STR = {
     next: 'Next level ▶', again: 'Play again', levels: 'All levels',
     hint: 'Hint', shuffle: 'Shuffle', home: 'All levels', pairs: 'Pairs left',
     sound: ['Sound off', 'Sound effects only', 'Music and sound on'],
-    mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters',
+    mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters', mode_puzzle: '🧩 Puzzle',
+    sub_puzzle: 'Tap two squares to swap them and put the princess back together!',
+    rule_puzzle: 'Squares in the right place sparkle. Tap 👀 to peek at the whole picture.',
+    peek: 'Peek at the picture', placed: 'Squares in place',
     sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two of the same number, letter or princess and tap them!',
     sub_abc: 'Find two of the same letter, number or princess and tap them!',
     rule_pics: 'Any two that are the same will disappear — no matter where they are!',
@@ -296,7 +314,10 @@ const STR = {
     next: '下一关 ▶', again: '再玩一次', levels: '选关',
     hint: '提示', shuffle: '洗牌', home: '选关', pairs: '剩余',
     sound: ['声音关闭', '只有音效', '音乐和音效'],
-    mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母',
+    mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母', mode_puzzle: '🧩 拼图',
+    sub_puzzle: '点两个小方格交换位置，把公主的图片拼好！',
+    rule_puzzle: '放对位置的小方格会闪闪发光。点 👀 可以偷看整张图片。',
+    peek: '看看原图', placed: '已拼好',
     sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字、字母或公主，点一点它们！', sub_abc: '找到两个一样的字母、数字或公主，点一点它们！',
     rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
     rule_nums: '两个一样的数字、字母或公主就能消除，不管它们在哪里！',
@@ -1009,7 +1030,9 @@ const glyphHtml = id => {
 function buildSprite() {
   const defs = `<defs><radialGradient id="g-glow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".95"/>` +
     `<stop offset=".55" stop-color="#ffd27a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient></defs>`;
-  const syms = Object.keys(A).map(id => `<symbol id="a-${id}" viewBox="0 0 100 100">${A[id].svg}</symbol>`).join('');
+  const syms = Object.keys(A).map(id => `<symbol id="a-${id}" viewBox="0 0 100 100">${A[id].svg}</symbol>`).join('') +
+    PUZZLE_LEVELS.map(L => `<linearGradient id="sg-${L.p}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${L.sky[0]}"/>` +
+      `<stop offset="1" stop-color="${L.sky[1]}"/></linearGradient><symbol id="scene-${L.p}" viewBox="0 0 300 300">${sceneSvg(L)}</symbol>`).join('');
   const holder = document.createElement('div');
   holder.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">${defs}${syms}</svg>`;
   document.body.prepend(holder.firstChild);
@@ -1062,7 +1085,73 @@ const ABC_LEVELS = [
 ];
 NUM_LEVELS.forEach(L => { L.deco = L.deco || '123✦'; });
 ABC_LEVELS.forEach(L => { L.deco = 'ABC✦'; });
-const MODES = { pics: LEVELS, nums: NUM_LEVELS, abc: ABC_LEVELS };
+/* ── puzzle: one big princess scene per level, cut into n×n squares; tap two squares to swap them ── */
+const PUZZLE_LEVELS = [
+  { p: 'snowwhite', n: 2, song: 'twinkle', items: ['apple', 'bird', 'dwarf', 'mirror'], sky: ['#bfe6ff', '#fff0f5'], ground: '#a6e09a', motif: 'heart' },
+  { p: 'cinderella', n: 2, song: 'danube', items: ['slipper', 'pumpkin', 'mouse', 'wand'], sky: ['#c3d6ff', '#f6e9ff'], ground: '#cfe0ff', motif: 'star' },
+  { p: 'aurora', n: 3, song: 'lullaby', items: ['spinwheel', 'fairy', 'owl', 'crown'], sky: ['#ffd6ec', '#fff6e0'], ground: '#b6e3a4', motif: 'flower' },
+  { p: 'ariel', n: 3, song: 'bonnie', items: ['crab', 'fish', 'shell', 'seahorse'], sky: ['#6fcdee', '#c9f1ff'], ground: '#f3dca6', motif: 'bubble' },
+  { p: 'belle', n: 3, song: 'minuet', items: ['rose', 'teacup', 'book', 'candle'], sky: ['#fff0c2', '#ffd9c9'], ground: '#e8c39a', motif: 'heart' },
+  { p: 'jasmine', n: 3, song: 'desert', items: ['lamp', 'tiger', 'carpet', 'palace'], sky: ['#2b2d6e', '#7a5cc9'], ground: '#f2cf8a', motif: 'star', night: true },
+  { p: 'mulan', n: 3, song: 'jasmineflower', items: ['dragon', 'blossom', 'redlantern', 'fan'], sky: ['#ffe0cc', '#ffd0dc'], ground: '#9fd39a', motif: 'flower' },
+  { p: 'tiana', n: 3, song: 'saints', items: ['frog', 'firefly', 'trumpet', 'lily'], sky: ['#3b4a8f', '#8fb0e8'], ground: '#4f9a5a', motif: 'star', night: true },
+  { p: 'rapunzel', n: 4, song: 'morning', items: ['lantern', 'chameleon', 'pan', 'tower'], extra: ['brush', 'goldflower'], sky: ['#b79bff', '#ffd9b0'], ground: '#9ad18a', motif: 'star' },
+  { p: 'elsa', n: 4, song: 'elise', items: ['snowman', 'reindeer', 'snowflake', 'icecastle'], extra: ['carrot', 'glove'], sky: ['#7cc6f2', '#dff2ff'], ground: '#ffffff', motif: 'snow' },
+  { p: 'anna', n: 4, song: 'jingle', items: ['snowman', 'reindeer', 'carrot', 'sled'], extra: ['snowflake', 'icecastle'], sky: ['#ffb8d6', '#cfe8ff'], ground: '#ffffff', motif: 'snow' },
+  { p: 'moana', n: 4, song: 'entertainer', items: ['shell', 'starfish', 'fish', 'lily'], extra: ['crab', 'seahorse'], sky: ['#9fe3ff', '#fff1d0'], ground: '#f6dca0', motif: 'bubble' }
+];
+PUZZLE_LEVELS.forEach(L => {
+  const twin = LEVELS.find(x => x.p === L.p);
+  Object.assign(L, { puzzle: true, cols: L.n, rows: L.n, bg: twin ? twin.bg : [L.sky[1], '#ffe3f1'], deco: twin ? twin.deco : '✦♥✿' });
+});
+function seeded(str) {          // tiny deterministic RNG so every scene looks the same each time
+  let h = 2166136261;
+  for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
+}
+const heartPath = (x, y, s, c) => `<path d="M${x} ${y + s * .9}C${x - s * 1.4} ${y - s * .1} ${x - s * .6} ${y - s * 1.1} ${x} ${y - s * .35}` +
+  `C${x + s * .6} ${y - s * 1.1} ${x + s * 1.4} ${y - s * .1} ${x} ${y + s * .9}Z" fill="${c}"/>`;
+function motifMark(kind, x, y, sz, R) {
+  const pal = ['#ffffff', '#ffd54a', '#ff8cc0', '#a78bfa', '#7fd3ff'];
+  const c = pal[Math.floor(R() * pal.length)];
+  if (kind === 'heart') return heartPath(x, y, sz, c);
+  if (kind === 'flower') return flower(x, y, sz * .7, c, '#ffd54a');
+  if (kind === 'bubble') return `<circle cx="${x}" cy="${y}" r="${sz}" fill="#fff" fill-opacity=".25" stroke="#fff" stroke-width="1.6" stroke-opacity=".9"/>`;
+  if (kind === 'snow') return `<path d="M${x - sz} ${y}H${x + sz}M${x - sz / 2} ${y - sz * .87}L${x + sz / 2} ${y + sz * .87}M${x - sz / 2} ${y + sz * .87}L${x + sz / 2} ${y - sz * .87}" stroke="#fff" stroke-width="${(sz * .3).toFixed(1)}" stroke-linecap="round"/>`;
+  return sparkle(x, y, sz, c);
+}
+function sceneSvg(L) {
+  const R = seeded(L.p);
+  let s = `<rect width="300" height="300" fill="url(#sg-${L.p})"/>`;
+  if (L.night) {
+    s += `<circle cx="150" cy="44" r="22" fill="#fff6c8"/><circle cx="160" cy="38" r="20" fill="${L.sky[0]}"/>`;
+  } else {
+    ['#ff7a8a', '#ffb35c', '#ffe26b', '#8fe08a', '#7fc8ff', '#b79bff'].forEach((c, i) => {
+      const r = 168 - i * 9;          // tall enough that the top row of a 4×4 cut still gets a slice of rainbow
+      s += `<path d="M${150 - r} 205A${r} ${r} 0 0 1 ${150 + r} 205" stroke="${c}" stroke-width="9" fill="none" opacity=".7"/>`;
+    });
+  }
+  if (!L.night) s += cloud(108, 30, 1) + cloud(198, 58, .8);
+  for (let i = 0; i < 36; i++) s += motifMark(L.motif, (8 + R() * 284).toFixed(1) * 1, (6 + R() * 220).toFixed(1) * 1, 3.5 + R() * 5.5, R);
+  s += `<path d="M0 238Q75 218 150 236T300 232V300H0Z" fill="${L.ground}"/>` +
+    (L.ground === '#ffffff' ? `<path d="M0 238Q75 218 150 236T300 232" stroke="#bfe3f7" stroke-width="3" fill="none"/>` : '');
+  for (let i = 0; i < 9; i++) s += groundMark(L.ground, 12 + i * 34 + R() * 10, 252 + R() * 38, R);   // no plain ground squares
+  s += `<g transform="translate(32.5 62) scale(2.35)">${A[L.p].svg}</g>`;
+  [[6, 6, .8], [214, 6, .8], [2, 150, .74], [224, 150, .74]].forEach(([x, y, k], i) => {
+    s += `<g transform="translate(${x} ${y}) scale(${k})">${A[L.items[i]].svg}</g>`;
+  });
+  (L.extra || []).forEach((id, i) => { s += `<g transform="translate(${i ? 244 : 2} 240) scale(.56)">${A[id].svg}</g>`; });   // 4×4 bottom corners
+  return s;
+}
+const cloud = (x, y, k) => `<g transform="translate(${x} ${y}) scale(${k})" fill="#fff" opacity=".92"><circle cx="-16" cy="4" r="11"/><circle cx="0" cy="-4" r="15"/>` +
+  `<circle cx="17" cy="3" r="12"/><rect x="-26" y="3" width="54" height="12" rx="6"/></g>`;
+function groundMark(ground, x, y, R) {
+  x = +x.toFixed(1); y = +y.toFixed(1);
+  if (ground === '#ffffff') return motifMark('snow', x, y, 4 + R() * 3, R).replace('stroke="#fff"', 'stroke="#8ccbf0"');
+  if (/^#f[0-9a-f]{5}$/i.test(ground) && ground !== '#ffffff') return `<path d="${starPath(x, y, 5 + R() * 2, 2.4)}" fill="${['#ff9e6e', '#ff8fb1', '#fff'][Math.floor(R() * 3)]}"/>`;
+  return flower(x, y, 2.6 + R() * 1.4, ['#ff8fb1', '#fff', '#ffd54a', '#c9a2ff'][Math.floor(R() * 4)], '#ffd54a');
+}
+const MODES = { pics: LEVELS, nums: NUM_LEVELS, abc: ABC_LEVELS, puzzle: PUZZLE_LEVELS };
 const PRINCESSES = ALL.filter(id => A[id].p);
 const levelName = L => L.kind ? L[lang] : L.p ? nameOf(L.p) : L[lang];
 const levelFace = L => L.p || L.trio[1];
@@ -1811,8 +1900,11 @@ function setLevelText() {
   $('#g-title').innerHTML = `<span class="lv-long">${t('level', G.li + 1)} · </span><span class="lv-short">${G.li + 1} · </span>${levelName(G.L)}`;
   $('#g-song').textContent = '♪ ' + songName(G.L.song);
   $('#g-mini').innerHTML = art(levelFace(G.L));
-  for (const [id, k] of [['#g-home', 'home'], ['#g-hint', 'hint'], ['#g-shuffle', 'shuffle']]) { $(id).title = t(k); $(id).setAttribute('aria-label', t(k)); }
-  $('.pairs').title = t('pairs');
+  const pz = !!G.L.puzzle;
+  $('#g-shuffle').textContent = pz ? '👀' : '🔀';
+  $('#g-icon').textContent = pz ? '🧩' : '💖';
+  for (const [id, k] of [['#g-home', 'home'], ['#g-hint', 'hint'], ['#g-shuffle', pz ? 'peek' : 'shuffle']]) { $(id).title = t(k); $(id).setAttribute('aria-label', t(k)); }
+  $('.pairs').title = t(pz ? 'placed' : 'pairs');
 }
 function theme(L) {
   const bg = L ? L.bg : ['#ffe3f1', '#e9e2ff'];
@@ -1834,6 +1926,8 @@ function clearTimers() { for (const k in G.timers) clearTimeout(G.timers[k]); G.
 function later(name, ms, fn) { clearTimeout(G.timers[name]); G.timers[name] = setTimeout(fn, ms); }
 
 function startLevel(i) {
+  if (curLevels()[i].puzzle) return startPuzzle(i);
+  $('#pboard').classList.add('hidden'); $('#board').classList.remove('hidden');
   clearTimers();
   G.li = i; G.L = curLevels()[i]; G.R = G.L.rows; G.C = G.L.cols;
   G.sel = null; G.hints = 0; G.matches = 0; G.over = false; G.busy = false;
@@ -1969,7 +2063,7 @@ function resetIdle() { later('idle', 20000, () => showHint(false)); }
 
 function win() {
   clearTimers();
-  const stars = G.hints <= 1 ? 3 : G.hints <= 3 ? 2 : 1;
+  const stars = G.L.puzzle ? puzzleStars() : G.hints <= 1 ? 3 : G.hints <= 3 ? 2 : 1;
   const best = store.get(starKey(), {});
   if ((best[G.li] || 0) < stars) { best[G.li] = stars; store.set(starKey(), best); }
   const last = G.li === curLevels().length - 1;
@@ -2018,6 +2112,122 @@ function confetti() {
   }
 }
 
+/* ── puzzle game ── */
+const pboard = $('#pboard');
+const PZ = { L: null, n: 3, perm: [], sel: -1, moves: 0, hints: 0, opt: 0, done: true, busy: false, els: [] };
+function scramble(N) {
+  let perm;
+  do { perm = shuffle(range(0, N - 1)); } while (perm.filter((v, i) => v === i).length > Math.floor(N / 4));
+  return perm;
+}
+function minSwaps(perm) {          // squares minus cycles = fewest swaps that solve it
+  const seen = new Array(perm.length).fill(false);
+  let cycles = 0;
+  perm.forEach((_, i) => { if (seen[i]) return; cycles++; for (let j = i; !seen[j]; j = perm[j]) seen[j] = true; });
+  return perm.length - cycles;
+}
+function startPuzzle(i) {
+  clearTimers();
+  G.li = i; G.L = curLevels()[i]; G.over = true; G.hints = 0;   // G.over keeps the matching-board logic idle
+  $('#win').classList.add('hidden');
+  $('#home').classList.add('hidden'); $('#game').classList.remove('hidden');
+  $('#board').classList.add('hidden'); pboard.classList.remove('hidden', 'solved');
+  theme(G.L); setLevelText();
+  const n = G.L.n, N = n * n;
+  Object.assign(PZ, { L: G.L, n, perm: scramble(N), sel: -1, moves: 0, hints: 0, done: false, busy: false });
+  PZ.opt = minSwaps(PZ.perm);
+  const v = 300 / n;
+  pboard.innerHTML = `<div class="peek"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg></div>`;
+  PZ.els = range(0, N - 1).map(k => {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'ptile'; el.dataset.piece = k;
+    el.setAttribute('aria-label', (k + 1) + '/' + N);
+    el.innerHTML = `<svg viewBox="${(k % n) * v} ${Math.floor(k / n) * v} ${v} ${v}" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg>`;
+    pboard.appendChild(el);
+    return el;
+  });
+  layoutPuzzle();
+  PZ.perm.forEach((piece, pos) => PZ.els[piece].classList.toggle('ok', piece === pos));
+  puzzleHud();
+  SND.preloadVoices([[lang, G.L.p]]);
+  SND.play(G.L.song);
+}
+function layoutPuzzle() {
+  if (!PZ.L) return;
+  const { w, h } = stageBox(), n = PZ.n;
+  const S = Math.floor(Math.min(w - 8, h - 8, 560)), cell = S / n, gap = PZ.done ? 0 : Math.max(3, cell * .04);
+  pboard.style.width = pboard.style.height = S + 'px';
+  PZ.perm.forEach((piece, pos) => {
+    const el = PZ.els[piece];
+    el.style.left = ((pos % n) * cell + gap / 2) + 'px'; el.style.top = (Math.floor(pos / n) * cell + gap / 2) + 'px';
+    el.style.width = el.style.height = (cell - gap) + 'px';
+  });
+}
+function puzzleHud() {
+  const N = PZ.n * PZ.n, ok = PZ.perm.filter((v, i) => v === i).length;
+  $('#g-left').textContent = ok + '/' + N;
+  $('#g-prog').style.width = (ok / N * 100) + '%';
+  return ok === N;
+}
+function puzzleSelect(pos) {
+  if (PZ.sel >= 0) PZ.els[PZ.perm[PZ.sel]].classList.remove('sel');
+  PZ.sel = pos;
+  if (pos >= 0) PZ.els[PZ.perm[pos]].classList.add('sel');
+}
+function swapSquares(a, b) {
+  const pa = PZ.perm[a], pb = PZ.perm[b];
+  PZ.perm[a] = pb; PZ.perm[b] = pa;
+  layoutPuzzle(); SND.sfx.tap();
+  PZ.busy = true;
+  setTimeout(() => {
+    PZ.busy = false;
+    let placed = 0;
+    for (const pos of [a, b]) {
+      const el = PZ.els[PZ.perm[pos]], ok = PZ.perm[pos] === pos;
+      if (ok && !el.classList.contains('ok')) { placed++; burst(el); }
+      el.classList.toggle('ok', ok);
+    }
+    if (placed) SND.sfx.match(PZ.perm.filter((v, i) => v === i).length);
+    if (puzzleHud()) finishPuzzle();
+  }, 320);
+}
+function finishPuzzle() {
+  PZ.done = true; puzzleSelect(-1);
+  pboard.classList.add('solved'); layoutPuzzle();
+  SND.say(lang, PZ.L.p, nameOf(PZ.L.p), .35);
+  later('pzburst', 450, () => PZ.els.forEach((el, i) => { if (i % 2 === 0) burst(el); }));
+  later('win', 1700, win);
+}
+function puzzleHint() {
+  if (PZ.done || PZ.busy) return;
+  const wrong = PZ.perm.map((v, i) => v === i ? -1 : i).filter(i => i >= 0);
+  if (!wrong.length) return;
+  const pos = wrong[rnd(wrong.length)], from = PZ.perm.indexOf(pos);
+  puzzleSelect(-1); PZ.hints++; G.hints = PZ.hints;
+  [PZ.els[PZ.perm[pos]], PZ.els[pos]].forEach(el => el.classList.add('hintme'));
+  SND.sfx.hint();
+  later('pzhint', 700, () => { PZ.els.forEach(el => el.classList.remove('hintme')); swapSquares(pos, from); });
+}
+function puzzlePeek() {
+  if (PZ.done) return;
+  const pk = pboard.querySelector('.peek'); if (!pk) return;
+  pk.classList.add('show'); SND.sfx.hint();
+  later('peek', 1800, () => pk.classList.remove('show'));
+}
+function puzzleStars() {
+  const n = PZ.n, score = Math.max(0, PZ.moves - PZ.opt - n) / n + Math.max(0, PZ.hints - 1);   // first hint is free
+  return score < 1 ? 3 : score < 3 ? 2 : 1;
+}
+pboard.addEventListener('click', e => {
+  const el = e.target.closest('.ptile');
+  if (!el || PZ.done || PZ.busy) return;
+  const pos = PZ.perm.indexOf(+el.dataset.piece);
+  if (PZ.sel < 0) { puzzleSelect(pos); SND.sfx.select(); return; }
+  if (PZ.sel === pos) { puzzleSelect(-1); SND.sfx.tap(); return; }
+  const a = PZ.sel; puzzleSelect(-1); PZ.moves++;
+  swapSquares(a, pos);
+});
+
 /* ── wiring ── */
 document.addEventListener('pointerdown', () => SND.unlock(), { capture: true });
 document.addEventListener('keydown', () => SND.unlock(), { capture: true });
@@ -2028,8 +2238,8 @@ board.addEventListener('click', e => {
 });
 $('#levels').addEventListener('click', e => { const b = e.target.closest('.lvl'); if (b) { SND.sfx.tap(); startLevel(+b.dataset.i); } });
 $('#g-home').addEventListener('click', () => { SND.sfx.tap(); showHome(); });
-$('#g-hint').addEventListener('click', () => showHint(true));
-$('#g-shuffle').addEventListener('click', () => { if (!G.over && !G.busy) reshuffle(); });
+$('#g-hint').addEventListener('click', () => { if (G.L && G.L.puzzle) puzzleHint(); else showHint(true); });
+$('#g-shuffle').addEventListener('click', () => { if (G.L && G.L.puzzle) puzzlePeek(); else if (!G.over && !G.busy) reshuffle(); });
 const cycleSound = () => { SND.setMode((SND.mode + 2) % 3); soundIcons(); SND.sfx.tap(); };
 $('#h-sound').addEventListener('click', cycleSound);
 $('#g-sound').addEventListener('click', cycleSound);
@@ -2045,20 +2255,24 @@ let rsz = 0;
 window.addEventListener('resize', () => {
   clearTimeout(rsz);
   rsz = setTimeout(() => {
-    if ($('#game').classList.contains('hidden') || !G.g) return;
+    if ($('#game').classList.contains('hidden')) return;
+    if (G.L && G.L.puzzle) { layoutPuzzle(); return; }
+    if (!G.g) return;
     if (wantTranspose()) transpose();
     render(false);
   }, 150);
 });
 
 buildSprite();
+{ const m = new URLSearchParams(location.search).get('mode');           // e.g. princess-match.html?mode=puzzle
+  if (m && MODES[m]) { G.mode = m; store.set('mode', m); } }
 $('#h-crown').innerHTML = art('crown');
 soundIcons();
 showHome();
 
 /* debug / test hooks */
 window.PM = {
-  G, A, LEVELS, MODES, SONGS, SND, startLevel, keyOf, rewardSvg, findAnyPair, findPath, render, tap,
+  G, A, LEVELS, MODES, SONGS, SND, startLevel, keyOf, rewardSvg, PZ, sceneSvg, findAnyPair, findPath, render, tap,
   validate() {
     const issues = [];
     for (const [id, s] of Object.entries(SONGS)) {
