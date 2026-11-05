@@ -198,6 +198,12 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 .modes{flex-wrap:wrap;justify-content:center;max-width:100%}
 @media (max-width:440px){.modes{border-radius:22px}.modes button{padding:8px 9px;font-size:.88rem}}
 /* puzzle */
+#pwrap{display:flex;align-items:center;justify-content:center}
+#pwrap.port{flex-direction:column}
+#pref{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px}
+#pref .pic{border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 0 0 4px #fff,0 0 0 7px var(--gold),0 6px 18px rgba(120,60,140,.22)}
+#pref .pic svg{display:block;width:100%;height:100%}
+#pref small{font-weight:700;color:var(--ink2);font-size:.9rem;white-space:nowrap}
 #pboard{position:relative;border-radius:18px;background:rgba(255,255,255,.6);box-shadow:0 6px 0 var(--edge),0 14px 30px rgba(120,60,140,.2)}
 .ptile{position:absolute;border:0;padding:0;background:#fff;border-radius:9%;overflow:hidden;cursor:pointer;
   transition:left .3s ease,top .3s ease,width .4s,height .4s,transform .15s,box-shadow .25s,border-radius .4s;box-shadow:0 2px 0 rgba(120,60,140,.2)}
@@ -248,7 +254,7 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
     <button id="g-sound" class="ib" type="button"></button>
   </header>
   <div class="progress"><i id="g-prog"></i></div>
-  <main id="stage"><div id="board"><svg id="paths" xmlns="http://www.w3.org/2000/svg"></svg></div><div id="pboard" class="hidden"></div></main>
+  <main id="stage"><div id="board"><svg id="paths" xmlns="http://www.w3.org/2000/svg"></svg></div><div id="pwrap" class="hidden"><div id="pref" aria-hidden="true"></div><div id="pboard"></div></div></main>
 </section>
 
 <div id="win" class="hidden" role="dialog" aria-modal="true">
@@ -295,7 +301,7 @@ const STR = {
     mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters', mode_puzzle: '🧩 Puzzle',
     sub_puzzle: 'Tap two squares to swap them and put the princess back together!',
     rule_puzzle: 'Squares in the right place sparkle. Tap 👀 to peek at the whole picture.',
-    peek: 'Peek at the picture', placed: 'Squares in place',
+    peek: 'Peek at the picture', placed: 'Squares in place', target: 'The finished picture',
     sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two of the same number, letter or princess and tap them!',
     sub_abc: 'Find two of the same letter, number or princess and tap them!',
     rule_pics: 'Any two that are the same will disappear — no matter where they are!',
@@ -317,7 +323,7 @@ const STR = {
     mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母', mode_puzzle: '🧩 拼图',
     sub_puzzle: '点两个小方格交换位置，把公主的图片拼好！',
     rule_puzzle: '放对位置的小方格会闪闪发光。点 👀 可以偷看整张图片。',
-    peek: '看看原图', placed: '已拼好',
+    peek: '看看原图', placed: '已拼好', target: '拼好的样子',
     sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字、字母或公主，点一点它们！', sub_abc: '找到两个一样的字母、数字或公主，点一点它们！',
     rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
     rule_nums: '两个一样的数字、字母或公主就能消除，不管它们在哪里！',
@@ -1927,7 +1933,7 @@ function later(name, ms, fn) { clearTimeout(G.timers[name]); G.timers[name] = se
 
 function startLevel(i) {
   if (curLevels()[i].puzzle) return startPuzzle(i);
-  $('#pboard').classList.add('hidden'); $('#board').classList.remove('hidden');
+  $('#pwrap').classList.add('hidden'); $('#board').classList.remove('hidden');
   clearTimers();
   G.li = i; G.L = curLevels()[i]; G.R = G.L.rows; G.C = G.L.cols;
   G.sel = null; G.hints = 0; G.matches = 0; G.over = false; G.busy = false;
@@ -2131,12 +2137,14 @@ function startPuzzle(i) {
   G.li = i; G.L = curLevels()[i]; G.over = true; G.hints = 0;   // G.over keeps the matching-board logic idle
   $('#win').classList.add('hidden');
   $('#home').classList.add('hidden'); $('#game').classList.remove('hidden');
-  $('#board').classList.add('hidden'); pboard.classList.remove('hidden', 'solved');
+  $('#board').classList.add('hidden'); $('#pwrap').classList.remove('hidden'); pboard.classList.remove('solved');
   theme(G.L); setLevelText();
   const n = G.L.n, N = n * n;
   Object.assign(PZ, { L: G.L, n, perm: scramble(N), sel: -1, moves: 0, hints: 0, done: false, busy: false });
   PZ.opt = minSwaps(PZ.perm);
   const v = 300 / n;
+  // the finished picture next to the board so it can be copied piece by piece (user request)
+  $('#pref').innerHTML = `<div class="pic"><svg viewBox="0 0 300 300"><use href="#scene-${G.L.p}" width="300" height="300"/></svg></div><small>${t('target')}</small>`;
   pboard.innerHTML = `<div class="peek"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg></div>`;
   PZ.els = range(0, N - 1).map(k => {
     const el = document.createElement('button');
@@ -2155,7 +2163,15 @@ function startPuzzle(i) {
 function layoutPuzzle() {
   if (!PZ.L) return;
   const { w, h } = stageBox(), n = PZ.n;
-  const S = Math.floor(Math.min(w - 8, h - 8, 560)), cell = S / n, gap = PZ.done ? 0 : Math.max(3, cell * .04);
+  // finished picture beside the board on wide screens, above it on tall (phone) screens; it is ~40% of the board
+  const port = h > w * 1.05, k = .4, gapPx = 18, label = 26;
+  const S = Math.floor(port ? Math.min(w - 8, (h - gapPx - label - 8) / (1 + k), 560)
+    : Math.min(h - 8, (w - gapPx - 8) / (1 + k), 560));
+  const ref = Math.floor(S * k);
+  const wrap = $('#pwrap');
+  wrap.classList.toggle('port', port); wrap.style.gap = gapPx + 'px';
+  const pic = $('#pref .pic'); if (pic) pic.style.width = pic.style.height = ref + 'px';
+  const cell = S / n, gap = PZ.done ? 0 : Math.max(3, cell * .04);
   pboard.style.width = pboard.style.height = S + 'px';
   PZ.perm.forEach((piece, pos) => {
     const el = PZ.els[piece];
