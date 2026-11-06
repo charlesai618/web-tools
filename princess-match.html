@@ -213,6 +213,20 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 .ptile.sel{transform:scale(1.07);z-index:3;box-shadow:0 0 0 4px var(--gold),0 0 18px 6px rgba(255,207,63,.85)}
 .ptile.ok{box-shadow:0 0 0 2px #fff,0 0 12px 3px rgba(255,207,63,.65)}
 .ptile.hintme{animation:hintPulse .6s ease-in-out infinite alternate;z-index:2}
+/* next-step guide: glowing square → dotted box, with a tapping hand; same square lit on the finished picture */
+.pguide{position:absolute;inset:0;pointer-events:none;z-index:6}
+.pguide svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pguide .arr{fill:none;stroke:var(--gold);stroke-linecap:round;animation:arrFlow .7s linear infinite}
+@keyframes arrFlow{to{stroke-dashoffset:var(--dash)}}
+.ptarget{position:absolute;box-sizing:border-box;border:4px dashed var(--gold);border-radius:12%;background:rgba(255,207,63,.2);animation:tgtPulse .7s ease-in-out infinite alternate}
+@keyframes tgtPulse{from{transform:scale(.93)}to{transform:scale(1.02)}}
+.pfinger{position:absolute;line-height:1;animation:fingerTap .6s ease-in-out infinite alternate;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+@keyframes fingerTap{from{transform:translate(-50%,12%)}to{transform:translate(-50%,-10%)}}
+.rtile{transition:opacity .3s}
+#pref .pic.guiding .rtile:not(.next){opacity:.35}
+.rtile.next{z-index:2;animation:refPulse .7s ease-in-out infinite alternate}
+@keyframes refPulse{from{box-shadow:0 0 0 3px #fff,0 0 8px 3px rgba(255,207,63,.6)}to{box-shadow:0 0 0 4px var(--gold),0 0 18px 7px rgba(255,207,63,.95)}}
+#pref small.go{color:var(--pink);font-size:1rem}
 #pboard.solved .ptile{border-radius:0;box-shadow:none}
 #pboard.solved{box-shadow:0 0 0 6px #fff,0 0 0 11px var(--gold),0 14px 40px rgba(255,180,0,.45);transition:box-shadow .5s}
 .peek{position:absolute;inset:0;border-radius:18px;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .35s;z-index:8}
@@ -302,8 +316,9 @@ const STR = {
     sound: ['Sound off', 'Sound effects only', 'Music and sound on'],
     mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters', mode_puzzle: '🧩 Puzzle',
     sub_puzzle: 'Tap two squares to swap them and put the princess back together!',
-    rule_puzzle: 'Squares in the right place sparkle. Tap 👀 to peek at the whole picture.',
+    rule_puzzle: 'Squares in the right place sparkle. Stuck? Tap 💡 and a little hand shows the next step.',
     peek: 'Peek at the picture', placed: 'Squares in place', target: 'The finished picture',
+    pz_step1: '① Tap the glowing square', pz_step2: '② Now tap where the hand points',
     sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two of the same number, letter or princess and tap them!',
     sub_abc: 'Find two of the same letter, number or princess and tap them!',
     rule_pics: 'Any two that are the same will disappear — no matter where they are!',
@@ -324,8 +339,9 @@ const STR = {
     sound: ['声音关闭', '只有音效', '音乐和音效'],
     mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母', mode_puzzle: '🧩 拼图',
     sub_puzzle: '点两个小方格交换位置，把公主的图片拼好！',
-    rule_puzzle: '放对位置的小方格会闪闪发光。点 👀 可以偷看整张图片。',
+    rule_puzzle: '放对位置的小方格会闪闪发光。不知道怎么拼？点 💡，小手会告诉你下一步。',
     peek: '看看原图', placed: '已拼好', target: '拼好的样子',
+    pz_step1: '① 点一下发光的方格', pz_step2: '② 再点小手指着的地方',
     sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字、字母或公主，点一点它们！', sub_abc: '找到两个一样的字母、数字或公主，点一点它们！',
     rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
     rule_nums: '两个一样的数字、字母或公主就能消除，不管它们在哪里！',
@@ -2122,7 +2138,7 @@ function confetti() {
 
 /* ── puzzle game ── */
 const pboard = $('#pboard');
-const PZ = { L: null, n: 3, perm: [], sel: -1, moves: 0, hints: 0, opt: 0, done: true, busy: false, els: [] };
+const PZ = { L: null, n: 3, perm: [], sel: -1, moves: 0, hints: 0, opt: 0, done: true, busy: false, els: [], guide: null };
 function scramble(N) {
   let perm;
   do { perm = shuffle(range(0, N - 1)); } while (perm.filter((v, i) => v === i).length > Math.floor(N / 4));
@@ -2142,13 +2158,13 @@ function startPuzzle(i) {
   $('#board').classList.add('hidden'); $('#pwrap').classList.remove('hidden'); pboard.classList.remove('solved');
   theme(G.L); setLevelText();
   const n = G.L.n, N = n * n;
-  Object.assign(PZ, { L: G.L, n, perm: scramble(N), sel: -1, moves: 0, hints: 0, done: false, busy: false });
+  Object.assign(PZ, { L: G.L, n, perm: scramble(N), sel: -1, moves: 0, hints: 0, done: false, busy: false, guide: null });
   PZ.opt = minSwaps(PZ.perm);
   const v = 300 / n;
   // the finished picture next to the board, same size and cut into the same squares, to copy from (user request)
   const sq = k => `<svg viewBox="${(k % n) * v} ${Math.floor(k / n) * v} ${v} ${v}" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg>`;
   $('#pref').innerHTML = `<div class="pic">${range(0, N - 1).map(k => `<div class="rtile">${sq(k)}</div>`).join('')}</div><small>${t('target')}</small>`;
-  pboard.innerHTML = `<div class="peek"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg></div>`;
+  pboard.innerHTML = `<div class="peek"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg></div><div class="pguide"></div>`;
   PZ.els = range(0, N - 1).map(k => {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'ptile'; el.dataset.piece = k;
@@ -2159,7 +2175,7 @@ function startPuzzle(i) {
   });
   layoutPuzzle();
   PZ.perm.forEach((piece, pos) => PZ.els[piece].classList.toggle('ok', piece === pos));
-  puzzleHud();
+  puzzleHud(); idleGuide();
   SND.preloadVoices([[lang, G.L.p]]);
   SND.play(G.L.song);
 }
@@ -2187,6 +2203,54 @@ function layoutPuzzle() {
     el.style.left = ((pos % n) * cell + gap / 2) + 'px'; el.style.top = (Math.floor(pos / n) * cell + gap / 2) + 'px';
     el.style.width = el.style.height = (cell - gap) + 'px';
   });
+  drawGuide();
+}
+/* next-step guide (user request): the first square in reading order that is wrong, and where its piece is now.
+   Swapping those two always puts one piece home, so following the guide is never a wasted move. */
+function nextStep() {
+  const pos = PZ.perm.findIndex((v, i) => v !== i);
+  return pos < 0 ? null : { pos, from: PZ.perm.indexOf(pos) };
+}
+function showGuide(auto) {
+  if (PZ.done || PZ.busy) return;
+  const s = nextStep(); if (!s) return;
+  const keep = PZ.sel === s.from || PZ.sel === s.pos;
+  if (!keep) puzzleSelect(-1);
+  PZ.guide = { ...s, auto, picked: keep ? PZ.sel : -1 };
+  drawGuide(); SND.sfx.hint();
+}
+function clearGuide() { if (PZ.guide) { PZ.guide = null; drawGuide(); } }
+function idleGuide() {   // a stuck player gets the guide by itself after a while (free, no star cost)
+  later('pzidle', PZ.moves ? 9000 : 5000, () => {
+    if (G.L === PZ.L && !PZ.guide && !$('#game').classList.contains('hidden')) showGuide(true);
+  });
+}
+function drawGuide() {
+  const g = PZ.guide, layer = pboard.querySelector('.pguide'), pic = $('#pref .pic'), lab = $('#pref small');
+  if (pic) pic.classList.toggle('guiding', !!g);
+  [...document.querySelectorAll('#pref .rtile')].forEach((el, k) => el.classList.toggle('next', !!g && k === g.pos));
+  PZ.els.forEach(el => el.classList.remove('hintme'));
+  if (lab) { lab.textContent = t(!g ? 'target' : g.picked < 0 ? 'pz_step1' : 'pz_step2'); lab.classList.toggle('go', !!g); }
+  if (!layer) return;
+  if (!g) { layer.innerHTML = ''; return; }
+  const n = PZ.n, S = parseFloat(pboard.style.width) || pboard.offsetWidth, cell = S / n, gap = Math.max(3, cell * .04);
+  const cx = p => (p % n + .5) * cell, cy = p => (Math.floor(p / n) + .5) * cell;
+  if (g.picked < 0) PZ.els[g.pos].classList.add('hintme');          // the piece that belongs in the box glows
+  const tapAt = g.picked < 0 ? g.from : g.picked === g.from ? g.pos : g.from;
+  // curved arrow from the glowing square to the dotted box
+  const x1 = cx(g.from), y1 = cy(g.from), x2 = cx(g.pos), y2 = cy(g.pos), L = Math.hypot(x2 - x1, y2 - y1);
+  const ux = (x2 - x1) / L, uy = (y2 - y1) / L, a = cell * .2, b = cell * .3, bend = Math.min(L * .18, cell * .5);
+  const sx = x1 + ux * a, sy = y1 + uy * a, ex = x2 - ux * b, ey = y2 - uy * b;
+  const qx = (sx + ex) / 2 - uy * bend, qy = (sy + ey) / 2 + ux * bend;
+  const w = Math.max(5, cell * .07), d = `M${sx} ${sy}Q${qx} ${qy} ${ex} ${ey}`;
+  const box = cell - gap + 8;
+  layer.innerHTML =
+    `<div class="ptarget" style="left:${cx(g.pos) - box / 2}px;top:${cy(g.pos) - box / 2}px;width:${box}px;height:${box}px"></div>` +
+    `<svg viewBox="0 0 ${S} ${S}"><defs><marker id="pz-ah" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto">` +
+    `<path d="M0 0L10 5L0 10z" fill="#ffcf3f" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></marker></defs>` +
+    `<path d="${d}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="${w + 5}" stroke-linecap="round"/>` +
+    `<path class="arr" d="${d}" stroke-width="${w}" stroke-dasharray="${w * 1.6} ${w * 1.4}" style="--dash:${-w * 3}" marker-end="url(#pz-ah)"/></svg>` +
+    `<div class="pfinger" style="left:${cx(tapAt)}px;top:${cy(tapAt) + cell * .02}px;font-size:${Math.round(cell * .42)}px">👆</div>`;
 }
 function puzzleHud() {
   const N = PZ.n * PZ.n, ok = PZ.perm.filter((v, i) => v === i).length;
@@ -2213,28 +2277,33 @@ function swapSquares(a, b) {
       el.classList.toggle('ok', ok);
     }
     if (placed) SND.sfx.match(PZ.perm.filter((v, i) => v === i).length);
-    if (puzzleHud()) finishPuzzle();
+    if (puzzleHud()) finishPuzzle(); else idleGuide();
   }, 320);
 }
 function finishPuzzle() {
+  clearTimeout(G.timers.pzidle); clearGuide();
   PZ.done = true; puzzleSelect(-1);
   pboard.classList.add('solved'); layoutPuzzle();
   SND.say(lang, PZ.L.p, nameOf(PZ.L.p), .35);
   later('pzburst', 450, () => PZ.els.forEach((el, i) => { if (i % 2 === 0) burst(el); }));
   later('win', 1700, win);
 }
+// 💡 shows the next step; tapping 💡 again while it is showing does that step for the player
 function puzzleHint() {
-  if (PZ.done || PZ.busy) return;
-  const wrong = PZ.perm.map((v, i) => v === i ? -1 : i).filter(i => i >= 0);
-  if (!wrong.length) return;
-  const pos = wrong[rnd(wrong.length)], from = PZ.perm.indexOf(pos);
-  puzzleSelect(-1); PZ.hints++; G.hints = PZ.hints;
+  if (PZ.done || PZ.busy || !nextStep()) return;
+  const g = PZ.guide;
+  if (!g || g.auto) { PZ.hints++; G.hints = PZ.hints; }
+  idleGuide();
+  if (!g) { showGuide(false); return; }
+  const { pos, from } = g;
+  clearGuide(); puzzleSelect(-1);
   [PZ.els[PZ.perm[pos]], PZ.els[pos]].forEach(el => el.classList.add('hintme'));
   SND.sfx.hint();
-  later('pzhint', 700, () => { PZ.els.forEach(el => el.classList.remove('hintme')); swapSquares(pos, from); });
+  later('pzhint', 600, () => { PZ.els.forEach(el => el.classList.remove('hintme')); swapSquares(pos, from); });
 }
 function puzzlePeek() {
   if (PZ.done) return;
+  idleGuide();
   const pk = pboard.querySelector('.peek'); if (!pk) return;
   pk.classList.add('show'); SND.sfx.hint();
   later('peek', 1800, () => pk.classList.remove('show'));
@@ -2246,10 +2315,13 @@ function puzzleStars() {
 pboard.addEventListener('click', e => {
   const el = e.target.closest('.ptile');
   if (!el || PZ.done || PZ.busy) return;
-  const pos = PZ.perm.indexOf(+el.dataset.piece);
-  if (PZ.sel < 0) { puzzleSelect(pos); SND.sfx.select(); return; }
-  if (PZ.sel === pos) { puzzleSelect(-1); SND.sfx.tap(); return; }
+  const pos = PZ.perm.indexOf(+el.dataset.piece), g = PZ.guide;
+  idleGuide();
+  if (g && pos !== g.pos && pos !== g.from) clearGuide();          // playing their own way: the guide steps aside
+  if (PZ.sel < 0) { puzzleSelect(pos); SND.sfx.select(); if (PZ.guide) { PZ.guide.picked = pos; drawGuide(); } return; }
+  if (PZ.sel === pos) { puzzleSelect(-1); SND.sfx.tap(); if (PZ.guide) { PZ.guide.picked = -1; drawGuide(); } return; }
   const a = PZ.sel; puzzleSelect(-1); PZ.moves++;
+  clearGuide();
   swapSquares(a, pos);
 });
 
