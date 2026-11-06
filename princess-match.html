@@ -197,39 +197,43 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
 .modes button{border:0;border-radius:999px;padding:9px 15px;font-weight:700;font-size:1rem;background:transparent;color:var(--ink2);white-space:nowrap}
 .modes{flex-wrap:wrap;justify-content:center;max-width:100%}
 @media (max-width:440px){.modes{border-radius:22px}.modes button{padding:8px 9px;font-size:.88rem}}
-/* puzzle */
-#pwrap{display:flex;align-items:center;justify-content:center}
-#pwrap:not(.port){align-items:flex-start}
-#pwrap.port{flex-direction:column}
+/* puzzle: real jigsaw pieces */
+#pwrap{position:relative;display:flex;align-items:flex-start;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none}
+#pwrap.port{flex-direction:column;align-items:center}
 #pref{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
-#pref .pic{position:relative;border-radius:18px;background:rgba(255,255,255,.6);box-shadow:0 0 0 4px #fff,0 0 0 7px var(--gold),0 6px 18px rgba(120,60,140,.22)}
-.rtile{position:absolute;background:#fff;border-radius:9%;overflow:hidden;box-shadow:0 2px 0 rgba(120,60,140,.2)}
-.rtile svg{display:block;width:100%;height:100%}
-#pref small{font-weight:700;color:var(--ink2);font-size:.9rem;white-space:nowrap}
-#pboard{position:relative;border-radius:18px;background:rgba(255,255,255,.6);box-shadow:0 6px 0 var(--edge),0 14px 30px rgba(120,60,140,.2)}
-.ptile{position:absolute;border:0;padding:0;background:#fff;border-radius:9%;overflow:hidden;cursor:pointer;
-  transition:left .3s ease,top .3s ease,width .4s,height .4s,transform .15s,box-shadow .25s,border-radius .4s;box-shadow:0 2px 0 rgba(120,60,140,.2)}
-.ptile svg{display:block;width:100%;height:100%;pointer-events:none}
-.ptile.sel{transform:scale(1.07);z-index:3;box-shadow:0 0 0 4px var(--gold),0 0 18px 6px rgba(255,207,63,.85)}
-.ptile.ok{box-shadow:0 0 0 2px #fff,0 0 12px 3px rgba(255,207,63,.65)}
-.ptile.hintme{animation:hintPulse .6s ease-in-out infinite alternate;z-index:2}
-/* next-step guide: glowing square → dotted box, with a tapping hand; same square lit on the finished picture */
-.pguide{position:absolute;inset:0;pointer-events:none;z-index:6}
-.pguide svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.pguide .arr{fill:none;stroke:var(--gold);stroke-linecap:round;animation:arrFlow .7s linear infinite}
-@keyframes arrFlow{to{stroke-dashoffset:var(--dash)}}
-.ptarget{position:absolute;box-sizing:border-box;border:4px dashed var(--gold);border-radius:12%;background:rgba(255,207,63,.2);animation:tgtPulse .7s ease-in-out infinite alternate}
-@keyframes tgtPulse{from{transform:scale(.93)}to{transform:scale(1.02)}}
-.pfinger{position:absolute;line-height:1;animation:fingerTap .6s ease-in-out infinite alternate;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
-@keyframes fingerTap{from{transform:translate(-50%,12%)}to{transform:translate(-50%,-10%)}}
-.rtile{transition:opacity .3s}
-#pref .pic.guiding .rtile:not(.next){opacity:.35}
-.rtile.next{z-index:2;animation:refPulse .7s ease-in-out infinite alternate}
-@keyframes refPulse{from{box-shadow:0 0 0 3px #fff,0 0 8px 3px rgba(255,207,63,.6)}to{box-shadow:0 0 0 4px var(--gold),0 0 18px 7px rgba(255,207,63,.95)}}
-#pref small.go{color:var(--pink);font-size:1rem}
-#pboard.solved .ptile{border-radius:0;box-shadow:none}
+#pref .pic{border-radius:6px;overflow:hidden;box-shadow:0 6px 18px rgba(120,60,140,.22)}
+#pref .pic svg{display:block;width:100%;height:100%}
+#pref small{font-weight:700;color:var(--pink);font-size:1rem;white-space:nowrap}
+#pright{flex:none;display:flex;flex-direction:column;align-items:center}
+#pboard{position:relative;border-radius:6px;background:rgba(255,255,255,.8);box-shadow:0 6px 0 var(--edge),0 14px 30px rgba(120,60,140,.2)}
+.pzlines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pzcut{fill:none;stroke:rgba(150,95,170,.5);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;transition:opacity .5s}
+.pzspot{fill:#ffcf3f;stroke:var(--gold);stroke-width:3;vector-effect:non-scaling-stroke;stroke-linejoin:round;animation:spotGlow .8s ease-in-out infinite alternate}
+@keyframes spotGlow{from{fill-opacity:.25}to{fill-opacity:.7}}
+#ptray{border-radius:18px;background:rgba(255,255,255,.4)}
+.jp{position:absolute;left:0;top:0;pointer-events:none}
+.jp svg{display:block;width:100%;height:100%;overflow:visible}
+.jp .seam{fill:none;stroke:rgba(255,255,255,.6);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;transition:opacity .5s}
+.jp.cur{pointer-events:auto;cursor:grab;z-index:30;will-change:transform;filter:drop-shadow(0 5px 5px rgba(90,40,110,.35))}
+.jp.cur .seam{stroke:#fff;stroke-width:2.5}
+.jp.drag{cursor:grabbing;filter:drop-shadow(0 12px 10px rgba(90,40,110,.4))}
+.jp.fly{transition:transform .2s ease-out}
+.jp.fly.slow{transition:transform .6s ease-in-out}
+.jp.pop svg{animation:piecePop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes piecePop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+/* always-on hint: a see-through copy of the piece and a hand slide from the tray to the glowing spot, over and over */
+.pzdemo,.pzhand{position:absolute;pointer-events:none;display:none;opacity:0}
+.pzdemo{z-index:29}
+.pzdemo svg{display:block;width:100%;height:100%;overflow:visible;opacity:.55}
+.pzdemo .seam{stroke:#fff;stroke-width:2;vector-effect:non-scaling-stroke}
+.pzhand{z-index:31;line-height:1;margin:-.08em 0 0 -.42em;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.pzdemo.on,.pzhand.on{display:block;animation:demoDrag 2.8s ease-in-out .5s infinite}
+#pwrap.dragging .pzdemo,#pwrap.dragging .pzhand{display:none}
+@keyframes demoDrag{0%{opacity:0;transform:translate(0,0)}10%,22%{opacity:1;transform:translate(0,0)}
+  68%,84%{opacity:1;transform:translate(var(--dx),var(--dy))}100%{opacity:0;transform:translate(var(--dx),var(--dy))}}
+#pboard.solved .pzcut,#pboard.solved .jp .seam{opacity:0}
 #pboard.solved{box-shadow:0 0 0 6px #fff,0 0 0 11px var(--gold),0 14px 40px rgba(255,180,0,.45);transition:box-shadow .5s}
-.peek{position:absolute;inset:0;border-radius:18px;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .35s;z-index:8}
+.peek{position:absolute;inset:0;border-radius:6px;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .35s;z-index:8}
 .peek svg{display:block;width:100%;height:100%}
 .peek.show{opacity:1}
 .modes button.on{background:#fff;color:var(--pink);box-shadow:0 2px 8px rgba(120,60,140,.18)}
@@ -270,7 +274,7 @@ h1.title{font-size:clamp(2.1rem,7.5vw,3.6rem);font-weight:700;color:#fff;text-al
     <button id="g-sound" class="ib" type="button"></button>
   </header>
   <div class="progress"><i id="g-prog"></i></div>
-  <main id="stage"><div id="board"><svg id="paths" xmlns="http://www.w3.org/2000/svg"></svg></div><div id="pwrap" class="hidden"><div id="pref" aria-hidden="true"></div><div id="pboard"></div></div></main>
+  <main id="stage"><div id="board"><svg id="paths" xmlns="http://www.w3.org/2000/svg"></svg></div><div id="pwrap" class="hidden"><div id="pref" aria-hidden="true"></div><div id="pright"><div id="pboard"></div><div id="ptray"></div></div></div></main>
 </section>
 
 <div id="win" class="hidden" role="dialog" aria-modal="true">
@@ -315,10 +319,10 @@ const STR = {
     hint: 'Hint', shuffle: 'Shuffle', home: 'All levels', pairs: 'Pairs left',
     sound: ['Sound off', 'Sound effects only', 'Music and sound on'],
     mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters', mode_puzzle: '🧩 Puzzle',
-    sub_puzzle: 'Tap two squares to swap them and put the princess back together!',
-    rule_puzzle: 'A little hand always shows the next step, and squares in the right place sparkle.',
+    sub_puzzle: 'Drag each jigsaw piece to its place and put the princess picture back together!',
+    rule_puzzle: 'A new piece pops up each time — the glowing spot and the little hand show where it goes.',
     peek: 'Peek at the picture', placed: 'Squares in place', target: 'The finished picture',
-    pz_step1: '① Tap the glowing square', pz_step2: '② Now tap where the hand points',
+    pz_drag: 'Drag the piece to the glowing spot',
     sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two of the same number, letter or princess and tap them!',
     sub_abc: 'Find two of the same letter, number or princess and tap them!',
     rule_pics: 'Any two that are the same will disappear — no matter where they are!',
@@ -338,10 +342,10 @@ const STR = {
     hint: '提示', shuffle: '洗牌', home: '选关', pairs: '剩余',
     sound: ['声音关闭', '只有音效', '音乐和音效'],
     mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母', mode_puzzle: '🧩 拼图',
-    sub_puzzle: '点两个小方格交换位置，把公主的图片拼好！',
-    rule_puzzle: '小手会一直告诉你下一步怎么拼，放对位置的小方格会闪闪发光。',
+    sub_puzzle: '把每一块拼图拖到正确的位置，拼出公主的图片！',
+    rule_puzzle: '每次会出现一块新拼图，发光的地方和小手会告诉你放在哪里。',
     peek: '看看原图', placed: '已拼好', target: '拼好的样子',
-    pz_step1: '① 点一下发光的方格', pz_step2: '② 再点小手指着的地方',
+    pz_drag: '把拼图拖到发光的地方',
     sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字、字母或公主，点一点它们！', sub_abc: '找到两个一样的字母、数字或公主，点一点它们！',
     rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
     rule_nums: '两个一样的数字、字母或公主就能消除，不管它们在哪里！',
@@ -2136,163 +2140,182 @@ function confetti() {
   }
 }
 
-/* ── puzzle game ── */
-const pboard = $('#pboard');
-const PZ = { L: null, n: 3, perm: [], sel: -1, moves: 0, hints: 0, opt: 0, done: true, busy: false, els: [], guide: null };
-function scramble(N) {
-  let perm;
-  do { perm = shuffle(range(0, N - 1)); } while (perm.filter((v, i) => v === i).length > Math.floor(N / 4));
-  return perm;
+/* ── puzzle game: real jigsaw pieces (user request) ──
+   Left: the finished picture, no lines on it. Right: an empty board showing only the piece outlines, a tray under it.
+   One piece at a time pops up in the tray; drag it near its place and it snaps in, then the next piece comes.
+   The hint is always on (user rule): the current piece's spot glows, and a see-through copy + hand show the drag. */
+const pboard = $('#pboard'), pwrap = $('#pwrap'), ptray = $('#ptray');
+const JM = .32;                     // room around each cell for the knobs, as a fraction of a cell
+const PZ = { L: null, n: 3, order: [], idx: 0, cur: -1, placed: [], misses: 0, hints: 0, done: true, busy: false,
+  els: [], paths: [], cell: 0, px: 0, py: 0, drag: null };
+
+// one side of a piece from a to b; e = null for a flat outside edge, else { o: ±1 knob out / in, c: shift, h: size }
+function edgeD(ax, ay, bx, by, e) {
+  if (!e) return `L${bx} ${by}`;
+  const ux = bx - ax, uy = by - ay, nx = uy, ny = -ux;          // pieces are traced clockwise, so (uy, -ux) points out
+  const P = (t, s) => { t += e.c; s *= e.h * e.o; return (ax + ux * t + nx * s).toFixed(2) + ' ' + (ay + uy * t + ny * s).toFixed(2); };
+  return `L${P(.37, 0)}C${P(.43, 0)} ${P(.45, .07)} ${P(.41, .12)}C${P(.30, .19)} ${P(.36, .29)} ${P(.50, .28)}` +
+    `C${P(.64, .29)} ${P(.70, .19)} ${P(.59, .12)}C${P(.55, .07)} ${P(.57, 0)} ${P(.63, 0)}L${bx} ${by}`;
 }
-function minSwaps(perm) {          // squares minus cycles = fewest swaps that solve it
-  const seen = new Array(perm.length).fill(false);
-  let cycles = 0;
-  perm.forEach((_, i) => { if (seen[i]) return; cycles++; for (let j = i; !seen[j]; j = perm[j]) seen[j] = true; });
-  return perm.length - cycles;
+// random knobs: H[r][c] is the edge above row r (sg 1 = knob points down), V[r][c] the edge left of column c (1 = right)
+function cutJigsaw(n) {
+  const knob = () => ({ sg: Math.random() < .5 ? 1 : -1, c: (Math.random() - .5) * .12, h: .92 + Math.random() * .12 });
+  const H = range(0, n).map(r => range(0, n - 1).map(() => r > 0 && r < n ? knob() : null));
+  const V = range(0, n - 1).map(() => range(0, n).map(c => c > 0 && c < n ? knob() : null));
+  const v = 300 / n, side = (e, o, back) => e && { o: o * e.sg, c: back ? -e.c : e.c, h: e.h };
+  const paths = range(0, n * n - 1).map(k => {
+    const r = Math.floor(k / n), c = k % n, x0 = c * v, y0 = r * v, x1 = x0 + v, y1 = y0 + v;
+    return `M${x0} ${y0}` + edgeD(x0, y0, x1, y0, side(H[r][c], -1)) + edgeD(x1, y0, x1, y1, side(V[r][c + 1], 1)) +
+      edgeD(x1, y1, x0, y1, side(H[r + 1][c], 1, true)) + edgeD(x0, y1, x0, y0, side(V[r][c], -1, true)) + 'Z';
+  });
+  let lines = '';
+  H.forEach((row, r) => row.forEach((e, c) => { if (e) lines += `M${c * v} ${r * v}` + edgeD(c * v, r * v, (c + 1) * v, r * v, side(e, -1)); }));
+  V.forEach((row, r) => row.forEach((e, c) => { if (e) lines += `M${c * v} ${r * v}` + edgeD(c * v, r * v, c * v, (r + 1) * v, side(e, 1)); }));
+  return { paths, lines };
+}
+function pieceSvg(k, id) {
+  const n = PZ.n, v = 300 / n, m = JM * v, x = (k % n) * v - m, y = Math.floor(k / n) * v - m;
+  return `<svg viewBox="${x} ${y} ${v + 2 * m} ${v + 2 * m}" aria-hidden="true"><defs><clipPath id="${id}"><path d="${PZ.paths[k]}"/></clipPath></defs>` +
+    `<g clip-path="url(#${id})"><use href="#scene-${PZ.L.p}" width="300" height="300"/></g><path class="seam" fill="none" d="${PZ.paths[k]}"/></svg>`;
 }
 function startPuzzle(i) {
   clearTimers();
   G.li = i; G.L = curLevels()[i]; G.over = true; G.hints = 0;   // G.over keeps the matching-board logic idle
   $('#win').classList.add('hidden');
   $('#home').classList.add('hidden'); $('#game').classList.remove('hidden');
-  $('#board').classList.add('hidden'); $('#pwrap').classList.remove('hidden'); pboard.classList.remove('solved');
+  $('#board').classList.add('hidden'); pwrap.classList.remove('hidden'); pboard.classList.remove('solved');
   theme(G.L); setLevelText();
-  const n = G.L.n, N = n * n;
-  Object.assign(PZ, { L: G.L, n, perm: scramble(N), sel: -1, moves: 0, hints: 0, done: false, busy: false, guide: null });
-  PZ.opt = minSwaps(PZ.perm);
-  const v = 300 / n;
-  // the finished picture next to the board, same size and cut into the same squares, to copy from (user request)
-  const sq = k => `<svg viewBox="${(k % n) * v} ${Math.floor(k / n) * v} ${v} ${v}" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg>`;
-  $('#pref').innerHTML = `<div class="pic">${range(0, N - 1).map(k => `<div class="rtile">${sq(k)}</div>`).join('')}</div><small>${t('target')}</small>`;
-  pboard.innerHTML = `<div class="peek"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#scene-${G.L.p}" width="300" height="300"/></svg></div><div class="pguide"></div>`;
-  PZ.els = range(0, N - 1).map(k => {
-    const el = document.createElement('button');
-    el.type = 'button'; el.className = 'ptile'; el.dataset.piece = k;
-    el.setAttribute('aria-label', (k + 1) + '/' + N);
-    el.innerHTML = sq(k);
-    pboard.appendChild(el);
-    return el;
-  });
-  layoutPuzzle();
-  PZ.perm.forEach((piece, pos) => PZ.els[piece].classList.toggle('ok', piece === pos));
-  puzzleHud(); showGuide();
-  SND.preloadVoices([[lang, G.L.p]]);
+  const n = G.L.n, N = n * n, cut = cutJigsaw(n), p = G.L.p;
+  Object.assign(PZ, { L: G.L, n, order: shuffle(range(0, N - 1)), idx: 0, cur: -1, placed: new Array(N).fill(false),
+    misses: 0, hints: 0, done: false, busy: false, els: [], paths: cut.paths, drag: null });
+  const full = `<svg viewBox="0 0 300 300" aria-hidden="true"><use href="#scene-${p}" width="300" height="300"/></svg>`;
+  $('#pref').innerHTML = `<div class="pic">${full}</div><small>${t('pz_drag')}</small>`;
+  pboard.innerHTML = `<svg class="pzlines" viewBox="0 0 300 300" aria-hidden="true"><path class="pzspot"/>` +
+    `<path class="pzcut" d="${cut.lines}"/><rect class="pzcut" width="300" height="300"/></svg><div class="peek">${full}</div>`;
+  pwrap.querySelectorAll('.jp, .pzdemo, .pzhand').forEach(el => el.remove());
+  pwrap.insertAdjacentHTML('beforeend', '<div class="pzdemo" aria-hidden="true"></div><div class="pzhand" aria-hidden="true">👆</div>');
+  layoutPuzzle(); puzzleHud(); nextPiece();
+  SND.preloadVoices([[lang, p]]);
   SND.play(G.L.song);
 }
 function layoutPuzzle() {
   if (!PZ.L) return;
-  const { w, h } = stageBox(), n = PZ.n;
-  // finished picture beside the board on wide screens, above it on tall (phone) screens; both are the same size
-  const port = h > w * 1.05, gapPx = port ? 14 : 22, label = 26;
-  const S = Math.floor(port ? Math.min(w - 8, (h - gapPx - label - 8) / 2, 560)
-    : Math.min(h - label - 8, (w - gapPx - 8) / 2, 560));
-  const wrap = $('#pwrap');
-  wrap.classList.toggle('port', port); wrap.style.gap = gapPx + 'px';
-  const cell = S / n, cut = Math.max(3, cell * .04), gap = PZ.done ? 0 : cut;
-  const pic = $('#pref .pic');
-  if (pic) {
-    pic.style.width = pic.style.height = S + 'px';
-    [...pic.children].forEach((el, k) => {
-      el.style.left = ((k % n) * cell + cut / 2) + 'px'; el.style.top = (Math.floor(k / n) * cell + cut / 2) + 'px';
-      el.style.width = el.style.height = (cell - cut) + 'px';
-    });
-  }
+  const { w, h } = stageBox(), n = PZ.n, port = h > w * 1.05;
+  // finished picture left of the board on wide screens, above it on tall (phone) screens; same size; tray under the board
+  const gap = port ? 12 : 22, tg = 10, tk = (1 + 2 * JM) / n;
+  const S = Math.floor(port ? Math.min(w - 8, (h - gap - tg - 52) / (2 + tk), 560)
+    : Math.min((w - gap - 8) / 2, (h - tg - 20) / (1 + tk), 560));
+  const cell = PZ.cell = S / n, P = cell * (1 + 2 * JM);
+  pwrap.classList.toggle('port', port); pwrap.style.gap = gap + 'px';
+  $('#pright').style.gap = tg + 'px';
+  const pic = $('#pref .pic'); if (pic) pic.style.width = pic.style.height = S + 'px';
   pboard.style.width = pboard.style.height = S + 'px';
-  PZ.perm.forEach((piece, pos) => {
-    const el = PZ.els[piece];
-    el.style.left = ((pos % n) * cell + gap / 2) + 'px'; el.style.top = (Math.floor(pos / n) * cell + gap / 2) + 'px';
-    el.style.width = el.style.height = (cell - gap) + 'px';
+  ptray.style.width = S + 'px'; ptray.style.height = Math.ceil(P + 8) + 'px';
+  PZ.els.forEach((el, k) => {
+    el.style.width = el.style.height = P + 'px';
+    if (PZ.placed[k]) { const [x, y] = slotXY(k, true); el.style.left = x + 'px'; el.style.top = y + 'px'; }
   });
-  drawGuide();
+  if (PZ.cur >= 0 && !PZ.drag && !PZ.busy) { const [x, y] = trayXY(); moveCur(x, y); }
+  showSpot();
 }
-/* next-step guide, always on (user request: never wait to be asked): the first square in reading order that is
-   wrong, and where its piece is now. Swapping those two always puts one piece home, so it is never a wasted move. */
-function nextStep() {
-  const pos = PZ.perm.findIndex((v, i) => v !== i);
-  return pos < 0 ? null : { pos, from: PZ.perm.indexOf(pos) };
+// positions are the top-left of a piece's box (cell + knob room), relative to #pwrap (or to the board)
+function trayXY() {
+  const P = PZ.cell * (1 + 2 * JM);
+  return [ptray.offsetLeft + (ptray.offsetWidth - P) / 2, ptray.offsetTop + (ptray.offsetHeight - P) / 2];
 }
-function showGuide() {
-  if (PZ.done || PZ.busy) return;
-  const s = nextStep(); if (!s) return;
-  const keep = PZ.sel === s.from || PZ.sel === s.pos;
-  if (!keep) puzzleSelect(-1);
-  PZ.guide = { ...s, picked: keep ? PZ.sel : -1 };
-  drawGuide();
+function slotXY(k, inBoard) {
+  const n = PZ.n, x = (k % n - JM) * PZ.cell, y = (Math.floor(k / n) - JM) * PZ.cell;
+  return inBoard ? [x, y] : [pboard.offsetLeft + x, pboard.offsetTop + y];
 }
-function clearGuide() { if (PZ.guide) { PZ.guide = null; drawGuide(); } }
-function drawGuide() {
-  const g = PZ.guide, layer = pboard.querySelector('.pguide'), pic = $('#pref .pic'), lab = $('#pref small');
-  if (pic) pic.classList.toggle('guiding', !!g);
-  [...document.querySelectorAll('#pref .rtile')].forEach((el, k) => el.classList.toggle('next', !!g && k === g.pos));
-  PZ.els.forEach(el => el.classList.remove('hintme'));
-  if (lab) { lab.textContent = t(!g ? 'target' : g.picked < 0 ? 'pz_step1' : 'pz_step2'); lab.classList.toggle('go', !!g); }
-  if (!layer) return;
-  if (!g) { layer.innerHTML = ''; return; }
-  const n = PZ.n, S = parseFloat(pboard.style.width) || pboard.offsetWidth, cell = S / n, gap = Math.max(3, cell * .04);
-  const cx = p => (p % n + .5) * cell, cy = p => (Math.floor(p / n) + .5) * cell;
-  if (g.picked < 0) PZ.els[g.pos].classList.add('hintme');          // the piece that belongs in the box glows
-  const tapAt = g.picked < 0 ? g.from : g.picked === g.from ? g.pos : g.from;
-  // curved arrow from the glowing square to the dotted box
-  const x1 = cx(g.from), y1 = cy(g.from), x2 = cx(g.pos), y2 = cy(g.pos), L = Math.hypot(x2 - x1, y2 - y1);
-  const ux = (x2 - x1) / L, uy = (y2 - y1) / L, a = cell * .2, b = cell * .3, bend = Math.min(L * .18, cell * .5);
-  const sx = x1 + ux * a, sy = y1 + uy * a, ex = x2 - ux * b, ey = y2 - uy * b;
-  const qx = (sx + ex) / 2 - uy * bend, qy = (sy + ey) / 2 + ux * bend;
-  const w = Math.max(5, cell * .07), d = `M${sx} ${sy}Q${qx} ${qy} ${ex} ${ey}`;
-  const box = cell - gap + 8;
-  layer.innerHTML =
-    `<div class="ptarget" style="left:${cx(g.pos) - box / 2}px;top:${cy(g.pos) - box / 2}px;width:${box}px;height:${box}px"></div>` +
-    `<svg viewBox="0 0 ${S} ${S}"><defs><marker id="pz-ah" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto">` +
-    `<path d="M0 0L10 5L0 10z" fill="#ffcf3f" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></marker></defs>` +
-    `<path d="${d}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="${w + 5}" stroke-linecap="round"/>` +
-    `<path class="arr" d="${d}" stroke-width="${w}" stroke-dasharray="${w * 1.6} ${w * 1.4}" style="--dash:${-w * 3}" marker-end="url(#pz-ah)"/></svg>` +
-    `<div class="pfinger" style="left:${cx(tapAt)}px;top:${cy(tapAt) + cell * .02}px;font-size:${Math.round(cell * .42)}px">👆</div>`;
+function moveCur(x, y, fly) {
+  const el = PZ.els[PZ.cur]; if (!el) return;
+  PZ.px = x; PZ.py = y;
+  el.classList.toggle('fly', !!fly);
+  el.style.transform = `translate(${x}px,${y}px)`;
+}
+function nextPiece() {
+  if (PZ.done || PZ.idx >= PZ.order.length) return;
+  const k = PZ.cur = PZ.order[PZ.idx++], el = document.createElement('div');
+  el.className = 'jp cur pop'; el.innerHTML = pieceSvg(k, 'jpc' + k); PZ.els[k] = el;
+  el.addEventListener('animationend', () => el.classList.remove('pop'), { once: true });
+  el.addEventListener('pointerdown', e => grabPiece(e, el));
+  el.addEventListener('pointermove', dragPiece);
+  el.addEventListener('pointerup', e => releasePiece(e, el));
+  el.addEventListener('pointercancel', e => releasePiece(e, el));
+  pwrap.appendChild(el);
+  el.style.width = el.style.height = PZ.cell * (1 + 2 * JM) + 'px';
+  const [x, y] = trayXY(); moveCur(x, y);
+  pwrap.querySelector('.pzdemo').innerHTML = pieceSvg(k, 'jpg' + k);
+  showSpot();
+}
+function grabPiece(e, el) {
+  if (PZ.done || PZ.busy || PZ.drag || !el.classList.contains('cur')) return;
+  e.preventDefault();
+  try { el.setPointerCapture(e.pointerId); } catch (_) { /* synthetic events in tests */ }
+  PZ.drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x0: PZ.px, y0: PZ.py, moved: 0 };
+  el.classList.remove('pop', 'fly'); el.classList.add('drag'); pwrap.classList.add('dragging');
+  SND.sfx.select();
+}
+function dragPiece(e) {
+  const d = PZ.drag; if (!d || e.pointerId !== d.id) return;
+  const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+  d.moved = Math.max(d.moved, Math.hypot(dx, dy));
+  moveCur(d.x0 + dx, d.y0 + dy);
+}
+function releasePiece(e, el) {
+  const d = PZ.drag; if (!d || e.pointerId !== d.id) return;
+  PZ.drag = null; el.classList.remove('drag'); pwrap.classList.remove('dragging');
+  const [sx, sy] = slotXY(PZ.cur);
+  if (Math.hypot(PZ.px - sx, PZ.py - sy) < PZ.cell * .45) { snapPiece(PZ.cur); return; }   // close enough: it clicks in
+  if (d.moved > PZ.cell * .5) { PZ.misses++; SND.sfx.nope(); }
+  const [x, y] = trayXY(); moveCur(x, y, true);                                            // otherwise back to the tray
+}
+function snapPiece(k, slow) {
+  const el = PZ.els[k], [sx, sy] = slotXY(k);
+  PZ.busy = true;
+  moveCur(sx, sy, true); el.classList.toggle('slow', !!slow);
+  PZ.cur = -1; showSpot();
+  later('pzsnap', slow ? 650 : 200, () => {
+    const [bx, by] = slotXY(k, true);
+    el.className = 'jp placed'; el.style.transform = ''; el.style.left = bx + 'px'; el.style.top = by + 'px';
+    pboard.appendChild(el);
+    PZ.placed[k] = true; PZ.busy = false;
+    burst(el); SND.sfx.match(PZ.placed.filter(Boolean).length);
+    if (puzzleHud()) finishPuzzle(); else later('pznext', 280, nextPiece);
+  });
+}
+function showSpot() {
+  const k = PZ.cur, on = k >= 0 && !PZ.done, spot = pboard.querySelector('.pzspot');
+  if (spot) { if (on) spot.setAttribute('d', PZ.paths[k]); else spot.removeAttribute('d'); }
+  const demo = pwrap.querySelector('.pzdemo'), hand = pwrap.querySelector('.pzhand');
+  if (!demo || !hand) return;
+  demo.classList.toggle('on', on); hand.classList.toggle('on', on);
+  if (!on) return;
+  const P = PZ.cell * (1 + 2 * JM), [tx, ty] = trayXY(), [sx, sy] = slotXY(k);
+  for (const el of [demo, hand]) { el.style.setProperty('--dx', (sx - tx) + 'px'); el.style.setProperty('--dy', (sy - ty) + 'px'); }
+  demo.style.width = demo.style.height = P + 'px';
+  demo.style.left = tx + 'px'; demo.style.top = ty + 'px';
+  hand.style.left = (tx + P / 2) + 'px'; hand.style.top = (ty + P / 2) + 'px';
+  hand.style.fontSize = Math.round(Math.max(28, PZ.cell * .42)) + 'px';
 }
 function puzzleHud() {
-  const N = PZ.n * PZ.n, ok = PZ.perm.filter((v, i) => v === i).length;
+  const N = PZ.n * PZ.n, ok = PZ.placed.filter(Boolean).length;
   $('#g-left').textContent = ok + '/' + N;
   $('#g-prog').style.width = (ok / N * 100) + '%';
   return ok === N;
 }
-function puzzleSelect(pos) {
-  if (PZ.sel >= 0) PZ.els[PZ.perm[PZ.sel]].classList.remove('sel');
-  PZ.sel = pos;
-  if (pos >= 0) PZ.els[PZ.perm[pos]].classList.add('sel');
-}
-function swapSquares(a, b) {
-  const pa = PZ.perm[a], pb = PZ.perm[b];
-  PZ.perm[a] = pb; PZ.perm[b] = pa;
-  layoutPuzzle(); SND.sfx.tap();
-  PZ.busy = true;
-  setTimeout(() => {
-    PZ.busy = false;
-    let placed = 0;
-    for (const pos of [a, b]) {
-      const el = PZ.els[PZ.perm[pos]], ok = PZ.perm[pos] === pos;
-      if (ok && !el.classList.contains('ok')) { placed++; burst(el); }
-      el.classList.toggle('ok', ok);
-    }
-    if (placed) SND.sfx.match(PZ.perm.filter((v, i) => v === i).length);
-    if (puzzleHud()) finishPuzzle(); else showGuide();
-  }, 320);
-}
 function finishPuzzle() {
-  clearGuide();
-  PZ.done = true; puzzleSelect(-1);
-  pboard.classList.add('solved'); layoutPuzzle();
+  PZ.done = true; showSpot();
+  pboard.classList.add('solved'); $('#pref small').textContent = t('target');
   SND.say(lang, PZ.L.p, nameOf(PZ.L.p), .35);
   later('pzburst', 450, () => PZ.els.forEach((el, i) => { if (i % 2 === 0) burst(el); }));
   later('win', 1700, win);
 }
-// the guide is always showing, so 💡 does the next step for the player
+// the hint is always showing, so 💡 puts the current piece in for the player
 function puzzleHint() {
-  if (PZ.done || PZ.busy) return;
-  const s = nextStep(); if (!s) return;
-  const { pos, from } = s;
-  PZ.hints++; G.hints = PZ.hints;
-  clearGuide(); puzzleSelect(-1);
-  [PZ.els[PZ.perm[pos]], PZ.els[pos]].forEach(el => el.classList.add('hintme'));
-  SND.sfx.hint();
-  later('pzhint', 600, () => { PZ.els.forEach(el => el.classList.remove('hintme')); swapSquares(pos, from); });
+  if (PZ.done || PZ.busy || PZ.drag || PZ.cur < 0) return;
+  PZ.hints++; G.hints = PZ.hints; SND.sfx.hint();
+  snapPiece(PZ.cur, true);
 }
 function puzzlePeek() {
   if (PZ.done) return;
@@ -2301,21 +2324,9 @@ function puzzlePeek() {
   later('peek', 1800, () => pk.classList.remove('show'));
 }
 function puzzleStars() {
-  const n = PZ.n, score = Math.max(0, PZ.moves - PZ.opt - n) / n + Math.max(0, PZ.hints - 1);   // first hint is free
+  const score = PZ.misses / PZ.n + Math.max(0, PZ.hints - 1);   // first 💡 is free
   return score < 1 ? 3 : score < 3 ? 2 : 1;
 }
-pboard.addEventListener('click', e => {
-  const el = e.target.closest('.ptile');
-  if (!el || PZ.done || PZ.busy) return;
-  const pos = PZ.perm.indexOf(+el.dataset.piece), g = PZ.guide;
-  // picking up some other square: the guide steps aside until that square is put down or swapped, then comes back
-  if (g && pos !== g.pos && pos !== g.from) clearGuide();
-  if (PZ.sel < 0) { puzzleSelect(pos); SND.sfx.select(); if (PZ.guide) { PZ.guide.picked = pos; drawGuide(); } return; }
-  if (PZ.sel === pos) { puzzleSelect(-1); SND.sfx.tap(); if (PZ.guide) { PZ.guide.picked = -1; drawGuide(); } else showGuide(); return; }
-  const a = PZ.sel; puzzleSelect(-1); PZ.moves++;
-  clearGuide();
-  swapSquares(a, pos);
-});
 
 /* ── wiring ── */
 document.addEventListener('pointerdown', () => SND.unlock(), { capture: true });
