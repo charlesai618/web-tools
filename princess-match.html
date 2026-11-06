@@ -320,9 +320,9 @@ const STR = {
     sound: ['Sound off', 'Sound effects only', 'Music and sound on'],
     mode_pics: '👑 Pictures', mode_nums: '🔢 Numbers', mode_abc: '🔤 Letters', mode_puzzle: '🧩 Puzzle',
     sub_puzzle: 'Drag each jigsaw piece to its place and put the princess picture back together!',
-    rule_puzzle: 'A new piece pops up each time — the glowing spot and the little hand show where it goes.',
+    rule_puzzle: 'A new piece pops up each time — drag it to where it belongs. Not sure where? Tap 💡.',
     peek: 'Peek at the picture', placed: 'Squares in place', target: 'The finished picture',
-    pz_drag: 'Drag the piece to the glowing spot',
+    pz_drag: 'Drag the piece to where it belongs',
     sub_pics: 'Find two pictures that are the same and tap them!', sub_nums: 'Find two of the same number, letter or princess and tap them!',
     sub_abc: 'Find two of the same letter, number or princess and tap them!',
     rule_pics: 'Any two that are the same will disappear — no matter where they are!',
@@ -343,9 +343,9 @@ const STR = {
     sound: ['声音关闭', '只有音效', '音乐和音效'],
     mode_pics: '👑 图案', mode_nums: '🔢 数字', mode_abc: '🔤 字母', mode_puzzle: '🧩 拼图',
     sub_puzzle: '把每一块拼图拖到正确的位置，拼出公主的图片！',
-    rule_puzzle: '每次会出现一块新拼图，发光的地方和小手会告诉你放在哪里。',
+    rule_puzzle: '每次会出现一块新拼图，把它拖到正确的位置。不知道放哪里？点 💡。',
     peek: '看看原图', placed: '已拼好', target: '拼好的样子',
-    pz_drag: '把拼图拖到发光的地方',
+    pz_drag: '把拼图拖到正确的位置',
     sub_pics: '找到两个一样的图案，点一点它们！', sub_nums: '找到两个一样的数字、字母或公主，点一点它们！', sub_abc: '找到两个一样的字母、数字或公主，点一点它们！',
     rule_pics: '只要两个图案一样就能消除，不管它们在哪里！',
     rule_nums: '两个一样的数字、字母或公主就能消除，不管它们在哪里！',
@@ -2143,11 +2143,12 @@ function confetti() {
 /* ── puzzle game: real jigsaw pieces (user request) ──
    Left: the finished picture, no lines on it. Right: an empty board showing only the piece outlines, a tray under it.
    One piece at a time pops up in the tray; drag it near its place and it snaps in, then the next piece comes.
-   The hint is always on (user rule): the current piece's spot glows, and a see-through copy + hand show the drag. */
+   Hints only when asked (user rule): 💡 makes the spot glow and a see-through copy + hand show the drag;
+   💡 again puts the piece in. */
 const pboard = $('#pboard'), pwrap = $('#pwrap'), ptray = $('#ptray');
 const JM = .32;                     // room around each cell for the knobs, as a fraction of a cell
 const PZ = { L: null, n: 3, order: [], idx: 0, cur: -1, placed: [], misses: 0, hints: 0, done: true, busy: false,
-  els: [], paths: [], cell: 0, px: 0, py: 0, drag: null };
+  els: [], paths: [], cell: 0, px: 0, py: 0, drag: null, hintOn: false };
 
 // one side of a piece from a to b; e = null for a flat outside edge, else { o: ±1 knob out / in, c: shift, h: size }
 function edgeD(ax, ay, bx, by, e) {
@@ -2187,7 +2188,7 @@ function startPuzzle(i) {
   theme(G.L); setLevelText();
   const n = G.L.n, N = n * n, cut = cutJigsaw(n), p = G.L.p;
   Object.assign(PZ, { L: G.L, n, order: shuffle(range(0, N - 1)), idx: 0, cur: -1, placed: new Array(N).fill(false),
-    misses: 0, hints: 0, done: false, busy: false, els: [], paths: cut.paths, drag: null });
+    misses: 0, hints: 0, done: false, busy: false, els: [], paths: cut.paths, drag: null, hintOn: false });
   const full = `<svg viewBox="0 0 300 300" aria-hidden="true"><use href="#scene-${p}" width="300" height="300"/></svg>`;
   $('#pref').innerHTML = `<div class="pic">${full}</div><small>${t('pz_drag')}</small>`;
   pboard.innerHTML = `<svg class="pzlines" viewBox="0 0 300 300" aria-hidden="true"><path class="pzspot"/>` +
@@ -2236,6 +2237,7 @@ function moveCur(x, y, fly) {
 function nextPiece() {
   if (PZ.done || PZ.idx >= PZ.order.length) return;
   const k = PZ.cur = PZ.order[PZ.idx++], el = document.createElement('div');
+  PZ.hintOn = false;
   el.className = 'jp cur pop'; el.innerHTML = pieceSvg(k, 'jpc' + k); PZ.els[k] = el;
   el.addEventListener('animationend', () => el.classList.remove('pop'), { once: true });
   el.addEventListener('pointerdown', e => grabPiece(e, el));
@@ -2285,7 +2287,7 @@ function snapPiece(k, slow) {
   });
 }
 function showSpot() {
-  const k = PZ.cur, on = k >= 0 && !PZ.done, spot = pboard.querySelector('.pzspot');
+  const k = PZ.cur, on = k >= 0 && !PZ.done && PZ.hintOn, spot = pboard.querySelector('.pzspot');
   if (spot) { if (on) spot.setAttribute('d', PZ.paths[k]); else spot.removeAttribute('d'); }
   const demo = pwrap.querySelector('.pzdemo'), hand = pwrap.querySelector('.pzhand');
   if (!demo || !hand) return;
@@ -2311,10 +2313,11 @@ function finishPuzzle() {
   later('pzburst', 450, () => PZ.els.forEach((el, i) => { if (i % 2 === 0) burst(el); }));
   later('win', 1700, win);
 }
-// the hint is always showing, so 💡 puts the current piece in for the player
+// 💡 shows where the current piece goes; 💡 again while that is showing puts the piece in for the player
 function puzzleHint() {
   if (PZ.done || PZ.busy || PZ.drag || PZ.cur < 0) return;
-  PZ.hints++; G.hints = PZ.hints; SND.sfx.hint();
+  SND.sfx.hint();
+  if (!PZ.hintOn) { PZ.hintOn = true; PZ.hints++; G.hints = PZ.hints; showSpot(); return; }
   snapPiece(PZ.cur, true);
 }
 function puzzlePeek() {
